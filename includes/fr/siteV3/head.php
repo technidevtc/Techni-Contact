@@ -48,25 +48,24 @@ $main_categories[] = array('id' => 99, 'name' => 'Espace Thématique', 'ref_name
 $main_categories_count = count($main_categories);
 foreach ($main_categories as $num_cat => $main_cat) {
   $last_cat = $num_cat == $main_categories_count-1;
-  // echo $num_cat."<br />";
-  // if ($num_cat > 0){
-    $menu_categories .= "<div class=\"separator\"></div>";
-    $cat1id = isset($cat1['id']) ? $cat1['id'] : (!empty($pdt['cat1_id']) ? $pdt['cat1_id'] : '' );
-    if (!empty($main_cat["ref_name"])) {
-      $menu_categories .= ($pageName == 'home'?'<h2>':'')."<a href=\"";
-      $menu_categories .= $last_cat ? URL.$main_cat["ref_name"].".html\" data-main-cat-id=\"".$main_cat["id"]."\" " : URL."familles/".$main_cat["ref_name"].".html\" data-main-cat-id=\"".$main_cat["id"]."\" ";
-      $last_cat_class = $last_cat ? ' last' : '';
-      $menu_categories .= $cat1id == $main_cat["id"] ? ($num_cat==0?"class=\"first selected\" ":" class=\"selected".$last_cat_class."\"") : ($num_cat==0?"class=\"first\" ": "class=\"".$last_cat_class."\"");
-      $menu_categories .= ">".$main_cat["name"] . "</a>".($pageName == 'home'?'</h2>':'');
-    }
-  // }
+	  // if ($num_cat > 0){
+		  $menu_categories .= "<div class=\"separator\"></div>";
+		  $cat1id = isset($cat1['id']) ? $cat1['id'] : (!empty($pdt['cat1_id']) ? $pdt['cat1_id'] : '' );
+		  if(!empty($main_cat["ref_name"])){
+		  $menu_categories .= ($pageName == 'home'?'<h2>':'')."<a href=\"";
+		  $menu_categories .= $last_cat ? URL.$main_cat["ref_name"].".html\" data-main-cat-id=\"".$main_cat["id"]."\" " : URL."familles/".$main_cat["ref_name"].".html\" data-main-cat-id=\"".$main_cat["id"]."\" ";
+		  $last_cat_class = $last_cat ? ' last' : '';
+		  $menu_categories .= $cat1id == $main_cat["id"] ? ($num_cat==0?"class=\"first selected\" ":" class=\"selected".$last_cat_class."\"") : ($num_cat==0?"class=\"first\" ": "class=\"".$last_cat_class."\"");
+		  $menu_categories .= ">".$main_cat["name"] . "</a>".($pageName == 'home'?'</h2>':'');
+		  }
+	  // }
 }
 
 $menu_categories_options = "<option value=\"\" disabled selected>Naviguer vers ...</option>";
 foreach ($main_categories as $main_cat){
-  if(!empty($main_cat["ref_name"])){
-    $menu_categories_options .= "<option value=\"".URL.($main_cat['id']==99 ? "" : "familles/").$main_cat['ref_name'].".html\">".$main_cat['name']."</option>";
-  }
+	if(!empty($main_cat["ref_name"])){
+		$menu_categories_options .= "<option value=\"".URL.($main_cat['id']==99 ? "" : "familles/").$main_cat['ref_name'].".html\">".$main_cat['name']."</option>";
+	}
 }
 
   
@@ -206,7 +205,11 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-
+<style>
+#fly-dropdown{
+	display:none;
+}
+</style>
 
   <title><?php echo $title ?></title>
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0,minimum-scale=1.0,maximum-scale=1.0"/>
@@ -226,6 +229,7 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="<?php echo $res_url; ?>css/styles.css" />
+  <link rel="stylesheet" type="text/css" href="<?php echo $res_url; ?>css/toolbar.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $res_url; ?>css/flick-jquery-ui.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $res_url; ?>fancybox/jquery.fancybox.css" />
   <!--[if lte IE 8]>
@@ -348,7 +352,7 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
 		}
     });
 </script>
-*/?>
+
 <!-- Hotjar Tracking Code for http://www.techni-contact.com/ -->
 <script> 
  (function(h,o,t,j,a,r){ 
@@ -360,8 +364,17 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
  a.appendChild(r); 
  })(window,document,'//static.hotjar.com/c/hotjar-','.js?sv='); 
 </script>
+*/?>
+
+<script type="text/javascript">var switchTo5x=true;</script>
+<script type="text/javascript" src="https://ws.sharethis.com/button/buttons.js"></script>
+<script type="text/javascript">stLight.options({publisher: "cff709ed-8f94-44b4-9555-b399facbdbf0", doNotHash:true, 
+doNotCopy:true,hashAddressBar:false});</script>
+
 </head>
 <body<?php if($smallBackground){echo ' class="small-bg"';}else{echo ' class="big-bg"';}?>>
+
+
 <a id="popup" style="display:none;"></a>
 <div id="tooltip"></div>
 <div id="message-dialog" title="Message"></div>
@@ -400,8 +413,8 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
           <a href="<?php echo URL; ?>contact.html">Contact</a> |
           <a href="<?php echo URL; ?>catalogues.html">Nos catalogues</a> |
           <a href="<?php echo URL; ?>guides-achat/nos-guides.html">Nos guides </a> |
-          <a href="<?php echo URL; ?>blog">Blog </a> |
-          <a href="<?php echo URL; ?>index-produits.html">Tous les produits</a>
+          <a href="<?php echo URL; ?>blog">Blog</a> 
+          
         </div>
         <div class="zero"></div>
       </div>
@@ -411,44 +424,8 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
         <?php if ($pageName == 'home') { ?><h1 class="header-logo"><?php }else{ ?><div class="header-logo"><?php } ?>
           <a href="<?php echo URL; ?>"><img src="<?php echo $res_url; ?>images/header-TC-logo.png" alt="Techni-Contact facilite tous vos achats professionnels : fourniture de matériels et d'équipements professionnels"/></a>
         <?php if ($pageName == 'home') { ?></h1><?php }else{ ?></div><?php } ?>
-        <div class="header-mid-div">
-          <img src="<?php echo $res_url; ?>images/en-1-clic.png" alt="Recherche en 1 clic"/>
-        </div>
-        <div class="header-mid-div">
-          <img src="<?php echo $res_url; ?>images/conseil-d-expert.png" alt="Conseils d'experts"/>
-        </div>
-        <div class="header-mid-div">
-          <img src="<?php echo $res_url; ?>images/devis-personnalises.png" alt="Devis personnalisés"/>
-        </div>
-        <div class="header-mid-div header-mid-div-last">
-          <img src="<?php echo $res_url; ?>images/commandes-securisees.png" alt="Commandes sécurisées"/>
-        </div>
-        <div id="header-mid-coords">
-          <img src="<?php echo $res_url; ?>images/header-blue-cellphone-logo.png" alt="01.55.60.29.29"/>
-          <span class="big-blue-title header-mid-coords-tel">
-           <?php 
-			if (isset($pdt_referent_commercial_id)) {
-				if(!isset($_SESSION['comm_phone'])){
-					echo $commercial_infos['phone'];
-				
-				}else {
-					echo $_SESSION['comm_phone'];
-				}
-			}else{
-					echo $commercial_infos['phone'];
-			}
-		    // initiated in head.php ?>
-          </span><br />
-          <span class="header-mid-coords-hours"><span class="atseo opening-hours"></span></span>
-        </div>
-        <div class="zero"></div>
-      </div>
-      <div id="header-search">
-        <div class="fl">
-          <a href="<?php echo URL; ?>recherche.html" class="header-search-team-link"></a>
-          <span class="blue-title header-search-or"><b><</b> OU </span>
-          <span class="green-title header-search-or2"><b>></b></span>
-        </div>
+        
+        <div id="header-search">
         <div id="header-search-form-zone">
 			<?php 
 				
@@ -467,21 +444,117 @@ if(((time() - $_SESSION['loggedin_time']) > $login_session_duration)){
 					$botton  = ' type="submit" ';
 				} 
 			?>
+		<div class="contentSeachTel">	
           <form class="search" <?= $action ?> method="get">
-          <img alt=">" src="<?php echo $res_url; ?>images/header-search-input-arrow.png" />
-          <input type="text" autocomplete="off" placeholder="Que recherchez-vous au sein de Techni-contact ?" value="<?= $_GET['search'] ?>" required  name="search"  id="header-search-input" oninvalid="this.setCustomValidity('Veuillez rentrer dans le champs de recherche le produit ou le service recherché')" oninput="setCustomValidity('')" class=" wf2_invalid wf2_isBlank wf2_defaultValue wf2_lostFocus" <?= $disable ?> />
+          <input type="text" autocomplete="off" placeholder="Chercher un produit, une référence..." value="<?= $_GET['search'] ?>" required  name="search"  id="header-search-input" oninvalid="this.setCustomValidity('Veuillez rentrer dans le champs de recherche le produit ou le service recherché')" oninput="setCustomValidity('')" class=" wf2_invalid wf2_isBlank wf2_defaultValue wf2_lostFocus" <?= $disable ?> />
           <input <?= $botton ?> src="<?php echo $res_url; ?>images/header-input-search-button.png" value="" id="header-search-input-submit"/>
 		  </form>
+		  
+		   <div class="txtContact">Pas envie de chercher votre matériel ?  <span class="clickContact" <?php if(TEST): ?> onclick="javascript:HN.TC.ShowContacteEquipeForm('show');" <?php endif; ?>>Contactez directement notre équipe </span> </div>
         </div>
 		
-		<div class="header-left">
-			<a href="<?= URL ?>catalogues.html">
-				<div class="title-header blue-small-title ">Nos catalogues</div>
-				<div><img src="<?= $img_vignette ?>" class="img-left-header" /></div>
-			</a>
+		<?php
+			// echo "aaaaaa : ".$pdt['adv_cat'];
+			if($_SERVER['SCRIPT_NAME'] == "/product.html"){
+				
+				if( ($pdt['adv_cat'] == '0') || ($pdt['adv_cat'] == '2') ){
+				
+				}else{				
+					
+		?>
+		
+		<div id="fly-dropdown" style="display:none;" >
+			<div class="titleFly">Gagnez du temps, c'est gratuit ! 
+				<img src="<?= URL ?>/ressources/images/close.png" class="imgClose" onclick="closeCalque()" /> </div>
+			<div style="margin-bottom: 8px;">Demandez à nos experts<br /> de rechercher <br /> les équipements pour vous !</div>
+			<div class="imgLeftFly" onclick="javascript:HN.TC.ShowContacteEquipeForm('show');">
+				<img src="<?= URL ?>/ressources/images/arrow1.png"  />
+				Envoyer une demande<br />(cela ne prend que 30 sec)
+			</div>
 		</div>
-        <div class="zero"></div>
+		<?php } 
+			}else { ?>
+		<div id="fly-dropdown" style="display:none;" >
+			<div class="titleFly">Gagnez du temps, c'est gratuit ! 
+				<img src="<?= URL ?>/ressources/images/close.png" class="imgClose" onclick="closeCalque()" /> </div>
+			<div style="margin-bottom: 8px;">Demandez à nos experts<br /> de rechercher <br /> les équipements pour vous !</div>
+			<div class="imgLeftFly" onclick="javascript:HN.TC.ShowContacteEquipeForm('show');">
+				<img src="<?= URL ?>/ressources/images/arrow1.png"  />
+				Envoyer une demande<br />(cela ne prend que 30 sec)
+			</div>
+		</div>		
+		<?php } ?>
+		
+		
+		
+		
+		<div id="show-contact-equipe-form" style="display:none;">
+				<div id="txt_infosHead">	
+					<p> Simple et gratuit : nos équipes cherchent les équipements pour vous !  </p><br /><br />
+				</div>
+				<div class="pointer_imgHead">
+					<img src="<?= URL ?>ressources/images/doigt-pointeur.jpg" />
+				</div>
+				
+				<div style="overflow: hidden;">
+					<div id="result_message_demandeHead" style="padding: 10px;margin-bottom: 20px;display:none;"></div>
+					<div id="loding_imgHead" style="overflow: hidden;margin: auto; width: 100px;display:none;">
+							<img src="<?= URL ?>ressources/images/loading.gif" />
+					</div>
+					
+					<div id="formss-question_demandeHead" >
+					<div>
+						<label><strong>Que recherchez vous ? </strong></label><br>
+						<textarea cols="74" rows="5" style="width: 316px;" id="demandeHead" placeholder="Exemple : Pour notre prochain séminaire, nous recherchons 10 tables pliantes rondes de 180 cm de diamètre"></textarea>
+					</div>
+					<div>
+						<div style="float:left;margin-right:10px;">
+						<label><strong>Nom</strong></label><br>
+						<input type="text" id="nomHead" value="" class="form-question-express" />
+						</div>
+						
+						<div>
+						<label><strong>Téléphone</strong></label><br>
+						<input type="text"  id="telephone_deHead" value="" class="form-question-express" />
+						</div>
+					</div>
+					
+					<div class="btn-send-demande1">
+						<center>
+						<div class="btn-create_question" style="width: 225px;margin-left: -77px;" id="DemandeEquipe" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Devis Express', 'Demande de recherche', 'Validation pop up');DemandeEquipe('3')" <?php endif; ?> >>>> Trouvez-moi ce matériel SVP</div>						
+						</center>
+				    </div>
+				</div>
+				
+				</div>
+				
+			</div>
+		<div class="zero"></div>
       </div>
+       
+        
+        <div id="header-mid-coords">
+          <span class="big-blue-title header-mid-coords-tel">
+           <?php 
+			if (isset($pdt_referent_commercial_id)) {
+				if(!isset($_SESSION['comm_phone'])){
+					echo $commercial_infos['phone'];
+				
+				}else {
+					echo $_SESSION['comm_phone'];
+				}
+			}else{
+					echo $commercial_infos['phone'];
+			}
+		    // initiated in head.php ?>
+          </span><br />
+          
+        </div>
+        <div class="zero"></div>
+		
+      </div>
+      </div>
+ 
       <div id="header-mobile-nav">
         <select>
           <?php echo $menu_categories_options ?>
@@ -502,6 +575,148 @@ function triggerSubmenuTopArrow(){
     });
   });
 }
+
+function DemandeEquipe(type){
+	
+	var demande 		= $("#demandeHead").val();
+	var email	 		= "";
+	var telephone 		= $("#telephone_deHead").val();
+	var nom	    		= $("#nomHead").val();
+	var prenom			= "";
+	var name_products 	= "";
+	var ids_products	= "";
+	var id_famillies	= "";
+	var id_advertiser	= "";
+	var typeLead		= type;
+
+	var textAreaString = demande.replace(/\n\r/g,"<br />");
+	var textAreaString = demande.replace(/\n/g,"<br />");
+	
+	var n = nom.length;
+	var q = prenom.length;
+	var d = demande.length;		
+	
+	if( (nom != '' || nom == null) && n>2 ){
+	 valid_forms_nom = 1;
+	}else {
+		$("#nomHead").css("border", "2px solid red");
+		$("#nomHead").attr("placeholder", "Merci de saisir votre Nom");
+     valid_forms_nom = 0;
+	}
+	
+	if( (demande != '' || demande == null) && d>9 ){
+	 valid_forms_demande = 1;
+	}else {
+		$("#demandeHead").css("border", "2px solid red");
+		$("#demandeHead").attr("placeholder", "Merci de saisir votre question");
+     valid_forms_demande = 0;
+	}
+	
+	if( (telephone != '' || telephone == null) ){
+	 valid_forms_tel = 1;
+	}else {
+		
+		$("#telephone_deHead").css("border", "2px solid red");
+		$("#telephone_deHead").attr("placeholder", "Merci de saisir votre tel");
+     valid_forms_tel = 0;
+	}
+	
+
+	if(valid_forms_nom == 1  && valid_forms_demande == 1 && valid_forms_tel == 1 ){
+		$.ajax({
+				url: '<?= URL ?>ajax_question/ajax_create_demande.php?textAreaString='+textAreaString+'&email='+email+"&telephone="+telephone+"&nom="+nom+"&prenom="+prenom+"&ids_products="+ids_products+"&id_famillies="+id_famillies+"&id_advertiser="+id_advertiser+"&typeLead="+typeLead,
+				type: 'GET',
+				beforeSend: function() {
+					$('#formss-question_demandeHead').hide();
+					$('#txt_infosHead').hide();
+					$('.pointer_imgHead').hide();
+					$('#loding_imgHead').show();
+        			
+				},				
+				success:function(data){
+					$('#result_message_demandeHead').show();
+					$('#result_message_demandeHead').html(data);
+				},
+				complete: function() {
+					$('#loding_imgHead').hide();
+				}
+		});	
+	}
+}
+<?php 
+	if($_SERVER['SCRIPT_NAME'] == "/product.html"){
+		if( ($pdt['adv_cat'] == '0') || ($pdt['adv_cat'] == '2') ){
+				
+		}else{
+?>
+$(document).ready(function(){
+	var ipClient  =  '<?= $_SERVER["REMOTE_ADDR"] ?>';
+	$.ajax({
+		url: '<?= URL ?>ressources/ajax/AJAX_update_ip.php?action=addCount&ipClient='+ipClient,  
+		type: 'GET',
+		success:function(data){
+			if(data == 3){
+				$("#fly-dropdown").remove();
+			}else{
+				setTimeout(function(){
+				   $('#fly-dropdown').fadeIn(1000);
+				}, 2000);
+			}
+		}
+	});	
+});
+	<?php } 
+	
+	}else { ?>
+$(document).ready(function(){
+	var ipClient  =  '<?= $_SERVER["REMOTE_ADDR"] ?>';
+	
+	$.ajax({
+		url: '<?= URL ?>ressources/ajax/AJAX_update_ip.php?action=addCount&ipClient='+ipClient,  
+		type: 'GET',
+		success:function(data){
+			if(data == 3){
+				$("#fly-dropdown").remove();
+			}else{
+				setTimeout(function(){
+				   $('#fly-dropdown').fadeIn(1000);
+				}, 2000);
+			}
+		}
+	});	
+});	
+	
+	
+	<?php } ?>
+function closeCalque(){
+	var ipClient  =  '<?= $_SERVER["REMOTE_ADDR"] ?>';
+	$.ajax({
+		url: '<?= URL ?>ressources/ajax/AJAX_update_ip.php?action=closeCount&ipClient='+ipClient,  
+		type: 'GET',
+		success:function(data){
+			if(data == 3){
+				$("#fly-dropdown").remove();
+			}
+		}
+	});	
+}
+
+
+var referrer = document.referrer.split('?')[1];
+console.log(referrer);
+/*
+$(document).ready(function() {
+var pathname = document.referrer;
+console.log(pathname);
+});
+*/
+
+$( ".imgClose" ).click(function() {
+  $('#fly-dropdown').fadeOut(1000);
+});
+
+
+//20000 
 </script>
 <?php require(SITE . 'breadcrumb.php'); ?>
 <?php if (DEBUG) $tab_microtime["header HTML & PHP"] = microtime(true); ?>

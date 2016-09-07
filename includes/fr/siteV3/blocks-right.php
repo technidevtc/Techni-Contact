@@ -47,10 +47,49 @@
       unset($ms);
     }
   ?>
+  <?php
+		
+		if( ($_SERVER['PHP_SELF'] == '/blog.html') || ($_SERVER['PHP_SELF'] == '/detail-article.html') || ($_SERVER['PHP_SELF'] == '/article_tag_detail.html') ){ ?>
+		<br />
+		<div class="" style="overflow: hidden;margin-right: 3px;">
+				<div class="second-blog">
+					<div class="suivi-blog">Suivez nous sur </div>
+					<div class="rs_partage">
+						<div class="rs_part"><a href="https://www.linkedin.com/company/techni-contact-md2i" target="_blink"><img src="<?= URL ?>ressources/images/linkedin.png"  /></a></div>
+						<div class="rs_part"><a href="https://www.facebook.com/Techni-Contact-168499622954/" target="_blink"><img src="<?= URL ?>ressources/images/facebook.png" /></a></div>
+						<div class="rs_part1"><a href="<?= URL ?>blog-rss.php" type="application/rss+xml" >
+								<img src="<?= URL ?>ressources/images/rss_picto_sociaux.png" /></a></div>
+					</div>
+				</div>
+				<br />
+				<div class="second-blog-2">
+					Recevez nos articles directement par email<br /><br />
+					<div id="result_email_send"></div>
+					<div id="form-input">
+						<input type="text" id="email-send-article" class="input-type-blog" /><br />
+						<div class="btn-send">
+						<div class="right-col-myaccount-button fl" style="left: 33px" onclick="send_mail_blog()">Valider</div><br /><br /><br />
+						</div>
+					</div>
+				</div>
+				<br />
+				<?php
+					$sql_zone  = "SELECT content FROM blog_mkt_zone WHERE active='1' ";
+					$req_zone  =  mysql_query($sql_zone);
+					$data_zone =  mysql_fetch_object($req_zone);
+				?>
+				<div class="zone-promo">
+					<?= $data_zone->content ?>
+				</div>
+				
+			</div>
+			
+
+	<?php } ?>
   <div id="my-account" class="col-right-arrowed-block">
     <img src="<?php echo $res_url; ?>images/right-col-block-top.png" alt="" />
     <div id="my-account-title">
-      <img src="<?php echo $res_url; ?>images/right-col-myaccount-logo.png" alt="" /><span>Mon compte</span>
+      <img src="<?php echo $res_url; ?>images/right-col-myaccount-logo.png" alt="Mon compte" /><span>Mon compte</span>
     </div>
     <div class="col-right-arrowed-block-center">
       <div id="right-col-myaccount-zone">
@@ -90,7 +129,10 @@
           <div class="right-col-myaccount-button fr" style="right: 6px" onClick="javascript:HN.TC.Logout()">Déconnexion</div>
        <?php endif // end logged ?>
         <div class="clear"></div><br />
-        <div id="myaccount-create-account-form-dialog" title="Créer mon compte">
+        
+		
+		
+		<div id="myaccount-create-account-form-dialog" title="Créer mon compte">
           <form method="post" action="" name="create_account_dialog_form" id="quick_account_form">
             <div>
               <div class="left">
@@ -175,10 +217,11 @@
       </div>
     </div>
   </div>
+   
   <a href="<?php echo URL ?>panier.html" id="my-basket" class="col-right-arrowed-block">
     <img src="<?php echo $res_url; ?>images/right-col-block-top.png" alt="" />
     <div id="my-basket-title">
-      <img src="<?php echo $res_url; ?>images/right-col-basket-logo.png" alt="" /> <span>Mon Panier</span>
+      <img src="<?php echo $res_url; ?>images/right-col-basket-logo.png" alt="Mon panier" /> <span>Mon Panier</span>
     </div>
     <?php $cart->calculateCart(); ?>
     <div class="col-right-arrowed-block-center">
@@ -188,7 +231,7 @@
     </div>
   </a>
  <?php endif; // not order process ?>
- 
+
  <?php if ($pageName != 'home') : ?>
   <div class="right-col-fixed">
  <?php endif ?>
@@ -202,6 +245,7 @@
       </div>
     </div>
     <div class="zero"></div>
+	 
    <?php if ($pageName == 'Demande de devis') : ?>
     <div id="right-col-links" class="right-col">
       <img src="<?php echo $res_url.'images/theytrustus/nous_les_accompagnons.jpg'; ?>" alt="Nous les accompagnons" />
@@ -209,15 +253,15 @@
    <?php else : // not "demande de devis" ?>
     <div id="right-col-links" class="right-col">
       <ul>
-        <li><a href="javascript:showReassuranceDialog(1);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Notre valeur ajoutée']);"<?php endif; ?>><img alt="" src="<?php echo $res_url; ?>images/right-col-link-logo-1.png" />Notre valeur ajoutée</a></li>
-        <li><a href="javascript:showReassuranceDialog(2);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Comment commander ?']);"<?php endif; ?>><img alt="" src="<?php echo $res_url; ?>images/right-col-link-logo-2.png" />Comment commander ?</a></li>
-        <li><a href="javascript:showReassuranceDialog(3);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Vos moyens de paiement']);<?php endif; ?>"><img alt="" src="<?php echo $res_url; ?>images/right-col-link-logo-3.png" />Vos moyens de paiement</a></li>
+        <li><a href="javascript:showReassuranceDialog(1);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Notre valeur ajoutée']);"<?php endif; ?>><img alt="Notre valeur ajoutée" src="<?php echo $res_url; ?>images/right-col-link-logo-3.png" />Notre valeur ajoutée</a></li>
+        <li><a href="javascript:showReassuranceDialog(2);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Comment commander ?']);"<?php endif; ?>><img alt="Comment commander ?" src="<?php echo $res_url; ?>images/right-col-link-logo-2.png" />Comment commander ?</a></li>
+        <li><a href="javascript:showReassuranceDialog(3);"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Pop_up_informatif', 'Ouverture pop up', 'Vos moyens de paiement']);<?php endif; ?>"><img alt="Vos moyens de paiement" src="<?php echo $res_url; ?>images/right-col-link-logo-1.png" />Vos moyens de paiement</a></li>
       </ul>
     </div>
     
     <?php if ($pageName != 'orderProcess') : ?>
     <div id="right-col-expert-space" class="right-col">
-      <a href="<?php echo URL.'espace-thematique.html'?>"><img alt="" src="<?php echo $res_url; ?>images/right-col-link-expert-space.png" />Nos espaces thématiques</a>
+      <a href="<?php echo URL.'espace-thematique.html'?>"><img alt="Nos espaces thématiques" src="<?php echo $res_url; ?>images/right-col-link-expert-space.png" />Nos espaces thématiques</a>
     </div>
     <?php endif ?>
    <?php endif // page "demande de devis" or not ?>
@@ -231,7 +275,7 @@
       <img src="<?php echo $res_url.'images/theytrustus/nous_les_accompagnons.jpg'; ?>" alt="Nous les accompagnons" />
     </div>
     <?php endif // order process ?>
-    
+   
    <?php if ($pageName == 'home') : ?>
     <div id="right-col-search" class="right-col">
       <div id="right-col-search-block">
@@ -419,6 +463,5 @@
   
  <?php if ($pageName != 'home') : ?>
   </div>
- <?php endif ?>
-  
+ <?php endif ?> 
 </div>

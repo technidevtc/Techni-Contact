@@ -1,6 +1,6 @@
 <?php if (DEBUG) $tab_microtime["page content"] = microtime(true); ?>
-    <div class="zero"></div>
 
+    <div class="zero"></div>
   </div><!-- /div#wrapper -->
   <div class="zero"></div>
 </div><!-- /div#outer-frame -->
@@ -100,6 +100,7 @@
             <img src="<?php echo $res_url; ?>images/footer-logo-techni-contact.png" alt="Techni-contact" id="footer-logo-techni-contact" />
           </div>
 
+        
         </div>
 
       </div><!-- /div#footer-wrapper -->
@@ -538,6 +539,10 @@
  <script>
 	$('#contact-crew-grey-text').html('<?= $num_right ?>');
 </script>	
+	<!--
+	<script type="text/javascript" src="<?php echo $res_url ?>scripts/eltd-like.js"></script> 
 	
+	-->
+	<script type="text/javascript" src="<?php echo $res_url ?>scripts/toolbar.js"></script> 
 </body>
 </html>

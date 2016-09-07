@@ -127,7 +127,7 @@
           $bcCat2 = $bcSeparator.$cat2['name'];
           $jsonLdItems[] = ['@id' => Utils::get_family_fo_url($cat2['ref_name']), 'name' => $cat2['name']];
           if (isset($cat3) && $catTree->length >= 3){
-            $bcCat2 = $bcSeparator.'<a href="'.Utils::get_family_fo_url($cat2['ref_name']).'.html">'.$cat2['name'].'</a>';
+            $bcCat2 = $bcSeparator.'<a href="'.Utils::get_family_fo_url($cat2['ref_name']).'">'.$cat2['name'].'</a>';
             $bcCat3 = $bcSeparator.$cat3['name'];
             $jsonLdItems[] = ['@id' => Utils::get_family_fo_url($cat3['ref_name']), 'name' => $cat3['name']];
           }
@@ -274,6 +274,70 @@
 		echo '</div>';
 
 	}
+	
+	if($_SERVER['SCRIPT_NAME'] == '/blog.html'){
+		//$url_params  =  $_SERVER[REQUEST_URI];
+
+		echo '<div id="breadcrumb">';
+		$homeButton  = '<img src="'.$res_url.'images/breadcrumb-home-logo.png" alt="Home" class="breadcrumb-home-logo" /> Accueil';
+		$bcSeparator = '<span class="breadcrumb-grey-text"> | </span>';
+
+		$bcHtml 	 = '<a href="'.URL.'">'.$homeButton.'</a>';
+		$nclient_Html= 'Blog';
+
+		echo $bcHtml.$bcSeparator.$nclient_Html;
+		echo '</div>';
+
+	}
+	
+	if($_SERVER['SCRIPT_NAME'] == '/detail-article.html'){
+		//$url_params  =  $_SERVER[REQUEST_URI];
+
+		echo '<div id="breadcrumb">';
+		$homeButton  = '<img src="'.$res_url.'images/breadcrumb-home-logo.png" alt="Home" class="breadcrumb-home-logo" /> Accueil';
+		$bcSeparator = '<span class="breadcrumb-grey-text"> | </span>';
+
+		$bcHtml 	 = '<a href="'.URL.'">'.$homeButton.'</a>';
+		$blog_Html= '<a href="'.URL.'blog">Blog</a>';
+		
+		$url_page 	=  $_SERVER['REQUEST_URI'];
+		$url_expode = explode('/',$url_page);
+		$id_article =  $url_expode[2];
+		
+		$sql_articles = " SELECT id ,article_title,promo_image,content,timestamp_created,ref_name
+							FROM blog_articles
+						  WHERE id ='".$id_article."'";
+		$req_articles  =  mysql_query($sql_articles);
+		$data_articles =  mysql_fetch_object($req_articles);
+
+		echo $bcHtml.$bcSeparator.$blog_Html.$bcSeparator.$data_articles->article_title;
+		echo '</div>';
+	}
+	
+	if($_SERVER['SCRIPT_NAME'] == '/article_tag_detail.html'){
+		//$url_params  =  $_SERVER[REQUEST_URI];
+
+		echo '<div id="breadcrumb">';
+		$homeButton  = '<img src="'.$res_url.'images/breadcrumb-home-logo.png" alt="Home" class="breadcrumb-home-logo" /> Accueil';
+		$bcSeparator = '<span class="breadcrumb-grey-text"> | </span>';
+
+		$bcHtml 	 = '<a href="'.URL.'">'.$homeButton.'</a>';
+		$blog_Html= '<a href="'.URL.'blog">Blog</a>';
+		
+		$url_page 	=  $_SERVER['REQUEST_URI'];
+		$url_expode = explode('/',$url_page);
+		$id_tag =  $url_expode[3];
+		
+		$sql_articles = " SELECT id ,name
+							FROM blog_tags_names
+						  WHERE id ='".$id_tag."'";
+		$req_articles  =  mysql_query($sql_articles);
+		$data_articles =  mysql_fetch_object($req_articles);
+
+		echo $bcHtml.$bcSeparator.$blog_Html.$bcSeparator.$data_articles->name;
+		echo '</div>';
+	}
+	
 	?>
 
 
