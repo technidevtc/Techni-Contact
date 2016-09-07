@@ -4,6 +4,7 @@ require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dir
 require("../../includes/fr/classV3/phpmailer_2014/PHPMailerAutoload.php");
 require("../../includes/fr/classV3/phpmailer_2014/Email_functions_external_mail_send.php");
 
+
 if (DEBUG) $tab_microtime["Product : config"] = microtime(true);
 $db = DBHandle::get_instance();
 if (DEBUG) $tab_microtime["Product : DBhandle"] = microtime(true);
@@ -81,7 +82,7 @@ $res = $db->query("
     IF(IFNULL(rc.price+rc.ecotax, p.price) < fdp.fdp_franco, fdp.fdp, 0) AS fdp,
     (p.as_estimate + a.as_estimate) as product_as_estimate
   FROM products p
-  INNER JOIN products_fr pfr ON p.id = pfr.id
+  INNER JOIN products_fr pfr ON p.id = pfr.id 
   INNER JOIN advertisers a ON p.idAdvertiser = a.id
   LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
   LEFT JOIN families_fr ffr3 ON ffr3.id = ".$catID."
@@ -196,7 +197,7 @@ if ( ($deleted != 1) && ($active == 1) ){
   $pdt["pic_url_count"] = 0;
   $pdt["ref_count"] = 0;
 }
-
+  
 // Comments
 $pdt["comments"] = array();
 $res = $db->query("
@@ -261,17 +262,17 @@ if ($rPdtListCount < Products::SHOWN_PRODUCTS_RELATED_COUNT) {
   $rPdtIdList = array($pdt['id']);
   foreach ($rPdtList as $rPdt)
     $rPdtIdList[] = $rPdt['id'];
-
+  
   $rPdtListNew = Products::getNewRelatedProducts($rPdtIdList, $pdt['cat3_id'], Products::SHOWN_PRODUCTS_RELATED_COUNT - $rPdtListCount);
-
+  
   // if we do have new products available, update the db then merge with fixed ones
   if (count($rPdtListNew) > 0) {
     array_shift($rPdtIdList);
     foreach ($rPdtListNew as $rPdt)
       $rPdtIdList[] = $rPdt['id'];
-
+    
     Products::setRelatedProducts($pdt['id'], $rPdtIdList);
-
+    
     $rPdtList = array_merge($rPdtList, $rPdtListNew);
     $rPdtListCount = count($rPdtList);
   }
@@ -435,7 +436,7 @@ require(SITE."head.php");
     }
 /*
  * function to clean product description from 'ugly' html font formatting
- *
+ * 
  */
 function cleanDescHtml($str){
   $descc3 = preg_replace("`<font .*>`siU", '', $str);
@@ -460,163 +461,219 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
           var pic_url_list = <?php echo json_encode($pdt["pic_url"]) ?>;
         </script>
         <div id="body" class="white-bg">
-        <div class="product-page" itemscope="itemscope" itemtype="http://schema.org/Product">
+        <div class="product-page"  itemscope="itemscope" itemtype="http://data-vocabulary.org/Product">
           <div class="mobile-infos product-page-category-link">
             <a href="<?php echo URL.'familles/'.$pdt['cat3_ref_name'].'.html' ?>"><?php echo $pdt['cat3_name'] ?></a>
           </div>
           <div class="product-page-title">
-      <?php
+		  <?php
+		  
+			
+			if(!empty($_GET['tokens_active'])){
+			
+				$tokens_active  = $_GET['tokens_active'];
+				$id_product     = $_GET['id_product'];
+				$id_question     = $_GET['id_question'];
+				$sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' "; 
+				$req_client		= mysql_query($sql_client);
+				$rows_client 	= mysql_num_rows($req_client);
+				
+				if($rows_client > 0){
+					$data_client = mysql_fetch_object($req_client);
+					$sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
+					mysql_query($sql_update_client);
+					
+					$sql_question_update = "UPDATE `q_a_questions` SET `etat` = '1' WHERE `id` ='".$id_question."'";
+					mysql_query($sql_question_update);
+					
+					$sql_update = "SELECT id,question,date_create,pseudo FROM `q_a_questions` WHERE `id` ='".$id_question."' ";
+					$req_update = mysql_query($sql_update);
+					$data_update= mysql_fetch_object($req_update);
+					
+					$sql_product_mail = "SELECT name FROM products_fr WHERE id='".$id_product."'";
+					$req_product_mail = mysql_query($sql_product_mail);
+					$data_product_mail = mysql_fetch_object($req_product_mail);
+					
+					$date_creation = date("d/m/Y",strtotime($data_update->date_create));
+					
+					
+					
+					$name_ptd 	  = htmlentities($data_product_mail->name, ENT_QUOTES); 
+					//$question 	  = htmlentities($data_update->question, ENT_QUOTES); 
+					$question    = utf8_decode($data_update->question); 
+					
+					$reponse  	  = htmlentities($reponse, ENT_QUOTES);
+					$pseudo   	  = htmlentities($data_update->pseudo, ENT_QUOTES);
+					$subject_name = utf8_decode($data_product_mail->name);
+					
+					
+					$header_from_name_new	= "Techni-contact";
+					$header_from_email	= 'ugc@techni-contact.com';
 
+					$header_send1_name	= '';
+					$header_send1_email	= 'ugc@techni-contact.com';
+					
+					$header_send2_name	= '';
+					$header_send2_email	= '';
+					
+					$header_reply1_name	= '';
+					$header_reply1_email= '';
+					
+					$header_copy2_name	= '';
+					$header_copy2_email	= '';
+					
+					$header_copy1_email	= '';
+					$header_copy1_name	= '';
+					$header_copy1_email	= '';
+					
+					
+					$url = ''.URL.'produits/'.$pdt["cat3_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html';
+					
+					
+					$subject = 'Question posee sur fiche '.$subject_name.' ';
+					
+					$message_header = "<html><head>
+						<meta http-equiv=Content-Type content=text/html; charset=iso-8859-1>
+						</head>
+						<body bgcolor=#FFFFFF>";
+					$message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
+					$message_text	.= '<p>';
+						$message_text	.= 'Bonjour';
+						$message_text	.= '<br /><br />';
+						$message_text	.= 'Le '.$date_creation.',  <strong>'.$pseudo.'</strong> un internaute a publi&eacute; une question sur la fiche du produit <a href="'.$url.'" >'.$name_ptd.'</a>.';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '<strong>Adresse mail : </strong>'.$data_client->email.'<br />';
+						$message_text	.= '<strong>Question :     </strong>'.$question;
+						$message_text	.= '<br /><br />';
+						
+						$message_text	.= '<a href="'.ADMIN_URL.'q_a_products/fiche_q_a.php?id_product='.$id_product.'">R&eacute;pondre &agrave; la question </a> | <a href="'.$url.'"> Voir la fiche produit </a>';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '</p>';
 
-      if(!empty($_GET['tokens_active'])){
-
-        $tokens_active  = $_GET['tokens_active'];
-        $id_product     = $_GET['id_product'];
-        $id_question     = $_GET['id_question'];
-        $sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' ";
-        $req_client		= mysql_query($sql_client);
-        $rows_client 	= mysql_num_rows($req_client);
-
-        if($rows_client > 0){
-          $data_client = mysql_fetch_object($req_client);
-          $sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
-          mysql_query($sql_update_client);
-
-          $sql_question_update = "UPDATE `q_a_questions` SET `etat` = '1' WHERE `id` ='".$id_question."'";
-          mysql_query($sql_question_update);
-
-          $sql_update = "SELECT id,question,date_create,pseudo FROM `q_a_questions` WHERE `id` ='".$id_question."' ";
-          $req_update = mysql_query($sql_update);
-          $data_update= mysql_fetch_object($req_update);
-
-          $sql_product_mail = "SELECT name FROM products_fr WHERE id='".$id_product."'";
-          $req_product_mail = mysql_query($sql_product_mail);
-          $data_product_mail = mysql_fetch_object($req_product_mail);
-
-          $date_creation = date("d/m/Y",strtotime($data_update->date_create));
-
-
-
-          $name_ptd 	  = htmlentities($data_product_mail->name, ENT_QUOTES);
-          //$question 	  = htmlentities($data_update->question, ENT_QUOTES);
-          $question    = utf8_decode($data_update->question);
-
-          $reponse  	  = htmlentities($reponse, ENT_QUOTES);
-          $pseudo   	  = htmlentities($data_update->pseudo, ENT_QUOTES);
-          $subject_name = utf8_decode($data_product_mail->name);
-
-
-          $header_from_name_new	= "Techni-contact";
-          $header_from_email	= 'ugc@techni-contact.com';
-
-          $header_send1_name	= '';
-          $header_send1_email	= 'ugc@techni-contact.com';
-
-          $header_send2_name	= '';
-          $header_send2_email	= '';
-
-          $header_reply1_name	= '';
-          $header_reply1_email= '';
-
-          $header_copy2_name	= '';
-          $header_copy2_email	= '';
-
-          $header_copy1_email	= '';
-          $header_copy1_name	= '';
-          $header_copy1_email	= '';
-
-
-          $url = ''.URL.'produits/'.$pdt["cat3_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html';
-
-
-          $subject = 'Question posee sur fiche '.$subject_name.' ';
-
-          $message_header = "<html><head>
-            <meta http-equiv=Content-Type content=text/html; charset=iso-8859-1>
-            </head>
-            <body bgcolor=#FFFFFF>";
-          $message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
-          $message_text	.= '<p>';
-            $message_text	.= 'Bonjour';
-            $message_text	.= '<br /><br />';
-            $message_text	.= 'Le '.$date_creation.',  <strong>'.$pseudo.'</strong> un internaute a publi&eacute; une question sur la fiche du produit <a href="'.$url.'" >'.$name_ptd.'</a>.';
-            $message_text	.= '<br /><br />';
-            $message_text	.= '<strong>Adresse mail : </strong>'.$data_client->email.'<br />';
-            $message_text	.= '<strong>Question :     </strong>'.$question;
-            $message_text	.= '<br /><br />';
-
-            $message_text	.= '<a href="'.ADMIN_URL.'q_a_products/fiche_q_a.php?id_product='.$id_product.'">R&eacute;pondre &agrave; la question </a> | <a href="'.$url.'"> Voir la fiche produit </a>';
-            $message_text	.= '<br /><br />';
-            $message_text	.= '</p>';
-
-          $message_bottom = "</body></html>";
-          $message_to_send = $message_header . $message_text . $message_bottom;
-
-          $mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
-
-        }
-      }
-
-      if(!empty($_GET['tokens_active_reponse'])){
-        $tokens_active  = $_GET['tokens_active_reponse'];
-        $sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' ";
-        $req_client		= mysql_query($sql_client);
-        $rows_client 	= mysql_num_rows($req_client);
-        if($rows_client > 0){
-          $data_client = mysql_fetch_object($req_client);
-          $sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
-          mysql_query($sql_update_client);
-          $sql_question_update = "UPDATE `q_a_reponses` SET `etat` = '1' WHERE `id_user` ='".$data_client->id."'";
-          mysql_query($sql_question_update);
-        }
-      }
-      ?>
-          <h1 class="bigger-blue-title" itemprop="name"><?php echo $pdt['name'] ?></h1>
-          <h2 class="medium-blue-title"><?php echo $pdt['fastdesc'] ?></h2>
-        </div>
-
-
-      <?php if (!empty ($pdt['average_note'])) { ?>
+					$message_bottom = "</body></html>";
+					$message_to_send = $message_header . $message_text . $message_bottom;	
+					
+					$mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
+					
+				}
+			}
+			
+			if(!empty($_GET['tokens_active_reponse'])){
+				$tokens_active  = $_GET['tokens_active_reponse'];
+				$sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' "; 
+				$req_client		= mysql_query($sql_client);
+				$rows_client 	= mysql_num_rows($req_client);
+				if($rows_client > 0){
+					$data_client = mysql_fetch_object($req_client);
+					$sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
+					mysql_query($sql_update_client);
+					$sql_question_update = "UPDATE `q_a_reponses` SET `etat` = '1' WHERE `id_user` ='".$data_client->id."'";
+					mysql_query($sql_question_update);
+				}
+			} 
+		  ?>
+            <h1 class="bigger-blue-title" itemprop="name">
+				<?= $pdt["name"]; ?> 
+			</h1>
+            <h2 class="medium-blue-title"><?php echo $pdt["fastdesc"]; ?></h2>
+          </div>
+	<!--  Toolbar HTML   Devis Express  -->
+		<?php
+		//echo "aaaaaa ".$pdt['adv_cat'];
+			if( ($pdt['adv_cat'] == 0) || ($pdt['adv_cat'] == 2) ){
+			echo '<input type="hidden" id="idCategory" value="'.$pdt['adv_cat'].'" />';
+			echo '<input type="hidden" id="inputData" value="" />';
+		?>
+		<div id="toolbar" class="on">
+			<span class="open opened" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Devis Express', 'Onglet demande de prix', 'Ouverture onglet demande de prix');" <?php endif; ?>>
+				<span class="opener">
+					Demande de prix express 
+				</span>
+			</span>
+			
+			<div id="toolbar_button"  <?php if(!TEST): ?> onclick="ga('send', 'event', 'Devis Express', 'Onglet demande de prix', 'Fermeture onglet Demande de prix');" <?php endif; ?> >
+				<span aria-hidden="true" class="arrow_carrot-down"></span>
+			</div>
+			
+			<div class="image load">
+				<div class="shader-left" style="right: 0px;"></div>
+					<div class="form-devisExpress">
+						<div class="titleDevisEE">Demande de prix express</div>
+						<div class="formDesvisEE">
+							<div style="    margin-bottom: 8px;">
+								<div style="float:left;margin-right: 10px;">
+								<label>Nom : </label><br />
+								<input type="text" id="nomDEE" value="" style="width: 100px;" onkeyup="onblurF()" />
+								</div>
+								
+								<div>
+								<label>Téléphone : </label><br />
+								<input type="text" id="telDEE" value="" style="width: 100px;" onkeyup="onblurF()"/>
+								</div>
+							</div>	
+								<div>
+								<label>Message (optionnel)</label><br />
+								<textarea id="messageDEE" style="width: 212px;height: 45px;"></textarea>
+								</div>
+							<br />
+							<div class="btnSendDEE" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Devis Express', 'Onglet demande de prix', 'Validation onglet Demande de prix');" <?php endif; ?> > Envoyer </div>
+						</div>
+						<div style="padding: 10px;">
+							<center><img src="<?= URL ?>ressources/images/loading.gif" style="display:none;" id="lodingDEE"/></center>
+						</div>
+						<div id="resultSendDEE"></div>
+					</div>
+					<div class="svg"></div>
+			</div>
+		</div>
+		<?php } ?>
+	<!-- Fin Toolbar HTML   Devis Express  -->
+		  
+		  <?php if (!empty ($pdt['average_note'])) { ?>
                   <div class="cat3-checked-line" style="float: right;    margin-bottom: 5px;">
                    <?php /* <img src="<?php echo URL ?>ressources/images/picto-avis.png" alt="picto-avis" /> Avis client*/ ?>
                     <?php showStarRater($pdt['average_note']) ?>
-          <br />
-          <span style="margin-left: 14px;">
+					<br />
+					<span style="margin-left: 14px;">
                     <a class="color-blue avis" href="#block-product-notation">Lire les avis</a>
-          </span>
+					</span>
                   </div>
            <?php } ?>
-
-       <?php
-        $sql_check_f3 = "SELECT glf.id, glf.id_guide , ga.ref_name
-                 FROM guides_linked_familles  glf, guides_achat ga
-                 WHERE glf.id_guide = ga.id
-                 AND id_familles_three='".$pdt["cat3_ids"][0]."' ";
-        $req_check_f3  =  mysql_query($sql_check_f3);
-        $rows_check_f3 =  mysql_num_rows($req_check_f3);
-
-        if($rows_check_f3 > 0){
-        if (empty ($pdt['average_note'])) {
-          $class_dyn = " style='margin-top:10px;' ";
-        }
-
-        $data_check_f3 = mysql_fetch_object($req_check_f3);
-         ?>
-        <div class="lien_guide_product" <?= $class_dyn ?>>
-          <a href="<?= URL ?>guides-achat/<?= $data_check_f3->id_guide ?>-<?= $data_check_f3->ref_name ?>.html" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Fiches produit', 'Lien vers guide d'achat', '<?= $pdt["name"] ?>');"<?php endif; ?>><span>Lire guide d'achat </span><img src="<?= URL ?>ressources/images/buying-guide-picto-2.jpg" class="img-guide-picto-pdt" /></a>
-        </div>
-        <?php } ?>
-
-
+		   
+		   <?php
+				$sql_check_f3 = "SELECT glf.id, glf.id_guide , ga.ref_name
+								 FROM guides_linked_familles  glf, guides_achat ga
+								 WHERE glf.id_guide = ga.id
+								 AND id_familles_three='".$pdt["cat3_ids"][0]."' ";
+				$req_check_f3  =  mysql_query($sql_check_f3);
+				$rows_check_f3 =  mysql_num_rows($req_check_f3);
+				
+				if($rows_check_f3 > 0){ 
+				if (empty ($pdt['average_note'])) {
+					$class_dyn = " style='margin-top:10px;' ";
+				}
+				
+				$data_check_f3 = mysql_fetch_object($req_check_f3); 
+				 ?>
+				<div class="lien_guide_product" <?= $class_dyn ?>>
+					<a href="<?= URL ?>guides-achat/<?= $data_check_f3->id_guide ?>-<?= $data_check_f3->ref_name ?>.html" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Fiches produit', 'Lien vers guide d'achat', '<?= $pdt["name"] ?>');"<?php endif; ?>><span>Lire guide d'achat </span><img src="<?= URL ?>ressources/images/buying-guide-picto-2.jpg" class="img-guide-picto-pdt" /></a>
+				</div>
+		    <?php } ?>
+		   
+		   
           <div class="product-page-main-zone"  id="product-sheet">
             <div class="product-page-pic-zone fl">
               <div class="product-page-pdt-code">Code fiche produit : <span class="color-blue"><?php echo $pdt["id"]; ?></span></div>
-              <div class="product-page-picture">
-                <img <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Zoom image']);" <?php endif ?>itemprop="image" src="<?php echo $pdt["pic_url"][0]["card"]; ?>" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"]; ?>" class="vmaib" data-index="0">
-                <div class="vsma"></div>
+              
+			
+			  <div class="product-page-picture">
+                <img <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Zoom image']);" <?php endif; ?>itemprop="image" src="<?php echo $pdt["pic_url"][0]["card"]; ?>" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"]; ?>" class="vmaib" data-index="0">
+				<div class="vsma"></div>
               </div>
-
-            <?php if ($pdt["pic_url_count"] > 1 || !empty($pdt["video_code"])) { ?>
+			
+			
+			 <?php if ($pdt["pic_url_count"] > 1 || !empty($pdt["video_code"])) { ?>
+			  
               <div class="product-page-carrousel">
                 <div class="grey-block">
                   <ul class="items">
@@ -637,18 +694,18 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
               </div>
               <?php } ?>
             </div>
-
+            
               <div id="video_code" style="display:none">
                 <?php if (!empty($pdt["video_code"])) { ?>
                 <?php echo $pdt["video_code"]; ?>
                 <?php } ?>
             </div>
-
-
-           <?php
-
-      if ( ($deleted != 1) && ($active == 1) ){ ?>
-        <div class="product-page-text-zone fr">
+              
+            
+           <?php 
+			
+			if ( ($deleted != 1) && ($active == 1) ){ ?>
+		    <div class="product-page-text-zone fr">
               <div class="product-page-main-zone-desc">
                 <?php if (($pdt["saleable"] && !$pdt_set_as_estimate) || ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ && $pdt_set_as_estimate)) { ?>
                   <span class="atseo expert-advice"></span>
@@ -656,11 +713,11 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                   <span class="atseo multiple-estimates"></span>
                 <?php } ?>
                 <h3 class="product-paragraph">
-        <?php
-        $delete_balise = strip_tags($pdt["descc"]);
-        $chaine = ereg_replace("<[^>]*>", " ", $pdt["descc"]);
-
-        echo substr($chaine , 0, 270).'...'; ?>
+				<?php
+				$delete_balise = strip_tags($pdt["descc"]);
+				$chaine = ereg_replace("<[^>]*>", " ", $pdt["descc"]); 
+				
+				echo substr($chaine , 0, 270).'...'; ?>
                   <?php //echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,220))."..." ?>
                   <a class="color-blue" href="#product-desc">Lire la suite</a>
                 </h3>
@@ -674,108 +731,193 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                   <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Garantie: <?php echo $pdt["warranty"]; ?></div>
                   <div class="zero"></div>
                 <?php } ?>
-        <br />
+				<br />
                 <div class="cat3-checked-line">
-
-
-          <?php
-          //echo $pdt['adv_cat'];
-
-          if($pdt['adv_cat'] == 1){
-          $sql_quest = "SELECT id,question,pseudo,id_user
-                    FROM q_a_questions
-                    WHERE id_produit='".$pdt["id"]."'
-                    AND etat='1' ";
-            $req_quest = mysql_query($sql_quest);
-            $rows_quest= mysql_num_rows($req_quest);
-            if( $rows_quest > 0){
-          ?>
-          <div class="left_point">
-            <div class="point_style">?</div>
-          </div>
-
-          <div style="overflow: hidden;">
-          <?php
-            if($rows_quest ==1) $in_ss = "";
-            else $in_ss = "s";
-
-          ?>
+                    
+					
+					<?php
+					//echo $pdt['adv_cat'];
+					
+					if($pdt['adv_cat'] == 1){
+					$sql_quest = "SELECT id,question,pseudo,id_user 
+									  FROM q_a_questions 
+									  WHERE id_produit='".$pdt["id"]."' 
+									  AND etat='1' ";
+						$req_quest = mysql_query($sql_quest);
+						$rows_quest= mysql_num_rows($req_quest);
+						if( $rows_quest > 0){
+					?>
+					<div class="left_point">
+						<div class="point_style">?</div>
+					</div>
+					
+					<div style="overflow: hidden;">
+					<?php
+						if($rows_quest ==1) $in_ss = "";
+						else $in_ss = "s";
+						
+					?>
                     <?= $rows_quest ?> question<?= $in_ss  ?> <a class="color-blue" href="#Plus_infos">Plus d'infos</a><br />
-          <a href="#" id="" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');"><strong>Poser une question</strong></a>
-          </div>
-          <?php }else{ ?>
-          <div class="left_point">
-            <div class="point_style">?</div>
-          </div>
-
-          <div style="overflow: hidden;">
+					<a href="#" id="" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');"><strong>Poser une question</strong></a>
+					</div>
+					<?php }else{ ?>
+					<div class="left_point">
+						<div class="point_style">?</div>
+					</div>
+					
+					<div style="overflow: hidden;">
                     <a href="#" id="" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');"><strong>Poser une question sur <br /> le produit</strong></a>
-          </div>
-          <br />
-          <?php }
-            }
-          ?>
-
+					</div>
+					<br />					
+					<?php } 
+						}else if (($pdt['adv_cat'] == 0) || ($pdt['adv_cat'] == 2) ){  ?>
+					
+					<div class="left_point">
+						<div class="point_style">?</div>
+					</div>
+					
+					<div style="overflow: hidden;">
+                    
+					<?php
+					/*
+					<a href="#"   onclick="javascript:HN.TC.ShowCreateAccountForm_create_question_annonceur('show');"><strong>Une question sur le produit ? <br /> Contactez nous ! </strong></a>
+					
+					
+					*/?>
+					<a href="#"  <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page produit', 'Q&A fiches annonceur', '<?= mysql_real_escape_string($pdt["name"]) ?>');javascript:HN.TC.ShowCreateAccountForm_create_question_annonceur('show');"<?php endif; ?> ><strong>Une question sur le produit ? <br /> Contactez nous ! </strong></a>
+					</div>
+					<br />
+					<?php } ?>
+					
                 </div>
-
-        <div id="create-question">
-        <div class="blue-title fl" id="title_quest_bar">Poser une question sur <?php echo $pdt["name"]; ?></div>
-
-        <div class="zero"></div>
-
-
-        <div id="product-refs" class="product-page-cart-table cart-table" style="height: auto;border-top: medium none;">
-        <div style="padding: 10px;">
-          <div style="margin-bottom: 15px;" id="parag_desc">
-            <p>Besoin d'un complément d'information sur notre produit?<br />
-              Posez votre question, notre expert ou la communauté vous répondront en ligne !<br />
-              Votre contribution profitera directement aux autres visiteurs.
-            </p>
-          </div>
-        <div id="result_message"></div>
-        <div id="formss-question">
-          <div>
-            <label><strong>Votre question</strong></label><br />
-            <textarea cols="65" rows="5" name="question" id="question" ></textarea>
-          </div>
-          <div>
-            <div style="float:left;margin-right:10px;">
-            <label><strong>Email (pour recevoir la réponse)</strong></label><br />
-            <input type="email" name="email" id="email" value="" class="form-question" />
-            </div>
-
-            <div>
-            <label><strong>Votre pseudo</strong></label><br />
-            <input type="text" name="pseudo" id="pseudo" value="" class="form-question" />
-            </div>
-          </div>
-
-          <div>
-            <div style="float:left;margin-right:10px;">
-            <label><strong>Téléphone (optionnel)</strong></label><br />
-            <input type="text" name="siteweb" id="telephone" value="" class="form-question" />
-            </div>
-
-            <div>
-            <label><strong>Votre site web (optionnel)</strong></label><br />
-            <input type="text" name="siteweb" id="siteweb" value="" class="form-question" />
-            </div>
-          </div>
-          <div>
-          <center>
-            <div class="btn-create_question" id="create_users">Posez votre question</div>
-            <div style="margin: 15px auto auto; width: 20px;"><img src="/ressources/images/loding.gif" style="display:none;" id="loding"/></div>
-          </center>
-            </div>
-        </div>
-        </div>
-        </div>
-        </div>
-
+				
+				
+				<div id="create-question-annonceur" style="display:none;">
+				
+				<input type="hidden" value="<?= $pdt["cat3_id"] ?>" id="id_famillies" />
+				<input type="hidden" value="1" id="typeLead" />
+				<input type="hidden" value="<?= $pdt["adv_id"] ?>"  id="id_advertiser" />
+				<input type="hidden" value="<?= $pdt["id"] ?>" id="ids_products_de"  />
+					<div class="zero"></div>
+				<div id="txt_infos">	
+					<p> Posez votre question en 2 min </p><br /><br />
+				</div>
+				<div class="pointer_img">
+					<img src="<?= URL ?>ressources/images/doigt-pointeur.jpg" />
+				</div>
+				
+				<div style="overflow: hidden;">
+					<div id="result_message_demande" style="padding: 10px;margin-bottom: 20px;display:none;"></div>
+					<div id="loding_img" style="overflow: hidden;margin: auto; width: 100px;display:none;">
+							<img src="<?= URL ?>ressources/images/loading.gif" />
+					</div>
+					<div id="formss-question_demande" >
+					<div>
+						<label><strong>Votre question</strong></label><br>
+						<textarea cols="74" rows="5" style="width: 316px;height: 50px;" name="demande" id="demande"></textarea>
+					</div>
+					<div>
+						<div style="float:left;margin-right:10px;">
+						<div style="margin-bottom: 20px;"><strong>Nom</strong></div>
+						<input type="text" name="nom" id="nom" value="" class="form-question-express" />
+						</div>
+						
+						
+						
+						<div style="overflow: hidden;">
+						<div style="margin-bottom: 6px;"><b>Téléphone (pour vous répondre personnellement)</b></div>
+						<input type="text" name="telephone" id="telephone_de" value="" class="form-question-express" />
+						</div>
+					</div>
+					<!--
+					<div>
+						<div style="float:left;margin-right:10px;">
+						<label><strong>Email </strong></label><br>
+						<input type="email" name="email" id="email_de" value="" class="form-question-express" />
+						</div>
+						
+						<div>
+						<label><strong>Prénom</strong></label><br>
+						<input type="text" name="prenom" id="prenom" value="" class="form-question-express" />
+						</div>
+					</div>
+					-->
+					<div class="btn-send-demande">
+						<?php
+							/*
+							<div class="btn-create_question" id="create_demande"  onclick="create_demande('1')" >Envoyer votre question</div>
+							*/
+						?>
+						<div class="btn-create_question" id="create_demande" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page produit', 'Q&A fiches annonceur', 'Validation form Q&A annonceur');create_demande('1')" <?php endif; ?>  >Envoyer votre question</div>
+				    </div>
+					
+				<!--<div id="close-send-express" onclick="close_popup_devis_express();">
+							<span>[ Fermer ]</span>
+				</div>-->	
+				</div>
+				
+				</div>
+				</div>
+				
+				
+				<div id="create-question">
+				<div class="blue-title fl" id="title_quest_bar">Poser une question sur <?php echo $pdt["name"]; ?></div>
+				
+				<div class="zero"></div>
+				
+				
+				<div id="product-refs" class="product-page-cart-table cart-table" style="height: auto;border-top: medium none;">
+				<div style="padding: 10px;">
+					<div style="margin-bottom: 15px;" id="parag_desc">
+						<p>Besoin d'un complément d'information sur notre produit?<br />
+							Posez votre question, notre expert ou la communauté vous répondront en ligne !<br />
+							Votre contribution profitera directement aux autres visiteurs.
+						</p>
+					</div>
+				<div id="result_message"></div>
+				<div id="formss-question">
+					<div>
+						<label><strong>Votre question</strong></label><br />
+						<textarea cols="65" rows="5" name="question" id="question" ></textarea>
+					</div>
+					<div>
+						<div style="float:left;margin-right:10px;">
+						<label><strong>Email (pour recevoir la réponse)</strong></label><br />
+						<input type="email" name="email" id="email" value="" class="form-question" />
+						</div>
+						
+						<div>
+						<label><strong>Votre pseudo</strong></label><br />
+						<input type="text" name="pseudo" id="pseudo" value="" class="form-question" />
+						</div>
+					</div>
+					
+					<div>
+						<div style="float:left;margin-right:10px;">
+						<label><strong>Téléphone (optionnel)</strong></label><br />
+						<input type="text" name="siteweb" id="telephone" value="" class="form-question" />
+						</div>
+						
+						<div>
+						<label><strong>Votre site web (optionnel)</strong></label><br />
+						<input type="text" name="siteweb" id="siteweb" value="" class="form-question" />
+						</div>
+					</div>
+					<div>
+					<center>
+						<div class="btn-create_question" id="create_users">Posez votre question</div>
+						<div style="margin: 15px auto auto; width: 20px;"><img src="/ressources/images/loding.gif" style="display:none;" id="loding"/></div>
+					</center>
+				    </div>
+				</div>
+				</div>
+				</div>
+				</div>
+				
                <?php if ($pdt["docs_count"] > 0 || !empty ($pdt['average_note'])) { ?>
                 <div class="product-page-notation-docs">
                <?php } ?>
-
+                 
                  <?php /* if ($pdt["docs_count"] > 0) : ?>
                   <div class="cat3-checked-line">
                     <img src="<?php echo $res_url ?>images/picto-docs.png" alt="picto-docs" />
@@ -786,39 +928,36 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 </div>
                <?php } ?>
               </div>
-
-              <div class="product-page-main-zone-right fr">
+              
+              <div class="product-page-main-zone-right fr" itemscope="itemscope" itemtype="http://data-vocabulary.org/Offer">
                 <?php //var_dump($pdt["adv_cat"], $pdt["saleable"], $pdt_set_as_estimate, $pdt["hasPrice"]); ?>
                <?php if ($pdt["saleable"] && !$pdt_set_as_estimate) : ?>
-
-               <?php if ($pdt["ref_count"] > 1) { // faire affichage tableau prix en calque pour mise au panier ?>
-                  <div class="hidden" itemscope="itemscope" itemtype="http://schema.org/Organization">
-                    <span itemprop="name" content="Techni-Contact">Techni-Contact</span>
-                    <span itemprop="url" content="http://www.techni-contact.com">http://www.techni-contact.com</span>
-                    <span itemprop="telephone" content="01 55 60 29 29">01 55 60 29 29</span>
-                  </div>
-                  <div itemscope="itemscope" itemtype="http://schema.org/Offer">
+                    
+                 <?php if ($pdt["ref_count"] > 1) { // faire affichage tableau prix en calque pour mise au panier ?>
+                <div class="hidden" itemprop="seller"  itemscope="itemscope" itemtype="http://data-vocabulary.org/Organization">
+                  <span itemprop="name" content="Techni-Contact">Techni-Contact</span>
+                  <span itemprop="url" content="http://www.techni-contact.com">http://www.techni-contact.com</span>
+                  <span itemprop="tel" content="01 55 60 29 29">01 55 60 29 29</span>
+                </div>
                     <div class="product-page-price">
-                      à partir de :
-                      <div>
-                        <span itemprop="price"><?php echo sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]); ?></span>
-                        <span >€</span> <?php echo $ttcPrice?'TTC':'HT'?>
-                        <span class="hidden" itemprop="priceCurrency">EUR</span>
-                      </div>
-                    <?php
-                      //Change on 31/12/2014
-                      //Add Js vars for iAdvize (Product price or 0 for Devis)
-                      echo('<script type="text/javascript">');
-                        echo('var idz_fiche_product_price = "'.sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]).'";');
-                      echo('</script>');
-                    ?>
+                      à partir de : <div><span itemprop="price"><?php echo sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]); ?></span><span  itemprop="currency">€</span> <?php echo $ttcPrice?'TTC':'HT'?></div>
+					  
+					<?php
+						//Change on 31/12/2014 
+						//Add Js vars for iAdvize (Product price or 0 for Devis)
+						echo('<script type="text/javascript">');
+							echo('var idz_fiche_product_price = "'.sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]).'";');
+						echo('</script>');
+	
+					?>
+					  
                     </div>
-                    <span class="hidden" itemprop="url"><?php echo $pdt["url"]; ?></span>
-                    <span class="hidden" itemprop="sku"><?php echo $pdt["id"]; ?></span>
+                <span class="hidden" itemprop="offerUrl"><?php echo $pdt["url"]; ?></span>
+                <span class="hidden" itemprop="identifier"><?php echo $pdt["id"]; ?></span>
                     <div class="product-page-action">
-                      <a class="btn-cart-add-big-pink"<?php if(!TEST): ?> onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Ouverture choix du modèle']);"<?php endif; ?> href="<?php echo $pdt["cart_add_url"]; ?>">Ajouter au panier11</a><br />
+                      <a class="btn-cart-add-big-pink"<?php if(!TEST): ?> onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Ouverture choix du modèle']);"<?php endif; ?> href="<?php echo $pdt["cart_add_url"]; ?>">Ajouter au panier</a><br />
                       <a href="<?php echo $pdt["cart_add_url"]; ?>"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="btn-esti-ask ask-estimate-link"><img alt="" src="<?php echo $res_url; ?>images/puce-estimate-small.png" class="fl"><span class="atseo ask-estimate">Demander un devis</span></a><br />
-
+					   
                       <div class="zero"></div>
                       <?php /*<a href="<?php echo $url.'pdf/commande-fax/'.$pdt["cat3_id"].'-'.$pdt['id']; ?>"><div class="puce puce-7"></div>Commander par FAX</a>*/ ?>
                       <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
@@ -831,7 +970,6 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                         <?php } ?>
                       </div>
                     </div>
-                  </div>
 
                     <?php }else{// one ref ?>
                     <div class="product-page-price">
@@ -840,23 +978,23 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                     <div class="product-page-action">
                       <a class="btn-cart-add-small-single" <?php if(!TEST): ?>onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Mise au panier directe']);"<?php endif; ?> href="<?php echo $pdt["cart_add_url"]; ?>">Ajouter au panier</a><br />
                       <a href="<?php echo $pdt["cart_add_url"]; ?>" data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="btn-esti-ask ask-estimate-link"><img alt="" src="<?php echo $res_url; ?>images/puce-estimate-small.png" class="fl"><span class="atseo ask-estimate"></span></a><br />
-
+					   
                       <div class="zero"></div>
                       <?php /*<a href="<?php echo url.'pdf/commande/'.$pdt['web_id']; ?>"><div class="puce puce-7"></div>Commander par FAX</a><br />*/ ?>
-
+                      
                       <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
                         <?php $productList = new ProductsSavedList();
                         if ($productList->isProductInSavedList($pdt['id'])) {?>
                           <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
                           <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
                         <?php }else{ ?>
-
+                      
                       <div class="zero"></div>
                        <?php } ?>
                       </div>
                     </div>
                     <?php } // ref count ?>
-
+                
                <?php else : // not saleable ?>
                 <?php if ($pdt["hasPrice"] && !$pdt_set_as_estimate){ ?>
                 <div class="product-page-esti">
@@ -870,7 +1008,7 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                           <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
                           <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
                         <?php }else{ ?>
-
+                          
                   <div class="zero"></div>
                   <?php } ?>
                       </div>
@@ -878,26 +1016,26 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <?php }else{ // no price ?>
                 <div class="product-page-esti">
                   Prix :<div> sur devis</div>
-
-            <?php
-            //Change on 31/12/2014
-            //Add Js vars for iAdvize (Product price or 0 for Devis)
-            echo('<script type="text/javascript">');
-              echo('var idz_fiche_product_price = "0";');
-            echo('</script>');
-          ?>
-
+				  
+				  	<?php
+						//Change on 31/12/2014 
+						//Add Js vars for iAdvize (Product price or 0 for Devis)
+						echo('<script type="text/javascript">');
+							echo('var idz_fiche_product_price = "0";');
+						echo('</script>');
+					?>
+					
                 </div>
                 <div class="product-page-action">
                   <a href="<?php echo $pdt["cart_add_url"]; ?>" class="btn-esti-ask-orange"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>">Demander un devis </a><br />
-
+				  
                   <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
                         <?php $productList = new ProductsSavedList();
                         if ($productList->isProductInSavedList($pdt['id'])){ ?>
                           <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
                           <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
                         <?php }else{ ?>
-
+                         
                   <div class="zero"></div>
                   <?php } ?>
                       </div>
@@ -905,8 +1043,8 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <?php } // has price ?>
                <?php endif // saleable ?>
               </div>
-
-
+              
+              
               <div class="zero"></div>
               <div class="product-page-reseaux-sociaux">
                 <!-- google plusone button -->
@@ -925,8 +1063,8 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <script type="text/javascript" src="http://s7.addthis.com/js/300/addthis_widget.js#pubid=technicontact"></script>
                 <!-- AddThis Button END -->
                 </a>
-        <div class="puce_lien"> <a href="saveProductList:add-<?php echo $pdt['id']; ?>" <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Sauvegarde produit']);"<?php endif; ?> class="btn-users-product-list"><div class="puce puce-5"></div><span>Sauvegarder ce produit</span></a>
-        </div>
+				<div class="puce_lien"> <a href="saveProductList:add-<?php echo $pdt['id']; ?>" <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Sauvegarde produit']);"<?php endif; ?> class="btn-users-product-list"><div class="puce puce-5"></div><span>Sauvegarder ce produit</span></a>
+				</div>
               </div>
             </div>
            <?php }else{ // deleted ?>
@@ -935,13 +1073,13 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
               <div class="vsma"></div>
             </div>
            <?php } // deleted or not ?>
-
-
-
-
+		   
+		   
+		   
+		   
             <div class="zero"></div>
           </div>
-
+          
           <div class="product-page-shadow"></div>
           <div class="product-page-bottom-zone">
             <div class="product-page-bottom-left-col fl">
@@ -1027,15 +1165,15 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 </div>
                <?php } ?>
                <div class="zero"></div>
-        <?php if ( ($deleted != 1) && ($active == 1) ){ ?>
-          <div class="product-page-supplier-products">
-          <a class="color-blue" href="<?php echo URL.'fournisseur/'.$pdt['adv_id'].'.html'?>"><u><b>Voir tous les produits de ce fournisseur</b></u></a>
+				<?php if ( ($deleted != 1) && ($active == 1) ){ ?>              
+			    <div class="product-page-supplier-products">
+			    <a class="color-blue" href="<?php echo URL.'fournisseur/'.$pdt['adv_id'].'.html'?>"><u><b>Matériels professionnels de ce fournisseur</b></u></a>
                 </div>
-        <?php } ?>
+				<?php } ?>
                <div class="zero"></div>
                 <div class="zero"></div>
               </div><!-- /.product-page-bottom-desc -->
-
+              
              <?php if ($pdt['ref_count'] > 0) : ?>
               <div class="grey-block product-page-bottom-prices display-infos">
                 <div class="product-page-top-arrow"></div>
@@ -1134,218 +1272,220 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                   <div class="zero"></div>
                 </div><!-- /#product-refs -->
               </div>
-
-
-
-
-
-
-        <!--   Questions Reponse  -->
-        <div class="grey-block product-page-bottom-prices display-infos" id="Plus_infos">
-        <div class="product-page-top-arrow"></div>
-          <div class="blue-title fl">Questions réponses utilisateurs</div>
-          <a class="goto-page-up fr" href="#poser_question"><img alt="^" src="../ressources/images/goto-page-up.png"></a>
-          <div class="zero"></div>
-          <div id="product-refs" class="product-page-cart-table cart-table"  style="height: auto;">
-          <div style="padding: 10px;">
-            <div style="margin-bottom: 15px;">
-            Il vous manque une information sur la fiche technique ?<br /> <strong><a href="#" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');">Posez votre question</a></strong> sur le produit <?= $pdt["name"] ?>. Techni-Contact, ou l'un de ses utilisateurs vous répondront.
-            </div>
-
-            <div>
-            <input type="hidden" id="name_products" value="<?php echo $pdt["name"]; ?>" />
-            <input type="hidden" id="ids_products" value="<?php echo $pdt["id"]; ?>" />
-            <input type="hidden" id="url" value="<?php  echo $pdt['url']; ?>" />
-            <?php if($rows_quest > 0){
-              $id_question_array = "";
-              while($data_quest = mysql_fetch_object($req_quest)){
-              $id_question_array .= $data_quest->id.'-';
-              echo '<input type="hidden" id="id_question'.$data_quest->id.'" value="'.$data_quest->id.'" />';
-            ?>
-              <div class="title_question" id="reponde" onclick="javascript:HN.TC.ShowCreateAccountForm_repondre<?= $data_quest->id ?>('show');">
-                <div class="picto_answer">
-                  <?= $data_quest->question ?>
-                </div>
-                <div class="picto_img">
-                <img src="../ressources/icons/page_white_wrench.png" alt="Répondre" title="Répondre" style="margin-right: 5px;" /> <span>Répondre</span></span>
-                </div>
-              </div>
-
-              <div id="product-reponse<?= $data_quest->id ?>" class="product-page-cart-table cart-table product-reponse">
-                <div id="result_message_reponse<?= $data_quest->id ?>"></div>
-                <div id="reponses_forms<?= $data_quest->id ?>">
-                <div class="blue-title fl" id="answer_title<?= $data_quest->id ?>">Réponse à question sur  produit <?php echo $pdt["name"]; ?></div>
-                <br />
-                  <div style="padding: 10px;">
-                  <input type="hidden" value="<?= $data_quest->id ?>" id="id_calque" />
-                    <div style="margin-bottom: 15px;">
-                      <p><strong>Question : </strong><?= $data_quest->question ?>
-                      </p>
-                    </div>
-
-                    <div>
-                      <label><strong>Votre r&eacute;ponse : </strong></label><br />
-                      <textarea cols="65" rows="5" id="reponse_reponse<?= $data_quest->id ?>"></textarea>
-                    </div>
-                    <div>
-                      <div style="float:left;margin-right:10px;">
-                      <label><strong>Email (pour suivre la discution)</strong></label><br />
-                      <input type="email" id="email_reponse<?= $data_quest->id ?>" class="form-question" />
-                      </div>
-
-                      <div>
-                      <label><strong>Votre pseudo</strong></label><br />
-                      <input type="text" id="pseudo_reponse<?= $data_quest->id ?>"  class="form-question" />
-                      </div>
-                    </div>
-
-                    <div>
-                    <div style="float:left;margin-right:10px;">
-                      <label><strong>Téléphone (optionnel)</strong></label><br />
-                      <input type="text" id="telephone<?= $data_quest->id ?>" value="" class="form-question" />
-                    </div>
-                    <div>
-                      <label><strong>Votre site web (optionnel)</strong></label><br />
-                      <input type="text" id="siteweb_reponse<?= $data_quest->id ?>" value="" class="form-question" />
-                    </div>
-                    </div>
-                  </div>
-                  <div class="zero"></div>
-                    <center><div class="btn-answer_question create_reponse" id="<?= $data_quest->id ?>">Envoyez votre r&eacute;ponse</div></center>
-                  <div class="zero"></div>
-                  </div>
-              </div>
-              <?php
-                $sql_users_quest = "SELECT url FROM clients WHERE id='".$data_quest->id_user."' ";
-                $req_users_quest = mysql_query($sql_users_quest);
-                $data_users_quest = mysql_fetch_object($req_users_quest);
-                //echo $sql_users_quest;
-                if(!empty($data_users_quest->url)){
-                  echo '<div>Posée par <a href="http://'.$data_users_quest->url.'" target="_blink" >'.$data_quest->pseudo.'</a></div>';
-                }else {
-                  echo '<div>Posée par '.$data_quest->pseudo.'</div>';
-                }
-              ?>
-
-              <?php
-              $sql_reponse = "SELECT id_user,reponse,id,vote,pseudo
-                      FROM q_a_reponses
-                      WHERE id_question='".$data_quest->id."'
-                      AND etat='1'
-                      ORDER BY date_create ASC ";
-              $req_reponse = mysql_query($sql_reponse);
-              $rows_reponse = mysql_num_rows($req_reponse);
-
-              if($rows_reponse > 0){
-                echo '<div style="padding: 15px;">';
-                while($data_reponse = mysql_fetch_object($req_reponse)){
-                //$comment = 'style="overflow: hidden;"';
-                echo '<div style="margin-bottom: 10px; border-bottom: 1px dashed rgb(204, 204, 204); padding: 10px;">
-                    <div class="stl_psudo">R&eacute;ponse de '.$data_reponse->pseudo.' </div>
-                    <div style="float: left; margin-right: 5px;"><img src="../ressources/icons/arrow_right.png"  /></div>
-                    <div style="overflow: hidden;">'.$data_reponse->reponse.'</div>
-                    </div>';
-                }
-                echo '</div>';
-              }else {
-              echo '<div class="block-reponse">  0 R&eacute;ponse pour cette question </div>';
-              }
-              }
-              ?>
-              <input type="hidden" value="<?= $id_question_array ?>" id="id_question_array" />
-
-
-
-        <?php }else {
-           } ?>
-            </div>
-          </div>
-        </div>
-
-         </div>
-         <!--  Fin Questions Reponse  -->
-
-
+			  
+			  
+			  
+			  
+			  
+			  
+			  <!--   Questions Reponse  -->
+			  <div class="grey-block product-page-bottom-prices display-infos" id="Plus_infos">
+				<div class="product-page-top-arrow"></div>
+					<div class="blue-title fl">Questions réponses utilisateurs</div>
+					<a class="goto-page-up fr" href="#poser_question"><img alt="^" src="../ressources/images/goto-page-up.png"></a>
+					<div class="zero"></div>
+					<div id="product-refs" class="product-page-cart-table cart-table"  style="height: auto;">
+					<div style="padding: 10px;">
+						<div style="margin-bottom: 15px;">
+						Il vous manque une information sur la fiche technique ?<br /> <strong><a href="#" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');">Posez votre question</a></strong> sur le produit <?= $pdt["name"] ?>. Techni-Contact, ou l'un de ses utilisateurs vous répondront.
+						</div>
+					
+						<div>
+						<input type="hidden" id="name_products" value="<?php echo $pdt["name"]; ?>" />
+						<input type="hidden" id="ids_products" value="<?php echo $pdt["id"]; ?>" />
+						<input type="hidden" id="url" value="<?php  echo $pdt['url']; ?>" />
+						<?php if($rows_quest > 0){ 
+							$id_question_array = "";
+							while($data_quest = mysql_fetch_object($req_quest)){
+							$id_question_array .= $data_quest->id.'-';
+							echo '<input type="hidden" id="id_question'.$data_quest->id.'" value="'.$data_quest->id.'" />';
+						?>
+							<div class="title_question" id="reponde" onclick="javascript:HN.TC.ShowCreateAccountForm_repondre<?= $data_quest->id ?>('show');">
+								<div class="picto_answer">
+									<?= $data_quest->question ?>
+								</div>
+								<div class="picto_img">
+								<img src="../ressources/icons/page_white_wrench.png" alt="Répondre" title="Répondre" style="margin-right: 5px;" /> <span>Répondre</span></span>
+								</div>
+							</div>
+							
+							<div id="product-reponse<?= $data_quest->id ?>" class="product-page-cart-table cart-table product-reponse">
+								<div id="result_message_reponse<?= $data_quest->id ?>"></div>
+								<div id="reponses_forms<?= $data_quest->id ?>">
+								<div class="blue-title fl" id="answer_title<?= $data_quest->id ?>">Réponse à question sur  produit <?php echo $pdt["name"]; ?></div>
+								<br />
+									<div style="padding: 10px;">
+									<input type="hidden" value="<?= $data_quest->id ?>" id="id_calque" />
+										<div style="margin-bottom: 15px;">
+											<p><strong>Question : </strong><?= $data_quest->question ?>
+											</p>
+										</div>
+								
+										<div>
+											<label><strong>Votre r&eacute;ponse : </strong></label><br />
+											<textarea cols="65" rows="5" id="reponse_reponse<?= $data_quest->id ?>"></textarea>
+										</div>
+										<div>
+											<div style="float:left;margin-right:10px;">
+											<label><strong>Email (pour suivre la discution)</strong></label><br />
+											<input type="email" id="email_reponse<?= $data_quest->id ?>" class="form-question" />
+											</div>
+											
+											<div>
+											<label><strong>Votre pseudo</strong></label><br />
+											<input type="text" id="pseudo_reponse<?= $data_quest->id ?>"  class="form-question" />
+											</div>
+										</div>
+										
+										<div>
+										<div style="float:left;margin-right:10px;">
+											<label><strong>Téléphone (optionnel)</strong></label><br />
+											<input type="text" id="telephone<?= $data_quest->id ?>" value="" class="form-question" />
+										</div>
+										<div>
+											<label><strong>Votre site web (optionnel)</strong></label><br />
+											<input type="text" id="siteweb_reponse<?= $data_quest->id ?>" value="" class="form-question" />
+										</div>
+										</div>
+									</div>
+									<div class="zero"></div>
+										<center><div class="btn-answer_question create_reponse" id="<?= $data_quest->id ?>">Envoyez votre r&eacute;ponse</div></center>
+									<div class="zero"></div>
+									</div>
+							</div>
+							<?php
+								$sql_users_quest = "SELECT url FROM clients WHERE id='".$data_quest->id_user."' ";
+								$req_users_quest = mysql_query($sql_users_quest);
+								$data_users_quest = mysql_fetch_object($req_users_quest);
+								//echo $sql_users_quest;
+								if(!empty($data_users_quest->url)){
+									echo '<div>Posée par <a href="http://'.$data_users_quest->url.'" target="_blink" >'.$data_quest->pseudo.'</a></div>';
+								}else {
+									echo '<div>Posée par '.$data_quest->pseudo.'</div>';
+								}
+							?>
+							
+							<?php 
+							$sql_reponse = "SELECT id_user,reponse,id,vote,pseudo  
+											FROM q_a_reponses  
+											WHERE id_question='".$data_quest->id."'
+											AND etat='1'
+											ORDER BY date_create ASC ";
+							$req_reponse = mysql_query($sql_reponse);
+							$rows_reponse = mysql_num_rows($req_reponse);
+							
+							if($rows_reponse > 0){
+								echo '<div style="padding: 15px;">';
+								while($data_reponse = mysql_fetch_object($req_reponse)){
+								//$comment = 'style="overflow: hidden;"';
+								echo '<div style="margin-bottom: 10px; border-bottom: 1px dashed rgb(204, 204, 204); padding: 10px;">
+										<div class="stl_psudo">R&eacute;ponse de '.$data_reponse->pseudo.' </div>
+										<div style="float: left; margin-right: 5px;"><img src="../ressources/icons/arrow_right.png"  /></div>
+										<div style="overflow: hidden;">'.$data_reponse->reponse.'</div>
+									  </div>';
+								}
+								echo '</div>';
+								echo '</div>';
+							}else {
+							echo '<div class="block-reponse">  0 R&eacute;ponse pour cette question </div>';
+							}
+							}
+							?>
+							<input type="hidden" value="<?= $id_question_array ?>" id="id_question_array" />
+							
+							
+							
+				<?php }else { 
+					 } ?>
+						</div>
+					</div>
+				</div>
+				
+				
+			   </div>
+			   <!--  Fin Questions Reponse  -->
+			   
+			   
               <div class="product-page-bottom-prices mobile-infos">
                 <a class="btn-cart-add-big-pink"<?php if(!TEST): ?> onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Ouverture choix du modèle']);"<?php endif ?> href="<?php echo $pdt["cart_add_url"] ?>">Ajouter au panier</a>
               </div>
              <?php endif // pdt['ref_count'] > 0 ?>
 
-       <?php
-        $sql_products  = "SELECT id_client ,lead_id,photo_equipement,etat,txt_equipement
-                  FROM annuaire_questionnaire
-                WHERE id_produit='".$pdt["id"]."' ";
-        $req_products  = mysql_query($sql_products);
-
-
-        $req_products2  = mysql_query($sql_products);
-        $data_client    = mysql_fetch_object($req_products2);
-
-        $sql_client_verify  = "SELECT etat
-                   FROM annuaire_client
-                   WHERE client_id='".$data_client->id_client."' ";
-        $req_client_verify  = mysql_query($sql_client_verify);
-        $data_client_verify = mysql_fetch_object($req_client_verify);
-        if($data_client_verify->etat == 1){
-
-        $rows_products = mysql_num_rows($req_products);
-        if($rows_products > 0){
-        echo '<div class="grey-block product-page-bottom-related" style="overflow: hidden">
-            <div class="product-page-top-arrow"></div>
-            <div class="blue-title fl">Ils nous font confiance pour ce produit</div>
-            <a class="goto-page-up fr" href="#header"><img alt="^" src="http://test.techni-contact.com/ressources/images/goto-page-up.png"></a>
-            <div class="zero"></div>';
-        while($data_products = mysql_fetch_object($req_products)){
-        $sql_client  = "SELECT id,logo,societe,question_activite,client_id
-                FROM annuaire_client
-                WHERE client_id='".$data_products->id_client."' ";
-        $req_client  = mysql_query($sql_client);
-        $data_client = mysql_fetch_object($req_client);
-        ?>
-        <div  style="padding: 15px;overflow: hidden;">
-          <?php if($data_products->etat == 1){  ?>
-          <div style="margin-bottom: 10px;">
-          <div class="logo_activite" style="float: left; margin-right: 30px;">
-            <?php
-            if(!empty($data_client->logo)){
-              echo '<div style="margin-bottom: 27px;">
-                  <img src="'.URL.''.$data_client->logo.'" style="width: 80px;" />
-                  </div>';
-            }
-            ?>
-            <div class="title_societe">
-          <?php
-  $search    = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
-  $replace   = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
-  $url_final = urlencode(str_replace($search, $replace, strtolower($data_client->societe)));
-          ?>
-            <a href="<?= URL ?>utilisateurs/<?= $data_client->id ?>-<?= $data_client->client_id ?>-<?= $url_final ?>.html">
-            <?= $data_client->societe ?>
-            </a>
-          </div>
-          </div>
-          <?php
-            $txt_equipement = str_replace("\'","'",$data_products->txt_equipement);
-          ?>
-            <div style="overflow: hidden;"><?= nl2br($txt_equipement) ?></div>
-
-          </div>
-
-            <?php
-              if(!empty($data_products->photo_equipement)){
-                echo '<div class="photo_equipement">';
-                  echo '<div><center><img src="'.URL.''.$data_products->photo_equipement.'" style="width: 300px;" /></center></div>';
-                echo '</div>';
-              }
-            }
-            ?>
-        </div>
-              <?php }
-        echo '</div>';
-        }
-        } ?>
-
-
+			 <?php
+			  $sql_products  = "SELECT id_client ,lead_id,photo_equipement,etat,txt_equipement
+							    FROM annuaire_questionnaire 
+								WHERE id_produit='".$pdt["id"]."' ";
+			  $req_products  = mysql_query($sql_products);
+			  
+			  
+			  $req_products2  = mysql_query($sql_products);
+			  $data_client    = mysql_fetch_object($req_products2);
+			  
+			  $sql_client_verify  = "SELECT etat
+									 FROM annuaire_client 
+									 WHERE client_id='".$data_client->id_client."' ";
+			  $req_client_verify  = mysql_query($sql_client_verify);
+			  $data_client_verify = mysql_fetch_object($req_client_verify);
+			  if($data_client_verify->etat == 1){
+			  
+			  $rows_products = mysql_num_rows($req_products);
+			  if($rows_products > 0){
+			  echo '<div class="grey-block product-page-bottom-related" style="overflow: hidden">
+						<div class="product-page-top-arrow"></div>
+						<div class="blue-title fl">Ils nous font confiance pour ce produit</div>
+						<a class="goto-page-up fr" href="#header"><img alt="^" src="'.URL.'ressources/images/goto-page-up.png"></a>
+						<div class="zero"></div>';
+			  while($data_products = mysql_fetch_object($req_products)){
+			  $sql_client  = "SELECT id,logo,societe,question_activite,client_id
+							  FROM annuaire_client 
+							  WHERE client_id='".$data_products->id_client."' ";
+			  $req_client  = mysql_query($sql_client);
+			  $data_client = mysql_fetch_object($req_client);
+			  ?>
+			  <div  style="padding: 15px;overflow: hidden;">
+					<?php if($data_products->etat == 1){  ?>
+					<div style="margin-bottom: 10px;">
+					<div class="logo_activite" style="float: left; margin-right: 30px;">
+						<?php 
+						if(!empty($data_client->logo)){
+							echo '<div style="margin-bottom: 27px;">
+									<img src="'.URL.''.$data_client->logo.'" style="width: 80px;" />
+								  </div>';
+						}
+						?>
+						<div class="title_societe">
+					<?php
+	$search    = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
+	$replace   = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
+	$url_final = urlencode(str_replace($search, $replace, strtolower($data_client->societe)));
+					?>
+						<a href="<?= URL ?>utilisateurs/<?= $data_client->id ?>-<?= $data_client->client_id ?>-<?= $url_final ?>.html">
+						<?= $data_client->societe ?>
+						</a>
+					</div>
+					</div>
+					<?php
+						$txt_equipement = str_replace("\'","'",$data_products->txt_equipement);
+					?>
+						<div style="overflow: hidden;"><?= nl2br($txt_equipement) ?></div>
+					
+					</div>
+					
+						<?php
+							if(!empty($data_products->photo_equipement)){
+								echo '<div class="photo_equipement">';
+									echo '<div><center><img src="'.URL.''.$data_products->photo_equipement.'" style="width: 300px;" /></center></div>';
+								echo '</div>';
+							}
+						}
+						?>
+				</div>
+              <?php } 
+			  echo '</div>';
+			  } 
+			  } ?>
+			 
+			 
              <?php if ($rPdtListCount > 0) : ?>
               <div class="grey-block product-page-bottom-related">
                 <div class="product-page-top-arrow"></div>
@@ -1353,21 +1493,21 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
                 <div class="zero"></div>
                 <ul class="list">
-                 <?php foreach ($rPdtList as $rPdt) :
-          $sql_url  = "SELECT pf.idFamily, ref_name
-                 FROM   products_fr ppf, products_families pf
-                 WHERE  pf.idProduct = ppf.id
-                 AND    ppf.id='".$rPdt['id']."'";
-          $req_url  =  mysql_query($sql_url);
-          $data_url =  mysql_fetch_object($req_url);
-
-         ?>
+                 <?php foreach ($rPdtList as $rPdt) : 
+					$sql_url  = "SELECT pf.idFamily, ref_name
+								 FROM   products_fr ppf, products_families pf
+								 WHERE  pf.idProduct = ppf.id
+								 AND    ppf.id='".$rPdt['id']."'";
+					$req_url  =  mysql_query($sql_url);
+					$data_url =  mysql_fetch_object($req_url);
+								
+				 ?>
                   <li>
                     <div class="name">
-          <?php //echo Utils::get_pdt_fo_url($rPdt['id'], $rPdt['ref_name'], $pdt['cat3_id']) ?>
+					<?php //echo Utils::get_pdt_fo_url($rPdt['id'], $rPdt['ref_name'], $pdt['cat3_id']) ?>
                       <a href="<?= URL.'produits/'.$data_url->idFamily.'-'.$rPdt['id'].'-'.$data_url->ref_name ?>.html">
-              <?php echo $rPdt['name'] ?>
-            </a>
+							<?php echo $rPdt['name'] ?>
+					  </a>
                     </div>
                     <div class="desc-autre">
                       <?php echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($rPdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,150))."..." ?>
@@ -1376,36 +1516,36 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                  <?php endforeach ?>
               </div>
              <?php endif // $rPdtListCount > 0 ?>
-
-
-
+              
+			  
+			 
               <?php if(!empty ($pdt['average_note'])) { ?>
               <div class="grey-block product-page-bottom-notation" id="block-product-notation">
                 <div class="product-page-top-arrow"></div>
                 <h4 class="blue-title fl">Avis clients pour <?php echo $pdt["name"]; ?></h4>
                 <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
                 <div class="zero"></div>
-
+                
                 <!--<div>Avis pour <?php echo $pdt["name"]; ?></div>-->
-                <div class="product-page-notation-list" itemscope="itemscope" itemtype="http://schema.org/Review">
-                  <span class="hidden" itemprop="itemReviewed"><?php echo $pdt["name"]; ?></span>
-                  <span class="hidden" itemprop="reviewRating"><?php echo round(($pdt["average_note"]/2),1); ?></span>
-                  <span class="hidden" itemprop="thumbnailUrl"><?php echo $pdt["pic_url"][0]["thumb_small"]; ?></span>
+                <div class="product-page-notation-list" itemscope="itemscope" itemtype="http://data-vocabulary.org/Review">
+                  <span class="hidden"  itemprop="itemreviewed"><?php echo $pdt["name"]; ?></span>
+                  <span class="hidden"  itemprop="rating"><?php echo round(($pdt["average_note"]/2),1); ?></span>
+                  <span class="hidden"  itemprop="photo"><?php echo $pdt["pic_url"][0]["thumb_small"]; ?></span>
                   <!--Il y a <?php echo $pdt['nb_comments']; ?> avis pour le produit <?php echo $pdt["name"]; ?>.<br />
                   Note moyenne : <?php  showStarRater($pdt['average_note']); ?><br />-->
-                  <?php
-
-          if(!empty($notations)){
-          foreach($notations as $key => $notation){
-            $volume[$key]  = $notation['timestamp'];
-          }
-          array_multisort($volume, SORT_DESC, $notations);
-          //var_dump($notations);
-          ?>
-                    <?php foreach($notations as $notation){
-
-          ?>
-
+                  <?php 
+				  
+				  if(!empty($notations)){
+					foreach($notations as $key => $notation){
+						$volume[$key]  = $notation['timestamp'];
+					}
+					array_multisort($volume, SORT_DESC, $notations);
+					//var_dump($notations);
+				  ?>
+                    <?php foreach($notations as $notation){ 
+						
+					?>
+						
                       <?php echo '<img class="cat3-feedback-logo-client" src="'.$res_url.'images/upper-grey-account-logo.png" alt="face" /><span style="color: #333333">'.$notation["prenom"].'</span> <span  style="color: #999999">le '.date('d/m/Y', $notation["timestamp"]).'</span> ';
                         showStarRater($notation["note"]);
                       echo '<div class="product-page-feedback-comment">'.$notation["comment"].'</div>';
@@ -1414,7 +1554,7 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 </div>
               </div>
               <?php } ?>
-
+              
               <?php if ($pdt["comments_count"] > 0) { ?>
               <div class="grey-block product-page-bottom-customer-askings">
                 <div class="product-page-top-arrow"></div>
@@ -1422,7 +1562,7 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
                 <div class="zero"></div>
                 <div id="product-comments" class="comments">
-
+                  
                   <ul class="list grey">
                    <?php foreach ($pdt["comments"] as $comment) : ?>
                     <li class="comment">
@@ -1433,7 +1573,7 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 </div>
               </div>
               <?php } ?>
-
+              
              <?php if ($lPdtListCount > 0) : ?>
               <div class="grey-block product-page-bottom-linked">
                 <div class="product-page-top-arrow"></div>
@@ -1454,29 +1594,29 @@ $pdt['priceTTC'] = $tvaValues['priceTTC'];
                 <div class="zero"></div>
               </div>
              <?php endif // $lPdtListCount > 0 ?>
-
+             
               <div class="zero"></div>
             </div><!-- /.product-page-bottom-right-col -->
             <div class="zero"></div>
           </div><!-- /.product-page-bottom-zone -->
-
-
-
+			
+			   
+			
           <?php if (SHOW_TAGS) { ?>
             <img src="<?php echo STATS_URL."?".$pdt["id"]."-".time()."-".$pdt["adv_id"]."-".$pdt["cat3_id"]."-".$pdt["idtc"]; ?>" width="0" height="0" style="display: none" />
           <?php } ?>
         <div id="page-product-zoom-image-dialog" title=""></div>
         <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
-        <span class="hidden" itemprop="category" content="<?php echo $pdt['cat3_name']; ?>"><?php echo $pdt['cat3_name']; ?></span>
-        <span class="hidden" itemprop="sku" content="<?php echo $pdt['id']; ?>"><?php echo $pdt['id']; ?></span>
-        <div class="hidden" itemprop="brand" itemscope="itemscope" itemtype="http://schema.org/Organization">
+        <span class="hidden" itemprop = "category"   content="<?php echo $pdt['cat3_name']; ?>"><?php echo $pdt['cat3_name']; ?></span>
+        <span class="hidden" itemprop = "identifier" content="<?php echo $pdt['id']; ?>"><?php echo $pdt['id']; ?></span>
+        <div class="hidden"  itemprop = "brand"  itemscope="itemscope" itemtype="http://data-vocabulary.org/Organization">
           <span itemprop="name" content="Techni-Contact">Techni-Contact</span>
           <span itemprop="url" content="http://www.techni-contact.com">http://www.techni-contact.com</span>
-          <span itemprop="telephone" content="01 55 60 29 29">01 55 60 29 29</span>
+          <span itemprop="tel" content="01 55 60 29 29">01 55 60 29 29</span>
         </div>
       </div><!-- /.product-page -->
-
-
+     
+      
 <?php require(SITE . "blocks-right.php"); ?>
 
 </div><!-- /.white-bg -->
@@ -1490,12 +1630,12 @@ if(!empty($value_id)){
 ?>
 
 HN.TC.ShowCreateAccountForm_repondre<?= $value_id ?> = function(){
-    $("#product-reponse<?= $value_id ?>").dialog("open");
-    $("#id_calque").val('<?= $value_id ?>');
-     var answer_title = $("#answer_title<?= $value_id ?>").text();
-     $("#answer_title<?= $value_id ?>").hide();
-     $("#ui-dialog-title-product-reponse<?= $value_id ?>").html(answer_title);
-
+		$("#product-reponse<?= $value_id ?>").dialog("open");
+		$("#id_calque").val('<?= $value_id ?>');
+		 var answer_title = $("#answer_title<?= $value_id ?>").text();
+		 $("#answer_title<?= $value_id ?>").hide();
+		 $("#ui-dialog-title-product-reponse<?= $value_id ?>").html(answer_title);
+		
 }
 
   $("#product-reponse<?= $value_id ?>").dialog({
@@ -1523,137 +1663,345 @@ function scrollToBottom(id){
 }
 
 $("#poser_question_forms").click(function(){
-    scrollToBottom('question_forms');
-    $("#question_forms").show("slow");
-
+	  scrollToBottom('question_forms');
+	  $("#question_forms").show("slow");  
+		
 });
 
 
 $( ".create_reponse" ).click(function() {
-  var id = this.id;
-  var reponse 		= $("#reponse_reponse"+id).val();
-  var email	 		= $("#email_reponse"+id).val();
-  var pseudo	 		= $("#pseudo_reponse"+id).val();
-  var telephone		= $("#telephone"+id).val();
-  var siteweb			= $("#siteweb_reponse"+id).val();
-  var id_question 	= $("#id_question"+id).val();
-  var name_products 	= $("#name_products").val();
-  var url	 			= $("#url").val();
-  var ids_products	= $("#ids_products").val();
-
-  var textAreaString = reponse.replace(/\n\r/g,"<br />");
-  var textAreaString = reponse.replace(/\n/g,"<br />");
-
-  var n = pseudo.length;
-  var q = reponse.length;
-
-
-  if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
+	var id = this.id;
+	var reponse 		= $("#reponse_reponse"+id).val();
+	var email	 		= $("#email_reponse"+id).val();
+	var pseudo	 		= $("#pseudo_reponse"+id).val();
+	var telephone		= $("#telephone"+id).val();
+	var siteweb			= $("#siteweb_reponse"+id).val();
+	var id_question 	= $("#id_question"+id).val();
+	var name_products 	= $("#name_products").val();
+	var url	 			= $("#url").val();
+	var ids_products	= $("#ids_products").val();
+	
+	var textAreaString = reponse.replace(/\n\r/g,"<br />");
+	var textAreaString = reponse.replace(/\n/g,"<br />");
+	
+	var n = pseudo.length;
+	var q = reponse.length;
+	
+	
+	if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
          valid_forms_email = 1;
     }else {
          alert("Email invalide !");
          valid_forms_email = 0;
     }
-
-  if( (pseudo != '' || pseudo == null) && n>2 ){
-   valid_forms_pseudo = 1;
-  }else {
-    alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
+	
+	if( (pseudo != '' || pseudo == null) && n>2 ){
+	 valid_forms_pseudo = 1;
+	}else {
+		alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
      valid_forms_pseudo = 0;
-  }
-
-  if( (reponse != '' || reponse == null) && q>9 ){
-   valid_forms_question = 1;
-  }else {
-    alert("Reponse est obligatoire 'Minimum 10 caractère' !");
+	}
+	
+	if( (reponse != '' || reponse == null) && q>9 ){
+	 valid_forms_question = 1;
+	}else {
+		alert("Reponse est obligatoire 'Minimum 10 caractère' !");
      valid_forms_question = 0;
-  }
-
-  if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
-    $.ajax({
-        url: '../ajax_question/ajax_create_reponse.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&reponse="+textAreaString+"&pseudo="+pseudo+"&url="+url+'&id_question='+id_question+'&telephone='+telephone,
-        type: 'GET',
-        success:function(data){
-          $('#result_message_reponse'+id).html(data);
-          $('#reponses_forms'+id).hide();
-        }
-    });
-  }
+	}
+	
+	if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
+		$.ajax({
+				url: '../ajax_question/ajax_create_reponse.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&reponse="+textAreaString+"&pseudo="+pseudo+"&url="+url+'&id_question='+id_question+'&telephone='+telephone,
+				type: 'GET',
+				success:function(data){
+					$('#result_message_reponse'+id).html(data);
+					$('#reponses_forms'+id).hide();
+				}
+		});
+	}
 
 });
+
+
+$("#telephone_de").click(function() {
+	$('#telephone_de').removeAttr('placeholder');
+});
+/*
+$("#email_de").click(function() {
+	$('#email_de').removeAttr('placeholder');
+});
+*/
+$("#demande").click(function() {
+	$('#demande').removeAttr('placeholder');
+});
+
+$("#nom").click(function() {
+	$('#nom').removeAttr('placeholder');
+});
+
+$("#prenom").click(function() {
+	$('#prenom').removeAttr('placeholder');
+});
+
+
+
+function create_demande(type){
+
+	var demande 		= $("#demande").val();
+	//var email	 		= $("#email_de").val();
+	var email	 		= "";
+	var telephone 		= $("#telephone_de").val();
+	var nom	    		= $("#nom").val();
+	//var prenom			= $("#prenom").val();
+	var prenom			= "";
+	var name_products 	= $("#name_products").val();
+	var ids_products	= $("#ids_products_de").val();
+	var id_famillies	= $("#id_famillies").val();
+	var id_advertiser	= $("#id_advertiser").val();
+	var typeLead		= type;
+
+
+	var textAreaString = demande.replace(/\n\r/g,"<br />");
+	var textAreaString = demande.replace(/\n/g,"<br />");
+	
+	var n = nom.length;
+	//var q = prenom.length;
+	var d = demande.length;
+	
+	/*
+	if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
+         valid_forms_email = 1;
+    }else {
+         //alert("Email invalide !");
+		  $("#email_de").css("border", "2px solid red");
+		  $("#email_de").attr("placeholder", "Merci de saisir votre email !");
+         valid_forms_email = 0;
+    }
+	*/
+	if( (nom != '' || nom == null) && n>2 ){
+	 valid_forms_nom = 1;
+	}else {
+		$("#nom").css("border", "2px solid red");
+		$("#nom").attr("placeholder", "Merci de saisir votre Nom");
+     valid_forms_nom = 0;
+	}
+	
+	if( (demande != '' || demande == null) && d>9 ){
+	 valid_forms_demande = 1;
+	}else {
+		$("#demande").css("border", "2px solid red");
+		$("#demande").attr("placeholder", "Merci de saisir votre question");
+     valid_forms_demande = 0;
+	}
+	
+	if( (telephone != '' || telephone == null) ){
+	 valid_forms_tel = 1;
+	}else {
+		
+		$("#telephone_de").css("border", "2px solid red");
+		$("#telephone_de").attr("placeholder", "Merci de saisir votre tel");
+     valid_forms_tel = 0;
+	}
+	/*
+		if( (prenom != '' || prenom == null) && q>2 ){
+		 valid_forms_prenom = 1;
+		}else {
+			$("#prenom").css("border", "2px solid red");
+			$("#prenom").attr("placeholder", "Merci de saisir votre prénom");
+		 valid_forms_prenom = 0;
+		}
+	*/	
+	if( valid_forms_nom == 1  && valid_forms_demande == 1 && valid_forms_tel == 1 ){
+		$.ajax({
+				url: '<?= URL ?>ajax_question/ajax_create_demande.php?textAreaString='+textAreaString+'&email='+email+"&telephone="+telephone+"&nom="+nom+"&prenom="+prenom+"&ids_products="+ids_products+"&id_famillies="+id_famillies+"&id_advertiser="+id_advertiser+"&typeLead="+typeLead,
+				type: 'GET',
+				beforeSend: function() {
+					$('#formss-question_demande').hide();
+					$('#txt_infos').hide();
+					$('.pointer_img').hide();
+					$('#loding_img').show();
+        			
+				},				
+				success:function(data){
+					$('#result_message_demande').show();
+					$('#result_message_demande').html(data);
+				},
+				complete: function() {
+					$('#loding_img').hide();
+				}
+		});	
+	}
+}
+
 
 $( "#create_users" ).click(function() {
-  var question = $("#question").val();
-  var email	 = $("#email").val();
-  var pseudo	 = $("#pseudo").val();
-  var siteweb	 = $("#siteweb").val();
-  var url	 	 = $("#url").val();
-  var telephone= $("#telephone").val();
-  var name_products	 = $("#name_products").val();
-  var ids_products	 = $("#ids_products").val();
-  var n = pseudo.length;
-  var q = question.length;
-
-  var textAreaString = question.replace(/\n\r/g,"<br />");
-  var textAreaString = question.replace(/\n/g,"<br />");
-
-  if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
+	var question = $("#question").val();
+	var email	 = $("#email").val();
+	var pseudo	 = $("#pseudo").val();
+	var siteweb	 = $("#siteweb").val();
+	var url	 	 = $("#url").val();
+	var telephone= $("#telephone").val();
+	var name_products	 = $("#name_products").val();
+	var ids_products	 = $("#ids_products").val();
+	var n = pseudo.length;
+	var q = question.length;
+	
+	var textAreaString = question.replace(/\n\r/g,"<br />");
+	var textAreaString = question.replace(/\n/g,"<br />");
+	
+	if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
          valid_forms_email = 1;
     }else {
          alert("Email invalide !");
          valid_forms_email = 0;
     }
-
-  if( (pseudo != '' || pseudo == null) && n>2 ){
-   valid_forms_pseudo = 1;
-  }else {
-    alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
+	
+	if( (pseudo != '' || pseudo == null) && n>2 ){
+	 valid_forms_pseudo = 1;
+	}else {
+		alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
      valid_forms_pseudo = 0;
-  }
-
-  if( (question != '' || question == null) && q>9 ){
-   valid_forms_question = 1;
-  }else {
-    alert("Question est obligatoire 'Minimum 10 caractère' !");
+	}
+	
+	if( (question != '' || question == null) && q>9 ){
+	 valid_forms_question = 1;
+	}else {
+		alert("Question est obligatoire 'Minimum 10 caractère' !");
      valid_forms_question = 0;
-  }
-
-
-  if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
-    $.ajax({
-        url: '../ajax_question/ajax_create_users.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&question="+textAreaString+"&pseudo="+pseudo+"&url="+url+"&telephone="+telephone,
-        type: 'GET',
-        beforeSend: function() {
-          $("#create_users").remove();
-          $("#loding").show();
-        },
-        success:function(data){
-          $('#parag_desc').hide();
-          $('#formss-question').hide("slow");
-          $('#result_message').html(data);
-        }
-    });
-  }
+	}
+	
+	
+	if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
+		$.ajax({
+				url: '../ajax_question/ajax_create_users.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&question="+textAreaString+"&pseudo="+pseudo+"&url="+url+"&telephone="+telephone,
+				type: 'GET',
+				beforeSend: function() {
+					$("#create_users").remove();
+					$("#loding").show();
+				},
+				success:function(data){
+					$('#parag_desc').hide();
+					$('#formss-question').hide("slow");
+					$('#result_message').html(data);
+				}
+		});
+	}
 });
 
-var product;
-function initTreepodia ()
-{
-   product = Treepodia.getProduct('UA-TECHNICONTACT','<?php echo $pdt['id']; ?>'); //UA-TECHNICONTACT
-   product.requestVideo(handleVideo);
+function onblurF(){
+
+	var nomDEE  	= $("#nomDEE").val();
+	var telDEE		= $("#telDEE").val();
+
+	if((nomDEE !='') && (telDEE !='') ){
+		$( ".btnSendDEE" ).addClass( "valideBtn" );
+		//$( ".btnSendDEE" ).attr("id","sendPrixExpress");
+	}else{
+		$( ".btnSendDEE" ).removeClass( "valideBtn" ); 
+		//$( ".btnSendDEE" ).removeClass( "sendPrixExpress" ); 
+	}
 }
+
+$(document).ready(function(){
+	var ipClient  =  '<?= $_SERVER["REMOTE_ADDR"] ?>';
+	
+	$.ajax({
+		url: '<?= URL ?>ressources/ajax/AJAX_update_ip_express.php?action=selectCount&ipClient='+ipClient,  
+		type: 'GET',
+		success:function(data){
+			if(data == 2){
+				$("#inputData").val(data);
+				//$('#toolbar').stop().animate({'bottom': '-326px'}, 200);
+				//$('#toolbar .open').stop().animate({'bottom': '326px'}, 200);
+			}
+		}
+	});	
+});	
+
+$(".arrow_carrot-down").click(function(){ 
+	var ipClient  =  '<?= $_SERVER["REMOTE_ADDR"] ?>';
+	var idProducts   =  $("#ids_products_de").val();
+	$.ajax({
+		url: '<?= URL ?>ressources/ajax/AJAX_update_ip_express.php?action=addCount&ipClient='+ipClient+'&idProducts='+idProducts,  
+		type: 'GET',
+		success:function(data){
+			if(data == 2){
+				$("#inputData").val(data);
+			}
+		}
+	});
+	
+});	
+
+
+$(".btnSendDEE").click(function(){
+	var messageDEE		= $("#messageDEE").val();	
+	var nomDEE  		= $("#nomDEE").val();
+	var telDEE			= $("#telDEE").val();
+	var idCategory		= $("#idCategory").val();
+	var ids_products	= $("#ids_products_de").val();
+	var id_famillies	= $("#id_famillies").val();
+	var id_advertiser	= $("#id_advertiser").val();
+	var typeLead		= $("#typeLead").val();
+	
+	
+		if( (telDEE != '' || telDEE == null) ){
+			valid_forms_tel = 1;
+		}else {
+			
+			$("#telDEE").css("border", "2px solid red");
+			$("#telDEE").attr("placeholder", "Tel obligatoire");
+			valid_forms_tel = 0;
+		}
+		
+		if( (nomDEE != '' || nomDEE == null) ){
+			valid_forms_nom = 1;
+		}else {
+			$("#nomDEE").css("border", "2px solid red");
+			$("#nomDEE").attr("placeholder", "Nom obligatoire");
+			valid_forms_nom = 0;
+		}
+		
+	
+	if(valid_forms_nom == 1 && valid_forms_tel == 1 ){
+		$.ajax({
+			url: '../ajax_question/ajax_prix_express.php?nomDEE='+nomDEE+'&telDEE='+telDEE+'&idCategory='+idCategory+'&typeLead='+typeLead+'&ids_products='+ids_products+'&id_famillies='+id_famillies+'&id_advertiser='+id_advertiser+'&messageDEE='+messageDEE,
+			type: 'GET',
+			beforeSend: function() {
+				$(".formDesvisEE").hide();
+				$("#lodingDEE").show();
+			},
+			success:function(data){
+				$(".formDesvisEE").hide();
+				$('#resultSendDEE').html(data);
+			},
+			complete: function() {
+				$('#lodingDEE').hide();
+			}
+		});
+	}
+	
+});
+
+
+var product; 
+function initTreepodia () 
+{ 
+   product = Treepodia.getProduct('UA-TECHNICONTACT','<?php echo $pdt['id']; ?>'); //UA-TECHNICONTACT
+   product.requestVideo(handleVideo); 
+} 
 
 var $video;
 var video_popup;
-function handleVideo(videoController)
-{
+function handleVideo(videoController) 
+{ 
  $video = videoController;
- if ($video.hasVideos())
-   {
-     $video.setPlayer("BlackGreen"); $video.setChromeless(false);
+ if ($video.hasVideos()) 
+   { 
+     $video.setPlayer("BlackGreen"); $video.setChromeless(false);  
      $video.setWidth(564); $video.setHeight(423);
      video_popup = $video;
-     video_popup.setAutoplay(false);
+     video_popup.setAutoplay(false); 
      if($('#desc-zone-video').length){
       $('#desc-zone-video').html('');
      }else{
@@ -1667,33 +2015,33 @@ function handleVideo(videoController)
       $('#video_code').html('');
       $video.show('video_code');
       $video.show('desc-zone-video');
-   }
+   } 
 }
 // Include Treepodia popup dialog Script
 document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa05szpct2ws.cloudfront.net/utils/trpdDialog/video-dialog.min.js' type='text/javascript'%3E%3C/script%3E"));
 // Include Treepodia main Script
 document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa05szpct2ws.cloudfront.net/TreepodiaAsyncLoader.js' type='text/javascript'%3E%3C/script%3E"));
-
+  
 </script>
 
-<!-- /treepodia video code -->
-
-<script>
-
+<!-- /treepodia video code -->  
+    
+<script> 
+  
   $(".product-page-pic-zone").on(
     'click', "a[rel^='fancyboxvideo']", function(e){
     var video_code = $('#video_code');
     var video_url = video_code.find('embed, iframe').attr('src');
-
+ 
     if($video.hasVideos()) // treepodia popup
       showVideoDialog('<?php echo addslashes($pdt['name']);?>', $video, '#FFFFFF', false);
     else if(typeof(video_url) != 'undefined')
       $.fancybox({ // database embeded video
       'type' : 'iframe',
-            'zoomOpacity'           : true,
-            'centerOnScroll'        : false,
-            'padding'           : 0,
-            'zoomSpeedIn'           : 500,
+            'zoomOpacity'           : true, 
+            'centerOnScroll'        : false, 
+            'padding'           : 0, 
+            'zoomSpeedIn'           : 500, 
             'zoomSpeedOut'          : 500,
             'type' : 'iframe',
         // hide the related video suggestions and autoplay the video
@@ -1701,7 +2049,12 @@ document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa0
         })
         e.preventDefault();
         return false;
-        });
+        }); 
+		   
+		$(".ui-dialog").draggable();
+		$(".ui-widget").draggable();
+		$(".ui-widget-content").draggable();
+		$(".ui-corner-all").draggable();
 </script>
 
 <!-- /treepodia video code -->

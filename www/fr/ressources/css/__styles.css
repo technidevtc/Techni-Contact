@@ -19,9 +19,7 @@ a.color-pink:hover {text-decoration: underline; color: #c21458;}
 a.color-orange:hover {text-decoration: underline; color: #f37830;}
 .very-big-blue-title{font: normal 29px georgia, serif; color: #0071bc;}
 .bigger-blue-title{font: normal 26px georgia, serif; color: #0071bc; margin-bottom: 7px}
-.bigger-blue-title h1{font: normal 26px georgia, serif; color: #0071bc; margin-bottom: 7px}
 .big-blue-title{font: normal 24px georgia, serif; color: #0071bc;}
-.big-blue-title h1{font: normal 24px georgia, serif; color: #0071bc;    top: 0 !important;}
 .medium-blue-title{font: normal 21px georgia, serif; color: #0071bc;}
 .blue-title{font: normal 18px georgia, serif; color: #0071bc;}
 .blue-small-title, .blue-small-title:hover{font: normal 16px georgia, serif; color: #0071bc;}
@@ -135,7 +133,6 @@ iframe#print-page{display: none}
 #ajax-pdt-list .grey-block.product:hover { background-color: #eeeeee }
 
 .grey-block-title{color: #0071bc; font-family: georgia, serif; font-size: 18px; position: relative; top: 5px; left: 13px; width: 700px}
-.grey-block-title h1{color: #0071bc; font-family: georgia, serif; font-size: 18px; position: relative; top: 5px;  width: 700px;    font-weight: normal;}
 .grey-block-inlay{width: 672px; margin: 26px auto 0px; position: relative; left: -8px}
 .grey-block-wide-inlay{ margin: 26px auto 0px; position: relative;}
 .grey-block-pdt{width: 146px; margin: 0 11px; display: inline;float: left; text-align: center; max-height: 228px}
@@ -1435,7 +1432,6 @@ h1 { float: none; top: 0 }
 .right-panel { float: none; width: auto }
 .blue-smaller-title, .blue-smaller-title:hover { font-size: 16px }
 .bigger-blue-title { font-size: 25px; margin-bottom: 5px }
-.bigger-blue-title h1 { font-size: 25px; margin-bottom: 5px }
 .medium-blue-title { font-size: 20px }
 button.gb135, button.gb135:hover { width: 112px }
 #outer-frame { left: 0; width: auto }
@@ -2569,7 +2565,7 @@ placeholder {
 }
 
 #close-send-express-ajax {
-	margin-top: -40px;
+	margin-top: 40px;
     text-align: center;
     color: #4027ff;
     font-size: 18px;

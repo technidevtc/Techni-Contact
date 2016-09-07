@@ -2745,11 +2745,6 @@ HN.TC.ShowCatalogueForm = function(){
   $("#show-catalogue-form").dialog("open");
 }
 
-HN.TC.ShowContacteEquipeForm = function(){
-  $("#show-contact-equipe-form").dialog("open");
-}
-
-
 HN.TC.ShowCreateAccountForm_create_question = function(){
 
   $("#create-question").dialog("open");
@@ -2760,34 +2755,9 @@ HN.TC.ShowCreateAccountForm_create_question = function(){
   $("#ui-dialog-title-create-question").html(answer_title);
 }
 
-HN.TC.ShowCreateAccountForm_create_question_annonceur = function(){
-
-  $("#create-question-annonceur").dialog("open");
-  $('#parag_desc').show();
-
-  var answer_title = $("#title_quest_bar").text();
-  $("#title_quest_bar").hide();
-  $("#ui-dialog-title-create-question-annonceur").html(answer_title);
-  
-  $('#formss-question_demande').show();
-  $('#txt_infos').show();
-  $('.pointer_img').show();
-  $("#result_message_demande").empty();
-}
-
 function close_popup_create(){
 	$("#create-question").dialog("close");
 }
-
-function close_popup_contact_equipe(){
-	$("#show-contact-equipe-form").dialog("close");
-}
-
-
-function close_popup_create_annonceur(){
-	$("#create-question-annonceur").dialog("close");
-}
-
 
 function close_popup_send_contact(){
 	$("#contactez-nous-form-dialog").dialog("close");
@@ -2797,10 +2767,6 @@ function close_popup_send_commande(){
 	$("#show-catalogue-form").dialog("close");
 }
 
-function close_popup_devis_express(){
-	$("#create-question-annonceur").dialog("close");
-	$("#show-contact-equipe-form").dialog("close");
-}
 
 function close_popup_repondre(){
 	var id_calque = $("#id_calque").val();
@@ -3062,26 +3028,7 @@ $(function(){
     modal: true,
     draggable: false,
     resizable: false
-  }); 
-  
-  $("#show-contact-equipe-form").dialog({
-    width: 582,
-    autoOpen: false,
-    modal: true,
-    draggable: false,
-    resizable: false
   });
-  
-  $("#create-question-annonceur").dialog({
-    width: 538,
-	height: 310,
-    autoOpen: false,
-    modal: true,
-    draggable: false,
-    resizable: false
-  });
-  
-  
   $("#saved-products-list-dialog").dialog({
     width: 430,
     height: 370,

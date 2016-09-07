@@ -6,12 +6,12 @@ HN.TC.URLinfos = new HN.URLinfos();
 // Constants
 HN.TC.Locals = {};
 
-HN.TC.Locals.URL = "http://test.techni-contact.com/";
-HN.TC.Locals.SECURE_URL = "https://secure-test.techni-contact.com/fr/";
+HN.TC.Locals.URL = "http://www.techni-contact.com/";
+HN.TC.Locals.SECURE_URL = "https://secure.techni-contact.com/fr/";
 HN.TC.Locals.AccountURL = HN.TC.Locals.SECURE_URL+"compte/";
 HN.TC.Locals.OrderURL = HN.TC.Locals.SECURE_URL+"commande/";
 HN.TC.Locals.RessourcesURL = (HN.TC.URLinfos.protocol == "http" ? HN.TC.Locals.URL : HN.TC.Locals.SECURE_URL) + "ressources/";
-HN.TC.Locals.Be2BillURL = "https://secure-test.be2bill.com/front/form/process";
+HN.TC.Locals.Be2BillURL = "https://secure-magenta1.be2bill.com/front/form/process.php";
 
 HN.TC.Locals.AJAX_Cat3ProductsView = HN.TC.Locals.URL + "product-list.php";
 

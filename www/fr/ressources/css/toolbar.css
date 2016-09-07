@@ -1,0 +1,158 @@
+#toolbar{
+    display: block;
+    height: 204px;
+    width: 280px;
+    position: fixed;
+    bottom: -326px;
+    visibility: visible;
+    font-family: 'Raleway', sans-serif! important;
+    z-index: 100001;
+    box-sizing: border-box;
+    background-color: #5d4646;
+}
+
+#toolbar .image {
+    position: relative;
+    z-index: 20;
+}
+
+.btnSendDEE {
+	background-color: #95908d;
+    width: 100px;
+    padding: 6px;
+    text-align: center;
+    border-radius: 10px;
+    margin-left: 55px;
+    font-family: arial;
+    font-size: 13px;
+    color: #bfbfbf;
+}
+
+.valideBtn {
+	background-color: #a3c177 ;
+	font-family: arial;
+    font-size: 13px;
+	cursor:pointer;
+	color: #fff;
+}
+
+#toolbar span.open{
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: #ffffff;
+    display: inline-block;
+    vertical-align: middle;
+    background-color: #5d4646;
+    text-decoration: none;
+    padding: 18px 16px 16px 25px;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    position: absolute !important;
+    bottom: 0;
+    z-index: 10;
+	padding:5px;
+	border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.form-devisExpress {
+	padding: 20px;
+	color: #fff;
+    
+}
+
+.form-devisExpress{
+	padding: 20px;
+    color: #fff;
+}
+
+.titleDevisEE{
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 15px;
+    font-family: arial;
+
+}
+
+#toolbar span.open span{
+    display: block;
+	font-weight: bold;
+    text-align: center;
+    margin: 0px 0px 12px 0px;
+}
+
+#toolbar span.open span.opener{
+    margin: 0px;
+}
+
+#toolbar_button {
+    position: absolute;
+    top: -17px;
+    left: -17px;
+    height: 34px;
+    width: 34px;
+    background-color: #e5735c;
+    border-radius: 50%;
+    z-index: 30;
+    text-align: center;
+    display: table;
+    cursor: pointer;
+}
+
+#toolbar_button .arrow_carrot-down {
+    color: #fff;
+    display: table-cell;
+    vertical-align: middle;
+    font-size: 17px;
+}
+
+.arrow_carrot-down {
+	background-image: url("../images/cd-oriental-sprite.png")!important;
+    background-position: 10px -355px!important;
+    background-repeat: no-repeat;
+}
+
+#toolbar span.open {
+    padding:10 px;
+    width:224px;
+    height:25px;
+}
+
+.shader-left {
+    position:absolute;
+    right:-160px;
+    width: 0; 
+    height: 0; 
+    border-top: 0px solid transparent;
+    border-bottom: 150px solid transparent; 
+    border-right:150px solid rgba(255,255,255,.15); 
+    -webkit-transition:right .1s ease-out, border .1s ease-out;
+    transition:right .4s cubic-bezier(0.24, 0.91, 0.36, 1), border .1s ease-out;
+	z-index: -9999999;
+}
+
+.image a:hover .shader-left{
+    border-bottom-width: 170px;
+    border-right-width: 170px;
+}
+
+#toolbar_button:hover {
+    background-color:#dc5d42;
+}
+
+#toolbar .svg {
+    position:absolute;
+    display:block;
+    top:40px;
+    left:50%;
+	-ms-transform:translateX(-50%);
+	-webkit-transform:translateX(-50%);
+    transform:translateX(-50%);
+}
+
+#toolbar .svg svg{
+    width:70px;
+    height:60px;
+}
