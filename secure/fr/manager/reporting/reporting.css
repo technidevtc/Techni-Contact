@@ -139,3 +139,15 @@ table.reporting thead{
 table.reporting thead td{
   padding : 0 5px;
 }
+.titleTab{
+	font-weight: bold;
+    font-size: 14px;
+    margin-bottom:5px;
+}
+
+.titleTabRessource{
+	font-weight: bold;
+    font-size: 14px;
+    
+}
+

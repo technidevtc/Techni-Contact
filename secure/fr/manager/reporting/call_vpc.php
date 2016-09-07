@@ -565,17 +565,18 @@ if(isset($_GET['date_start'])){
 			
 			$rows_total_ff_relance 		+= $total_sortant_final;
 			
-			
-			$sql_not_called  = "SELECT DISTINCT(client_id) as client_id 
+			//GROUP BY client_id
+			//DISTINCT(client_id) as
+			$sql_not_called  = "SELECT  id 
 								FROM call_spool_vpc 
 								WHERE call_result='not_called'
 								AND assigned_operator='".$data_relance_comm->assigned_operator."'
 								AND call_type='1'
-								GROUP BY client_id";
+								";
 			$req_not_called  =  mysql_query($sql_not_called);
 			$rows_not_called =  mysql_num_rows($req_not_called);
 			$rows_not_called_ff_relance 		+= $rows_not_called;
-			
+			// echo $sql_not_called.'<br />';
 			$sql_absent   = "SELECT DISTINCT(client_id) as client_id 
 								FROM call_spool_vpc 
 								WHERE call_result='absence'
@@ -583,6 +584,7 @@ if(isset($_GET['date_start'])){
 								AND call_type='1'
 								AND calls_count < 3
 								GROUP BY client_id";
+			
 			$req_absent   =  mysql_query($sql_absent);
 			$rows_absent  =  mysql_num_rows($req_absent);
 			$rows_absent_ff_relance 		+= $rows_absent;
@@ -736,12 +738,12 @@ if(isset($_GET['date_start'])){
 			
 			$rows_total_ff_feedback 		+= $total_sortant_final;
 			
-			$sql_not_called  = "SELECT DISTINCT(client_id) as client_id 
+			$sql_not_called  = "SELECT id
 								FROM call_spool_vpc 
 								WHERE call_result='not_called'
 								AND assigned_operator='".$data_relance_comm->assigned_operator."'
 								AND call_type IN ('2','6')
-								GROUP BY client_id";
+								";
 			$req_not_called  =  mysql_query($sql_not_called);
 			$rows_not_called =  mysql_num_rows($req_not_called);
 			$rows_not_called_ff_feedback 		+= $rows_not_called;
@@ -916,14 +918,14 @@ if(isset($_GET['date_start'])){
 			
 			$rows_total_ff_rdv 		+= $total_sortant_final;
 			
-			
-			$sql_not_called  = "SELECT DISTINCT(client_id) as client_id 
+			//DISTINCT(client_id) as client_id
+			$sql_not_called  = "SELECT  id
 								FROM call_spool_vpc 
 								WHERE call_result='not_called'
 								AND assigned_operator='".$data_relance_comm->assigned_operator."'
 								AND call_type='4'
 								AND timestamp_rdv  between '$date_end_all' AND '$date_start' 
-								GROUP BY client_id";
+								";
 								
 			$req_not_called  =  mysql_query($sql_not_called);
 			$rows_not_called =  mysql_num_rows($req_not_called);
