@@ -254,6 +254,9 @@ $(function(){
   },1000);
 });
 	</script>
+	  
+	
+	
 </head>
 
 <body>
@@ -385,6 +388,8 @@ $(function(){
               <?php if ($userPerms->has($fntByName["m-comm--sm-customers"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>clients/">Rechercher un client</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-comm--sm-pile-appels-complete"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>pile_appels_commerciaux/pile_appels_VPC.php">Pile d’appels VPC</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-comm--sm-pile-appel-personaliser"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>pile_appels_commerciaux/pile_appels_VPC.php">Pile d’appels VPC</a> </li><?php } ?>
+			  <?php if ($userPerms->has($fntByName["m-comm--sm-gestion-sav"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>gestion_sav/index.php">Gestion des SAV</a> </li><?php } ?>
+			  
             </ul>
           </li>
          <?php } ?>
@@ -392,7 +397,7 @@ $(function(){
           <li>
             <a href="#" class="sf-with-ul">Marketing</a>
             <ul>
-              <?php if ($userPerms->has($fntByName["m-mark--sm-flagship-products"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>products-flagship/index.php">Gestion des produits phares</a> </li><?php } ?>
+              <?php if ($userPerms->has($fntByName["m-mark--sm-flagship-products"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>products-flagship-v2/index.php">Gestion des produits phares</a> </li><?php } ?>
               <?php if ($userPerms->has($fntByName["m-mark--sm-products-priorities"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>families/pdt-overwrite.php">Priorité familles/produits</a> </li><?php } ?>
               <?php if ($userPerms->has($fntByName["m-mark--sm-mini-stores"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>mini-stores/mini-stores.php?">Mini boutiques</a> </li><?php } ?>
               <?php if ($userPerms->has($fntByName["m-mark--sm-leads-export"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>export/contacts.php">Export demandes de contact</a> </li><?php } ?>
@@ -401,7 +406,7 @@ $(function(){
 			  <?php if ($userPerms->has($fntByName["m-mark--qa-fiches-produits"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>/q_a_products/q-a-fiches-produits.php">Q&A fiches produits</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-mark--sm-gestion-achat"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>guides_achat/index.php">Gestion guides d'achat</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-mark--sm-gestion-familles-bloquees"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>familles-bloquees/index.php">Familles bloquées récupérables</a> </li><?php } ?>
-			  <?php if ($userPerms->has($fntByName["m-mark--sm-gestion-familles-bloquees"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>gestion-bloquees/index.php">Gestion du blog</a> </li><?php } ?>
+			  <?php if ($userPerms->has($fntByName["m-mark--sm-gestion-blog"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>blog/index.php">Gestion du blog</a> </li><?php } ?>
 			  
 
             </ul>
@@ -427,7 +432,7 @@ $(function(){
           <li>
             <a href="#" class="sf-with-ul">BI – KPI</a>
             <ul>
-              <li> <a href="<?php echo ADMIN_URL ?>bi_kpi/search_kpi.php">KPI Familles 3</a> </li>
+              <li> <a href="<?php echo ADMIN_URL ?>bi_kpi_v2/search_kpi.php">KPI Familles 3</a> </li>
 			</ul>
           </li>
          <?php } ?>
@@ -443,7 +448,7 @@ $(function(){
               <?php if ($userPerms->has($fntByName["m-reporting--sm-rejected-leads"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>reporting/rejected-leads.php">Taux de rejets</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-reporting--sm-call-vpc"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>reporting/call_vpc.php">Call / VPC</a> </li><?php } ?>
 			  <?php if ($userPerms->has($fntByName["m-reporting--sm-notation-operateurs"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>reporting/notation_operateurs.php">Notation opérateurs</a> </li><?php } ?>
-
+			  <?php if ($userPerms->has($fntByName["m-reporting--sm-sav"], "r")) { ?><li> <a href="<?php echo ADMIN_URL ?>reporting/reporting_sav.php">SAV</a> </li><?php } ?>
             </ul>
           </li>
          <?php } ?>
@@ -530,3 +535,4 @@ $(function(){
     <div id="page-content-wrapper">
 <?php require_once(ADMIN."rdv.php") ?>
 <?php require_once(ADMIN."tabbed_search.php") ?>
+<?php require_once(ADMIN."tabbed_commande.php") ?>
