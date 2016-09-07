@@ -1,0 +1,59 @@
+.input_container {
+	overflow: hidden;
+}
+
+.input_container ul {
+    background: #f3f3f3 none repeat scroll 0 0;
+    border: 1px solid #ddd;
+    line-height: 20px;
+    list-style: outside none none;
+    margin-top: 0;
+    padding: 5px;
+    position: absolute;
+    width: 230px;
+    z-index: 9;
+}
+
+.input_container ul li:hover {
+		color:#fff;
+		background-color:#3f403e;		
+}
+  
+.input_container ul li {
+	padding: 2px;
+	cursor: pointer;
+}
+
+#name_camp_list {
+	display: none;
+	margin-top: -10px;
+    margin-left: 0px;
+}
+
+.img-autocomplate{
+	float: right;
+}
+
+#result_name_campgne{
+	border: 1px solid #ccc;
+    overflow: hidden;
+    width: 300px;
+    padding: 10px;
+	display:none;
+}
+
+#result_name_event {
+    border: 1px solid #ccc;
+    overflow: hidden;
+    width: 300px;
+    padding: 10px;
+    display: none;
+}
+
+#global-export{
+	float:left;
+}
+
+
+
+/*******************************************************************************/
