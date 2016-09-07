@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
 
 if (!isset($_GET["category"]) || !preg_match("/^[0-9a-z\-]+$/", $_GET["category"])) {
@@ -403,7 +403,7 @@ switch ($catTree->length) {
         else {
           $pdt["hits2orders"] = $pdt["hits2leads"] = 0;
         }
-        $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." € HT") : "N/D") : $pdt["shipping_fee"]." € HT";
+        $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." â‚¬ HT") : "N/D") : $pdt["shipping_fee"]." â‚¬ HT";
         if (empty($pdt["delivery_time"])) $pdt["delivery_time"] = $pdt["adv_delivery_time"];
         $pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
         $pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
@@ -558,7 +558,7 @@ switch ($catTree->length) {
   else {
     ob_start();
 ?>
-  Aucun produit ne correspond aux critères sélectionnés
+  Aucun produit ne correspond aux critÃ¨res sÃ©lectionnÃ©s
 <?php
   }
   if ($standalone) {
@@ -619,13 +619,15 @@ if ($results["count"] > 0) {
   $pdf->addFont('Georgia', 'B', 'georgiab.php');
   $pdf->addFont('Georgia', 'I', 'georgiai.php');
   $pdf->addFont('Georgia', 'Z', 'georgiaz.php');
-    
+  $link=$pdf->AddLink();
+  $pdf->Write(5,'ici',$link);  
   //$pdf->SetAutoPageBreak(false);
 // hides header and footer for front page
   $pdf->showHeader = false;
   $pdf->showFooter = false;
   $pdf->AddPage();
   
+  $tel = "TÃ©l";
   $bx = $x = round($pdf->getX(),1); // default margin
   $by = round($pdf->GetY(),1); // base y
   $pdf->FrontHeader();
@@ -638,7 +640,7 @@ if ($results["count"] > 0) {
   $pdf->SetX($pdf->GetX()+70);
   $pdf->writeFrontAddressBottom("www.techni-contact.com");
   $pdf->SetX($pdf->GetX()+70);
-  $pdf->writeFrontAddressBottom("Tél : 01 55 60 29 29");
+  $pdf->writeFrontAddressBottom(utf8_decode($tel)." : 01 55 60 29 29");
   $pdf->SetX($pdf->GetX()+70);
   $pdf->writeFrontAddressBottom("Fax : 01 83 62 32 12");
   $pdf->Image(SECURE_PATH.'ressources/images/catalogue_pdf_front_footer.jpg',28,260,160);
@@ -698,8 +700,21 @@ if ($results["count"] > 0) {
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetY($y+68);
         $pdf->SetX($x);
-        $pdf->Cell(120, 10, 'Code produit sur www.techni-contact.com : '.$pdt['id'],0);
-        //images/contact-man.png
+        $pdf->Cell(45, 10, 'Code produit :  '.$pdt['id'],0);
+        $pdf->Image(SECURE_PATH.'ressources/images/flesh_pdf.png');
+		
+		$sqlFF  = "SELECT ref_name FROM families_fr WHERE id='".$cat3Id."' ";
+		$reqFF  =  mysql_query($sqlFF);
+		$dataFF =  mysql_fetch_object($reqFF);
+		
+		$pdf->SetTextColor(0,0,255);
+		$pdf->SetFont('','U');
+		$pdf->SetXY(65, 76);
+		$link=$pdf->AddLink();
+		$urlPdt = URL."produits/".$cat3Id."-".$pdt['id']."-".$pdt['ref_name'].".html?utm_source=Catalogues-F3-pdf&utm_medium=Catalogues-tc&utm_campaign=Catalogue-F3_".utf8_decode($dataFF->ref_name)."&campaignID=5000";
+		$pdf->Write(-6,'Voir ce produit sur notre site',$urlPdt);
+		
+	   //images/contact-man.png
         $l = 41;
         $h = 11;
         $contactX = $x+120;
@@ -739,11 +754,12 @@ if ($results["count"] > 0) {
         $size = getimagesize(SECURE_PATH.$pdt['pic_url']);
         $largeur=$size[0];
         $hauteur=$size[1];
-        $ratio=60/$hauteur;	//hauteur imposée de 120mm
+        $ratio=60/$hauteur;	//hauteur imposÃ©e de 120mm
         $newlargeur=$largeur*$ratio;
         $posi=(80-$newlargeur)/2;	//210mm = largeur de page
 //$pdf->image($image, $posi, 0,120);
-        $pdf->Cell(80,60,'',1,0,'C',$pdf->Image(SECURE_PATH.$pdt['pic_url'], $x+$posi, $y+80,0,60));
+        $pdf->Cell(80,60,'',0,0,'C',$pdf->Image(SECURE_PATH.$pdt['pic_url'], $x+$posi, $y+80,0,60));
+        // $pdf->Cell(80,60,'',1,0,'C',$pdf->Image(SECURE_PATH.$pdt['pic_url'], $x+$posi, $y+80,0,60));
         
         // zone prix
         $pdf->SetXY($x+90, $y+101);
@@ -753,28 +769,29 @@ if ($results["count"] > 0) {
         $price_text = '';
         // produits de partenaires non fournisseurs
         if($pdt['adv_cat'] != 1){
-          if(is_numeric($pdt['price']) && $pdt['price'] != 0){ // on a un montant renseigné -> prix indicatif
+          if(is_numeric($pdt['price']) && $pdt['price'] != 0){ // on a un montant renseignÃ© -> prix indicatif
             $pdf->SetTextColor(212, 20, 90);
             $pdf->SetFont('Georgia','',15);
             $pdf->Cell(30, 5, 'Prix indicatif : ');
             $pdf->SetXY($x+130, $y+100);
             $price_text = sprintf('%.02f',$pdt['price'])." ".chr(164);
-          }else{ // montant à 0 ou texte -> sur devis
+          }else{ // montant Ã  0 ou texte -> sur devis
             $pdf->SetTextColor(213, 84, 33);
             $price_text = 'Sur devis';
           }
         }else{ // produits de partenaires fournisseurs
-          if(is_numeric($pdt['price']) && $pdt['price'] != 0 && $pdt['product_as_estimate'] != 1 && $pdt['nb_refs'] != 0 ){ // le produit fournisseur a un montant non nul, et un tableau prix renseigné
+		$aPartir = "Ã€ partir de";
+		 if(is_numeric($pdt['price']) && $pdt['price'] != 0 && $pdt['product_as_estimate'] != 1 && $pdt['nb_refs'] != 0 ){ // le produit fournisseur a un montant non nul, et un tableau prix renseignÃ©
             $pdf->SetTextColor(212, 20, 90);
-            if($pdt['nb_refs'] > 1){ // références multiples -> à partir de
+            if($pdt['nb_refs'] > 1){ // rÃ©fÃ©rences multiples -> Ã  partir de
               $pdf->SetFont('Georgia','',15);
-              $pdf->Cell(30, 5, 'à partir de');
+              $pdf->Cell(30, 5, utf8_decode($aPartir));
               $pdf->SetXY($x+120, $y+100);
               $price_text = sprintf('%.02f',$pdt['price'])." ".chr(164);
-            }else{ // référence unique -> prix
+            }else{ // rÃ©fÃ©rence unique -> prix
               $price_text = sprintf('%.02f',$pdt['price'])." ".chr(164);
             }
-          }else{ // montant à 0 ou texte ou fournisseur paramétré sur devis ou tableau prix vide-> sur devis
+          }else{ // montant Ã  0 ou texte ou fournisseur paramÃ©trÃ© sur devis ou tableau prix vide-> sur devis
             $pdf->SetTextColor(213, 84, 33);
             $price_text = 'Sur devis';
           }
@@ -784,12 +801,12 @@ if ($results["count"] > 0) {
         $pdf->SetFont('Georgia','',20);
         $pdf->Cell(60, 5, $price_text,0); // .'   '.$pdt['adv_cat'].'   '.$pdt['price'].'   '.$pdt['nb_refs'].'   '.$pdt['product_as_estimate']
         
-        
+        $expidition = "ExpÃ©dition";
          if(!empty($pdt['delivery_time']) && $pdt['adv_cat'] == 1){
             $pdf->SetXY($x+90, $y+109);
             $pdf->SetFont('Arial','',11);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->Cell(80, 5, 'Expédition : '.utf8_decode($pdt['delivery_time']),0);
+            $pdf->Cell(80, 5,  utf8_decode($expidition).' : '.utf8_decode($pdt['delivery_time']),0);
           }
         
         //pp($pdt);
@@ -802,11 +819,13 @@ if ($results["count"] > 0) {
         $pdf->nextPageTopMargin = 30;
         $pdf->MultiCell(190, 5, str_replace($array_search, $array_replace, strip_tags(html_entity_decode($pdt['descc'], ENT_QUOTES, 'ISO-8859-15'))), 0);
         
+        $MdCC  = utf8_decode("ModÃ¨les disponibles");
+        $Mdc  = utf8_decode("ModÃ¨le disponible");
         
         // tableau ref
         if($pdt['nb_refs'] > 0){
           $y = $pdf->GetY();
-          $modeleText = $pdt['nb_refs'] == 1 ? 'Modèle disponible' : 'Modèles disponibles';
+          $modeleText = $pdt['nb_refs'] == 1 ? $Mdc : $MdCC;
           
           $pdf->SetFont('Georgia','',15);
           $pdf->SetTextColor(0, 113, 188);
@@ -838,24 +857,28 @@ if ($results["count"] > 0) {
           
           $HH = max($header_height);
           
+		  $libelle  = utf8_decode("LibellÃ©");
+		  $refTc  = utf8_decode("RÃ©f. TC");
           $pdf->SetLineWidth(0.1);
           $pdf->SetFillColor(176,176,176);
           $pdf->SetXY($rf_tabX, $rf_tabY);
-          $pdf->MultiCell($col_len,$HH*5,"Réf. TC",1,"C",1);
+          $pdf->MultiCell($col_len,$HH*5,$refTc,1,"C",1);
           $pdf->SetXY( $col_len+$rf_tabX,$rf_tabY);
-          $pdf->MultiCell($col_len,$HH*5,"Libellé",1,"C",1);
+          $pdf->MultiCell($col_len,$HH*5,$libelle,1,"C",1);
           $a=2;
           foreach ($pdt['refs_headers'] as $pdt_ref_header){
             $pdf->SetXY( $col_len*$a+$rf_tabX,$rf_tabY);
-            $pdf->MultiCell($col_len,($HH*5)/$header_height[$a-2],utf8_decode($pdt_ref_header),1,"C",1);
-            $a++;
+            if($pdt_ref_header != "UnitÃ©"){
+				$pdf->MultiCell($col_len,($HH*5)/$header_height[$a-2],utf8_decode($pdt_ref_header),1,"C",1);
+				$a++;
+			}
           }
           $pdf->SetXY( $col_len*$a+$rf_tabX,$rf_tabY);
           $pdf->MultiCell($col_len,$HH*5,"Prix HT",1,"C",1);
           
           $pdf->SetFillColor(255,255,255);
           $data_refs = array();
-          //pp($pdt); // traitement des références
+          //pp($pdt); // traitement des rÃ©fÃ©rences
           foreach($pdt['refs'] as $key => $ref){
             
             $data_refs[$key][] = $ref['id'];
@@ -887,18 +910,20 @@ if ($results["count"] > 0) {
             foreach ($ligne as $l => $content){
               //$pdf->SetXY( $col_len*($l)+$rf_tabX,($LH*5)/$line_height[$l]);
               $pdf->SetXY( $col_len*($l)+$rf_tabX,$y);
-              if($l == $k){ // la dernière info est le prix
+              if($l == $k){ // la derniÃ¨re info est le prix
                 $content = $pdt['product_as_estimate'] != 1 ? sprintf($content)." ".chr(128) : 'Sur devis';
               }else
                 $content = utf8_decode($content);
+                // $content = utf8_decode($content);
               $pdf->MultiCell($col_len,($LH*5)/$line_height[$l],$content,1,"C",1);
               
             }
             $previousLineHeight = $LH;
           }                    
         }       
-     }    
-  $pdf->Output("Catalogue Techni-Contact - ".utf8_decode($cat3->getAttribute("name")).".pdf", $dl?'D':'I');   
+     } 
+	// $dl?'D':'I';
+  $pdf->Output("Catalogue Techni-Contact - ".utf8_decode($cat3->getAttribute("name")).".pdf",$dl?'D':'I');   
     ?>
 <?php } ?>
 <?php
