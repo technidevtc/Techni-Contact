@@ -10,7 +10,7 @@ ob_start();
 
 <?php
 	// $id_estimate   =  "1126299538";
-	$sql_estimate  =  "SELECT societe,adresse,cp,ville,pays,total_ht ,updated_mail_sent_pdf
+	$sql_estimate  =  "SELECT societe,adresse,cp,ville,pays,total_ht ,updated_mail_sent_pdf , client_id
 					   FROM   estimate
 					   WHERE  id='".$id_estimate."' ";
 	$req_estimate  =   mysql_query($sql_estimate);
@@ -77,7 +77,11 @@ ob_start();
 			<td style="line-height:15px">
 				<tr>
 					<td >
-						<span style="font-weight: bold; font-style: italic;">Partenaire</span><br /><br />
+					<?php
+						if(!empty($data_estimate->client_id))	$client_id  = "(".$data_estimate->client_id.")";
+						else $client_id  = "";
+					?>
+						<span style="font-weight: bold; font-style: italic;">Partenaire <?= $client_id ?></span><br /><br />
 						Société  : <?= utf8_decode($data_estimate->societe) ?><br />
 						Site web : <br />
 						Siret : <br />
