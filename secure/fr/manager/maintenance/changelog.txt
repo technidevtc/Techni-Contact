@@ -1,0 +1,119 @@
+LISTE DES DERNIERS CHANGEMENTS
+--------------------------------------------------------------------------------
+
+15/10/2009
+----------------------------------------
+BO Annonceur :
+  + Filtrage automatique des accents/caractères de ponctuations des
+    noms des champs personnalisés lors de la sauvegarde.
+  + Ajout de la possibilité de rendre obligatoire ou non la plupart des
+    champs par défaut.
+  + Ajout de la checkbox "Ne pas comptabiliser les demandes de particulier".
+    Cette option cochée, les demandes de particuliers ne seront pas comptabi-
+	lisés dans les stats
+BO Manager : Rajout des colonnes personnalisées dans l'extract Excel
+BO Extranet : Rajout des colonnes personnalisées dans l'extract Excel
+FO Commande : Ajout des tag "Tous les Prix"
+FO Lead :
+  + Prise en compte des champs obligatoires par défaut
+  + Update de l'affichage des champs personnalisés
+
+14/10/2009
+----------------------------------------
+Ajout du module d'upload des fichiers en ajax dans l'extranet.
+Corrections de divers bugs liés aux nouveaux répertoires d'images depuis la v3
+lors de la suppression/validation/ajout de produits issus de l'extranet.
+
+13/10/2009
+----------------------------------------
+Nouveau module de gestion de champs personnalisé par annonceur mis en place.
+
+06/10/2009
+----------------------------------------
+Ajout de la gestion des contraintes sur la page panier :
+  - En cas de problème, les références sont automatiquement regroupée par
+  fournisseur et id produit
+  - Si une contrainte pour un fournisseur n'est pas respectée, l'ensemble des
+  produits correspondants est entouré en orage avec un message explicatif
+  - Si une contrainte pour un produit n'est pas respectée, l'ensemble des
+  références correspondantes est entouré en rouge avec un message explicatif
+  - Les messages n'apparaissent que s'il y a eu tentative de validation du
+  panier pour un devis/une commande
+  - Une fois les quantités changées, si le panier est recalculé, les messages
+  disparaissent mais seront réaffichés lors d'une nouvelle tentative de
+  validation en cas de nouveau problème
+
+
+02/10/2009
+----------------------------------------
+Ajout de la possibilité d'ordonner les produits affichés dans le module
+des produits phares
+
+
+28/09/2009
+----------------------------------------
+Mails Clients :
+  + Tous les numéros de fax (01 55 60 08 40) ont été remplacés parle numéro
+  01 72 08 01 18
+  + Tous les liens vide (&lt;a href="#"&gt;CONTENU&lt;/a&gt;) ont été
+  supprimés et le contenu mis en gras.
+Produits phares : Les produits annonceurs sont désormais affiché avec le
+bon bouton et un prix "sur devis" en Home du FO
+
+
+23/09/2009
+----------------------------------------
+Nouveau module de sélection des produits phares. Il est désormais possible
+de sélectionner des produits annonceurs.
+Moteur de recherche :
+  + autocomplétion : Les noms de familles sont à nouveau affichés. Les 5
+  premiers résultats sont donc en priorité 5 noms de familles, suivit de
+  5 noms de produits.
+  + lorsqu'une recherche a le nom exact d'une famille existante, l'internaute
+  est automatiquement redirigé sur la page de cette dernière
+  + Lorsque la recherche n'a qu'un seul produit en résultat, l'internaute
+  est automatiquement redirigé sur la page de ce dernier
+
+
+21/09/2009
+----------------------------------------
+Serveur Test :
+  + Les ressources sécurisées pointent désormais correctement sur celles du
+    serveur test
+  + Correction du sous-domaine dans le fichier de configuration du manager
+Le contenu des mail suivant a été modifié avec la nouvelle présentation :
+  - mail-confirmation-commande
+  - mail-creation-de-compte-client
+  - mail-creation-devis
+  - mail-devis-bloc-viral
+  - mail-lead-annonceur
+  - mail-lead-fournisseur
+  - mail-lead-produit-lie
+  - mail-produit-bloc-viral
+Fiches Produits :
+  + Le titre comporte maintenant le nom de la famille du produit si ce dernier
+    est présent dans plusieurs
+  + Les prix des références sont maintenant arrondis à 2 chiffres après la
+   virgule dans tous les cas
+Compte Client :
+  + Détail Commande : Correction du total TVA affiché
+  + Détail Devis : Correction du total TVA affiché
+Général : Prise en compte de 6 chiffres après la virgule en interne pour le
+calcul de la TVA et du prix TTC
+
+
+17/09/2009
+----------------------------------------
+Familles : L'url d'une famille n'existant pas renvoit maintenant à la page 404
+Général : Suppression complète des flux RSS
+Listing Fournisseur : Balise meta noindex/nofollow ajoutée
+Fiches Produits :
+  + Les docs PDF sont maintenant en base de page
+  + En bas de page, la mention « Modèles disponibles » a été ajoutée à la fin
+    de la zone description produit. Le tableau prix est solidaire de la zone
+	de description.
+
+
+15/09/2009 - 16/09/2009
+----------------------------------------
+Remise en place du serveur de test

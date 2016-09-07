@@ -1,0 +1,36 @@
+<p>
+	L'annonceur <a href="ADVERTISER_BO_URL" target="_blank">ADVERTISER_NAME</a> a effectué une demande de rejet pour le contact <a href="CONTACT_BO_URL" target="_blank">CONTACT_ID</a><br/>
+	<br/>
+	Information sur la demande de contact :<br/>
+	<br/>
+	<table cellpadding="0" cellspacing="0" border="0" style="font: 12px verdana, arial, sans-serif">
+		<tbody>
+		<tr><td><b>Raison du rejet : </b></td><td>REJECT_REASON</td></tr>
+		<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		<tr><td><b>Nom du produit : </b></td><td><a href="PRODUCT_BO_URL" target="_blank">PRODUCT_NAME</a><a href="PRODUCT_FO_URL" target="_blank"><img src="SECURE_RESSOURCES_URLicons/firefox_icon_20x20.png" alt="" border="0"></a></td></tr>
+		<tr><td><b>Précisions : </b></td><td>CONTACT_DETAIL</td></tr>
+		<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		<tr><td><b>Nom : </b></td><td>CONTACT_LAST_NAME</td></tr>
+		<tr><td><b>Prénom : </b></td><td>CONTACT_FIRST_NAME</td></tr>
+		<tr><td><b>Fonction : </b></td><td>CONTACT_JOB</td></tr>
+		<tr><td><b>Email : </b></td><td>CONTACT_EMAIL</td></tr>
+		<tr><td><b>Site internet : </b></td><td>CONTACT_URL</td></tr>
+		<tr><td><b>Téléphone : </b></td><td>CONTACT_TEL</td></tr>
+		<tr><td><b>Fax : </b></td><td>CONTACT_FAX</td></tr>
+		<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		<tr><td><b>Société : </b></td><td>CONTACT_COMPANY_NAME</td></tr>
+		<tr><td><b>Nombre de salariée : </b></td><td>CONTACT_WORKFORCE</td></tr>
+		<tr><td><b>Secteur d'activité : </b></td><td>CONTACT_SECTOR</td></tr>
+		<tr><td><b>Code NAF : </b></td><td>CONTACT_NAF</td></tr>
+		<tr><td><b>Numéro SIRET : </b></td><td>CONTACT_SIREN</td></tr>
+		<tr><td><b>Adresse : </b></td><td>CONTACT_ADRESS CONTACT_CADRESS</td></tr>
+		<tr><td><b>Code Postal : </b></td><td>CONTACT_PC</td></tr>
+		<tr><td><b>Ville : </b></td><td>CONTACT_CITY</td></tr>
+		<tr><td><b>Pays : </b></td><td>CONTACT_COUNTRY</td></tr>
+		CONTACT_CF
+		</tbody>
+	</table>
+	<br/>
+	<br/>
+	Voulez-vous <a href="REJECT_ACCEPT_URL" target="_blank">Valider la demande</a> ou <a href="REJECT_REFUSE_URL" target="_blank">Refuser la demande</a>
+</p>

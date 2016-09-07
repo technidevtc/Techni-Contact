@@ -1,0 +1,19 @@
+<style type="text/css">
+ table.liste_produits_popup { width: 900px; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+ table.liste_produits_popup  thead, table.libelle_total td.text { font-weight: bold; color: #FFFFFF; background-color: #5D6068; margin: 0; padding: 0; text-align: center; vertical-align: middle; }
+ table.liste_produits_popup  tr td, table.libelle_total tr td { padding: 2px 4px; border-left: 1px solid #CCCCCC; vertical-align: top; }
+ table.libelle_total { width: 200px; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+ table.libelle_total tr td.valeur { width: 60px; text-align: right;}
+  a {text-decoration: none;}
+  img{border: 0 none;}
+</style>
+<br />
+<br />
+Une commande fournisseur a été envoyée le EXP_DATE<br />
+<br />
+Fournisseur : ADVERTISER_NAME<br />
+Numéro de commande : <a href="LINK">USER_ID-CMD_NUMBER</a><br />
+Commanditaire : OPERATOR_NAME<br />
+<br />
+CART_HTML
+<br />

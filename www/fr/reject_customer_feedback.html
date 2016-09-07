@@ -1,0 +1,93 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+// checking that we have all the necessary GET data
+$cc_values = array("oui", "non"); // customer contacted possible values
+if (!isset($_GET["lead_id"]) || !is_numeric($_GET["lead_id"])
+ || !isset($_GET["customer_contacted"]) || !in_array(strtolower($_GET["customer_contacted"]), $cc_values)) {
+  header("Location: ".URL);
+  exit();
+}
+
+$lead_id = $_GET["lead_id"];
+$cc = $_GET["customer_contacted"];
+
+$db = DBHandle::get_instance();
+$res = $db->query("
+  SELECT
+    c.id,
+    c.reject_cus_fb,
+    c.invoice_status,
+    c.nom AS user_lastname,
+    c.prenom AS user_firstname,
+    c.societe AS user_company,
+    c.tel AS user_tel,
+    c.email AS user_email,
+    c.idFamily AS cat_id,
+    c.reject_reason AS reject_reason,
+    IF(c.parent=0,pfr.id,(SELECT idProduct FROM contacts WHERE id = c.parent)) AS pdt_id,
+    IF(c.parent=0,pfr.name,(SELECT pfr2.name FROM products_fr pfr2 INNER JOIN contacts c2 ON c2.idProduct = pfr2.id WHERE c2.id = c.parent)) AS pdt_name,
+    IF(c.parent=0,pfr.ref_name,(SELECT pfr3.ref_name FROM products_fr pfr3 INNER JOIN contacts c3 ON c3.idProduct = pfr3.id WHERE c3.id = c.parent)) AS pdt_ref_name,
+    a.id AS adv_id,
+    a.nom1 AS adv_name
+  FROM contacts c
+  LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+  INNER JOIN advertisers a ON c.idAdvertiser = a.id
+  WHERE c.id = ".$lead_id, __FILE__, __LINE__);
+$lead = $db->fetchAssoc($res);
+
+// checking if the lead status is on rejected
+if ($lead["invoice_status"] != __LEAD_REJECTED__) {
+  header("Location: ".URL);
+  exit();
+}
+
+// update the contact if it wasn't already and send an email if the answer is "yes"
+if ($lead["reject_cus_fb"] == "-") {
+  $db->query("UPDATE contacts SET reject_cus_fb = '".$cc."', reject_cus_fb_t = '".time()."' WHERE id = ".$lead_id, __FILE__, __LINE__);
+  if ($cc == "oui") {
+    $mail = new Email(array(
+      "email" => "b.dieterlen@techni-contact.com,e.verry@techni-contact.com,f.stumm@techni-contact.com",
+      "subject" => "Le rejet par ".$lead["adv_name"]." du lead ".$lead["id"]." pourrait être suspect",
+      "headers" => "From: Rejet de lead suspect <".$lead["user_email"].">\n",
+      "template" => "tc-fo_reject_feedback-customer_contacted",
+      "data" => array(
+        "FO_URL" => URL,
+        "LEAD_ID" => $lead["id"],
+        "PARTNER_ID" => $lead["adv_id"],
+        "PARTNER_NAME" => $lead["adv_name"],
+        "PDT_NAME" => $lead["pdt_name"],
+        "CUSTOMER_COMPANY"   => $lead["user_company"],
+        "CUSTOMER_LASTNAME"  => $lead["user_lastname"],
+        "CUSTOMER_FIRSTNAME" => $lead["user_firstname"],
+        "CUSTOMER_EMAIL" => $lead["user_email"],
+        "CUSTOMER_PHONE" => $lead["user_tel"],
+        "REJECT_REASON"  => $lead["reject_reason"],
+        "BO_LEAD_URL"    => ADMIN_URL."contacts/lead-detail.php?id=".$lead["id"],
+        "FO_PDT_URL"     => URL."produits/".$lead["cat_id"]."-".$lead["pdt_id"]."-".$lead["pdt_ref_name"].".html"
+      )
+    ));
+    $mail->send();
+  }
+}
+
+$title = "Assurance qualité Techni-Contact.com";
+$meta_desc = "";
+$pageName = "assurance_qualite";
+
+require(SITE . "head.php");
+?>
+                      <div id="quality-insurance">
+                        <div class="block-pdt-title">Votre réponse à bien été enregistrée</div>
+                        <div class="zero"></div>
+                          <br/>
+                          Merci pour votre participation à l'amélioration de notre service.<br/>
+                          <br/>
+                          Si aucun autre partenaire ne peut pour l'instant répondre à votre demande, n'hésitez à contacter directement nos experts au 01.72.08.01.14 ou en remplissant le formulaire ci-dessous.<br/>
+                          <br/>
+                          Ils pourront approfondir vos recherches et tenteront de trouver le fournisseur qui vous convient.<br/>
+                          <br/>
+                          <?php $form_pdt_search_origin = "rejets"; include_once("form-demande-recherche-produit.html") ?>
+                      </div>
+					
+<?php require(SITE . "foot.php") ?>

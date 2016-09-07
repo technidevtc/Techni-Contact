@@ -1,0 +1,63 @@
+<ul class="list-unstyled list-inline pull-left">
+	<li>TECHNI-CONTACT.COM &copy; 2000 - <?php echo(date('Y')); ?></li>
+</ul>
+
+<button class="pull-right btn btn-default btn-xs hidden-print" back-to-top="" style="padding: 1px 10px; margin-right: 12px;">
+	<i class="fa fa-angle-up"></i>
+</button>
+
+<div id="old_navigator_popup" style="display:none">
+	Il semblerait que votre navigateur soit ancien.
+	<br /><br />
+
+	Afin de profiter de toutes les fonctionnalit&eacute;s de votre Extranet nous vous invitons &agrave; mettre &agrave; jour votre navigateur.
+	
+	<br /><br />
+	Voici la liste des navigateurs compatibles :
+	<br />
+
+	<ul>
+		<li><a href="http://windows.microsoft.com/fr-fr/internet-explorer/download-ie" target="_blank">Internet Explorer 10 et +</a></li>
+		<li><a href="https://www.google.com/intl/fr/chrome/" target="_blank">Google Chrome</a></li>
+		<li><a href="https://www.mozilla.org/fr/firefox/new/" target="_blank">Firefox</a></li>
+	</ul>
+</div>
+<script type="text/javascript">
+
+	if (isIE () == 7 || isIE () == 8 || isIE () == 9) {
+	
+		<?php
+		
+			if(empty($_SESSION['user_old_navigator'])){
+			
+				?>
+				$( "#old_navigator_popup" ).dialog({
+					resizable: false,
+					height: 355,
+					width: 450,
+					modal: true,
+					buttons: {
+						"Fermer": function(){
+							$( this ).dialog( "close" );
+						}
+					},
+					show: {
+						effect: "fade",
+						duration: 300
+					},
+					hide: {
+						effect: "puff",
+						duration: 220
+					}
+				});
+				
+				$("span.ui-dialog-title").text('Attention !');
+				<?php		
+			
+				$_SESSION['user_old_navigator']	= "show_on";
+			}//End if PHP validity Session !
+			
+		?>
+	}//End if Javascript
+
+</script>

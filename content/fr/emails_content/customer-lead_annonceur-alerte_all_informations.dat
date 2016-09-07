@@ -1,0 +1,151 @@
+<p>
+	Cher partenaire,<br/>
+	<br/>
+	Vous avez reçu une demande de devis.
+	<br/>
+	EXTRAINFO_PRODUCT_NAME
+	
+	
+  <br/><br/>
+  
+	Voici le détail de cette demande :
+	<br />
+	
+  <br/>
+  <table>
+	<tr>
+		<td>
+			<strong>Société</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_NAME
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Adresse :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_ADDRESS
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Code postal :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_PC
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Ville :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_CITY
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Pays :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_COUNTRY
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Secteur :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_SECTOR
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>NAF :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_NAF
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>SIRET :</strong>
+		</td>
+		<td>
+			EXTRAINFO_COMPANY_SIREN
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Nom :</strong>
+		</td>
+		<td>
+			EXTRAINFO_LASTNAME
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Prénom :</strong>
+		</td>
+		<td>
+			EXTRAINFO_FIRSTNAME
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Email :</strong>
+		</td>
+		<td>
+			EXTRAINFO_EMAIL
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Téléphone :</strong>
+		</td>
+		<td>
+			EXTRAINFO_PHONE
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<strong>Fonction :</strong>
+		</td>
+		<td>
+			EXTRAINFO_JOB
+		</td>
+	</tr>
+  
+  </table> 
+  
+  <br/>
+  
+  <br/>
+	Vous pouvez aussi cliquer le lien suivant pour accéder à votre extranet et en prendre connaissance.<br/>
+	<br/>
+	<a href="EXTRANET_URLextranet-v3-contacts-detail.html?uid=ADVERTISER_WEBPASS&id=GENERATEDCONTACTID">Accéder à la demande de contact sur l'extranet</a><br/>
+
+  <br/>
+	L'équipe TECHNI-CONTACT<br />
+  <br />
+  <br />
+  <i>Ce mail est une alerte automatique, merci de ne pas y répondre.</i><br />
+  <i>Aucune réponse directe à cet email ne sera traitée.</i><br />
+</p>
+
+
+

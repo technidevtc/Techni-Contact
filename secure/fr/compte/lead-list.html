@@ -1,0 +1,146 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+  header('Location: '.COMPTE_URL.'login.html');
+  exit();
+}
+
+// getting all the lead status which are visible
+$visibleStatusList = array();
+$statusConstList = array_keys(Contacts::$statusList);
+foreach ($statusConstList as $statusConst)
+  if ($statusConst & Contacts::STATUS_IS_VISIBLE)
+    $visibleStatusList[] = $statusConst;
+
+// get all supplier or visible leads
+$leadList = Doctrine_Query::create()
+  ->select('l.id,
+            l.idProduct,
+            l.create_time,
+            l.timestamp,
+            l.invoice_status,
+            l.parent,
+            pfr.name AS productName,
+            pfr.fastdesc,
+            pfr.ref_name,
+            p.id,
+            IFNULL(lc.id,1) AS id_family,
+            a.category AS adv_category,
+            a.actif AS adv_active,
+            l.processing_status,
+            l.processing_time')
+  ->from('Contacts l INDEXBY l.id')
+  ->leftJoin('l.product p')
+  ->leftJoin('p.product_fr pfr') // tous les leads primaires, 
+  ->innerJoin('l.advertiser a')
+  ->leftJoin('l.category lc')
+  ->where('l.email = ?', $user->login)
+  ->orderBy('l.create_time DESC, l.parent ASC')
+  ->fetchArray();
+
+// count the number of active adv that can handle them, then filter out the non-primary leads
+foreach ($leadList as $lead_id => &$lead) {
+  $lead1_id = $lead['parent'] ? $lead['parent'] : $lead['id'];
+  
+  if ($lead['category'] != __ADV_CAT_SUPPLIER__) {
+    if (!isset($leadList[$lead1_id]['adv_active_count']))
+      $leadList[$lead1_id]['adv_active_count'] = 0;
+    
+    // count the number of advertiser than can handle their lead for the primary lead
+    if (in_array($lead['invoice_status'], $visibleStatusList) && $lead['adv_active'])
+      $leadList[$lead1_id]['adv_active_count']++;
+    
+    // only take into account primary leads
+    if ($lead['parent'])
+      unset($leadList[$lead_id]);
+  }
+
+}
+unset($lead);
+
+// additional loop to set the status text (to keep the html code clean)
+foreach ($leadList as $lead_id => &$lead) {
+  if ($lead['adv_category'] == __ADV_CAT_SUPPLIER__) {
+    $lead['status_text'] = "Soumis aux experts Techni-contact";
+  } else {
+    if ($lead['adv_active_count'] > 0)
+      $lead['status_text'] = "Soumis à ".$lead['adv_active_count']." partenaire".($lead['adv_active_count']>1?"s":"");
+    else
+      $lead['status_text'] = "Aucun partenaire ne peut gérer votre demande";
+  }
+}
+unset($lead);
+
+$current_account_menuitem = "Mes demandes de contact";
+define('SECURE', true);
+require SITE.'head.php' ;
+require SITE.'account-head.php' ;
+?>
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url; ?>images/personal-space-logo.png" alt="logo" />Mes demandes de devis</h1>
+      </div>
+      <div class="font14">
+        Voici le listing des demandes de devis que vous avez soumises sur notre site<br />
+        Pour accéder au détail de chaque demande, cliquez sur "voir".
+      </div>
+      <div class="account-order margin-top-11">
+        <div class="account-order-table">
+          <table class="account-order-list">
+            <thead>
+              <tr>
+                <th class="num">Numéro</th>
+                <th colspan="2">Produit</th>
+                <th class="th-width-150 datetime">Date et heure</th>  
+                <th class="status">État</th>
+              </tr>
+            </thead>
+            <tbody>
+             <?php foreach ($leadList as $lead) : ?>
+              <tr>
+                <td class="num">
+                  <?php echo $lead['id'] ?><br />
+                  <a class="color-blue" href="<?php echo COMPTE_URL; ?>lead.html?leadID=<?php echo $lead['id'] ?>">Voir</a>
+                </td>
+                <td class="image">
+                  <a class="color-blue" href="<?php echo COMPTE_URL; ?>lead.html?leadID=<?php echo $lead['id'] ?>"> 
+                    <img class="vmaib" src="<?php echo Utils::get_secure_pdt_pic_url($lead['idProduct']); ?>" alt=""/>
+                  </a>
+                </td>
+                <td class="designation">
+                  <div class="vmaib">
+                    <a class="color-blue" href="<?php echo COMPTE_URL; ?>lead.html?leadID=<?php echo $lead['id'] ?>">
+                    <?php echo $lead['productName'] ?>
+                    </a><br />
+                    <div class="mobile-infos">
+                      <i>Réf</i> <strong><?php echo $lead['id'] ?></strong><br />
+                      <i>Le</i> <strong><?php echo date('d/m/Y à H:i', $lead['create_time']) ?></strong>
+                    </div>
+                  </div>
+                </td>
+                <td class="datetime"><?php echo date('d/m/Y à H:i', $lead['create_time']) ?></td>
+                <td class="status"><?php echo $lead['status_text'] ?></td>
+              </tr>
+             <?php endforeach ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+  $(".account-order")
+    .find("a.icon-conv").click(function(){ $(this).closest('tr').next('tr.conversation').toggle(); }).end()
+    .find("img.post-clip").click(function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+</script>
+
+<?php require SITE.'account-foot.php' ?>
+
+<?php require SITE.'foot.php' ?>

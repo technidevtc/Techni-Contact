@@ -1,0 +1,102 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-shopping-cart"></i> Produits</h1>
+    </div>
+	
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h4>
+						Type de demandes - Soumissions &agrave; TECHNI-CONTACT
+					</h4>
+					<div id="">
+						<!-- <input type="button" id="products_btn_lst_create" value="Ajouter un produit" onclick="javascript:document.location='extranet-v3-products-add.html'" class="btn btn-primary" /> -->
+					</div>
+				</div>
+				
+				<div class="panel-body">
+					
+					<!-- 
+					<div class="panel-form">
+						
+						<?php //require_once('extranet_v3_products_form.html'); ?>
+					</div>
+					-->
+					
+					<div id="panel-table">
+						<div id="panel-table-tabs">
+							<ul>
+								<li><a href="#pstabs-2">En attente de validation de modification</a></li>
+								<li><a href="#pstabs-1">En attente de validation de cr&eacute;ation</a></li>
+								<li><a href="#pstabs-3">En attente de validation de suppression</a></li>
+							</ul>
+							
+							<div id="pstabs-2">
+								<!-- Modification -->
+							</div>
+							<div id="pstabs-1">
+								<!-- Creation ! -->
+							</div>
+							<div id="pstabs-3">
+								<!-- Suppression ! -->
+							</div>
+							
+							<div id="loader_panel-table" style="position: relative; padding-bottom: 100px; margin-top: 0;">
+								<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+							</div>
+  
+						</div><!-- end div #panel-table-tabs -->
+					</div><!-- end div #panel-table -->
+					
+					<!-- IT Concerns the load of every tab, pagination .. -->
+					<input type="hidden" id="fps-add" value="1" />
+					<input type="hidden" id="fpp-add" value="10" />
+	
+					<input type="hidden" id="fps-edit" value="1" />
+					<input type="hidden" id="fpp-edit" value="10" />
+					
+					<input type="hidden" id="fps-delete" value="1" />
+					<input type="hidden" id="fpp-delete" value="10" />
+					
+
+					<script type="text/javascript">
+						//products_pending_lunch_search('add');
+						products_pending_lunch_search('edit');
+					</script>
+					
+					<!-- To open a link in a new window ! -->
+					<form id="products_external_formid" method="GET" action="#" target="_blank"></form>
+					
+				</div><!-- end div .panel-heading -->
+			</div><!-- end div .panel panel-primary -->
+				
+			
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	<script type="text/javascript">
+	
+		$('#panel-table-tabs').tabs({
+			activate: function( event, ui ) {
+				//alert(ui.newPanel.selector);
+				//console.log(ui.newPanel);
+				if(ui.newPanel.selector=='#pstabs-1'){
+					//document.getElementById('pstabs-1').innerHTML+='<br />Loading the pending Add..';
+					products_pending_lunch_search('add');
+				}else if(ui.newPanel.selector=='#pstabs-2'){
+					//document.getElementById('pstabs-2').innerHTML+='<br />Loading the pending Edit..';
+					products_pending_lunch_search('edit');
+				}else if(ui.newPanel.selector=='#pstabs-3'){
+					//document.getElementById('pstabs-3').innerHTML+='<br />Loading the pending Delete..';
+					products_pending_lunch_search('delete');
+				}
+			},
+			
+			hide: 'fade', 
+			show: 'fade'
+		});
+	
+	</script>
+
+</div><!-- end div .za -->

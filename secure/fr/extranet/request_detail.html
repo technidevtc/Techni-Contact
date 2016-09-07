@@ -1,0 +1,673 @@
+<?php
+
+//Code add on 20/11/2014 Redirect to the new page
+header('Location: extranet-v3-contacts-detail.html?uid='.$_GET['uid'].'&id='.$_GET['id'].'');
+die;
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include("language_local.php");
+
+$title = REQUEST_DETAIL_TITLE;
+
+define("WHERE",WHERE_CONTACT);
+$nav = "<a href=\"index.html?SESSION\">".HEAD_HOMEPAGE."</a> &raquo; <a href=\"requests.html?SESSION\">".REQUESTS_HEAD_TITLE."</a> &raquo; ".REQUEST_DETAIL_HEAD_TITLE;
+
+require(EXTRANET."head.php");
+  
+$error = false;
+$error_reject = false;
+if (!isset($_GET["id"]) || !preg_match("/^[0-9]{1,8}$/",$_GET["id"]) || $user->parent != '0')
+  $error = true;
+else {
+
+  function make_charge_link($fieldName) {
+    echo "<a href=\"#facturer\" class=\"invoice-link\">Voir ".$fieldName."</a>";
+  }
+
+  $db = DBHandle::get_instance();
+
+  $res = $db->query("
+    SELECT
+      c.id,
+      c.nom,
+      c.prenom,
+      c.fonction,
+      c.societe,
+      c.salaries,
+      c.secteur,
+      c.naf,
+      c.siret,
+      c.adresse,
+      c.cadresse,
+      c.cp,
+      c.ville,
+      c.pays,
+      c.tel,
+      c.fax,
+      c.email,
+      c.url,
+      c.precisions,
+      c.type,
+      c.idAdvertiser,
+      c.customFields,
+      c.invoice_status,
+      c.income,
+      c.income_total,
+      c.parent,
+      c.timestamp,
+      c.reject_timestamp,
+      c.credited_on,
+      pfr.id AS pdt_id,
+      pfr.name AS pdt_name,
+      pfr.fastdesc AS pdt_fastdesc,
+      pfr.ref_name AS pdt_ref_name,
+      ffr.id AS cat_id,
+      ffr.name AS cat_name,
+      a.nom1,
+      a.ic_reject,
+      a.is_fields,
+      a.category,
+      clt.id as clt_id
+    FROM contacts c
+    INNER JOIN advertisers a ON c.idAdvertiser = a.id
+    LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+    LEFT JOIN families_fr ffr ON c.idFamily = ffr.id
+    LEFT JOIN clients clt ON clt.login = c.email
+    WHERE
+      c.id = '".$_GET["id"]."'
+      ".($user->id == __ID_TECHNI_CONTACT__ ? "" : " AND c.idAdvertiser = '".$db->escape($user->id)."'")."
+    GROUP BY pfr.id",__FILE__,__LINE__);
+
+  if ($db->numrows($res,__FILE__,__LINE__) != 1) {
+    $error = true;
+  }
+  else {
+    $lead = $db->fetchAssoc($res);
+    if ($lead["category"] == __ADV_CAT_BLOCKED__ || $lead["category"] == __ADV_CAT_LITIGATION__) {
+      header("Location: ".EXTRANET_URL."requests.html");
+      exit();
+    }
+      
+    $db->query("UPDATE contacts SET cread = 1 WHERE id = ".$lead["id"],__FILE__,__LINE__);
+    $customFields = unserialize($lead["customFields"]);
+    if (empty($customFields))
+      $customFields = array();
+
+    $show_reject_options = $lead["ic_reject"] && ($lead["invoice_status"] & __LEAD_REJECTABLE__);
+    $show_personal_infos = $lead["invoice_status"] & __LEAD_VISIBLE__;
+
+    if (isset($_POST["charge"]) && $_POST["charge"] == "1" && $lead["income"] == 0 && !$show_personal_infos) {
+      $lead["is_fields"] = empty($lead["is_fields"]) ? array() : unserialize($lead["is_fields"]);
+      if (!empty($lead["is_fields"])) {
+        $is_cur = $lead["is_fields"][0];
+        switch ($is_cur["type"]) {
+          case "lead":
+            $lead["invoice_status"] = __LEAD_INVOICE_STATUS_CHARGED_PERMANENT__;
+            $lead["income"] = (float) $is_cur["fields"]->lead_unit_cost;
+            break;
+          case "budget":
+            $lead["invoice_status"] = __LEAD_INVOICE_STATUS_CHARGED_PERMANENT__;
+            $lead["income"] = (float) $is_cur["fields"]->budget_unit_cost;
+            break;
+          case "forfeit": break; // never happen
+          default: break;
+        }
+        if ($lead["income"] != 0) { // income has changed
+          if ($lead["parent"] == 0) { // it's a primary lead
+            $lead["income_total"] += $lead["income"];
+            $db->query("
+              UPDATE `contacts` SET
+                `invoice_status` = '".$lead["invoice_status"]."',
+                `income` = '".$lead["income"]."',
+                `income_total` = '".$lead["income_total"]."'
+              WHERE `id` = '".$lead["id"]."'",__FILE__,__LINE__);
+          }
+          else { // it's a secondary lead, so we get the parent primary lead and change its total income
+            $res = $db->query("SELECT `id`, `idProduct`, `income_total` FROM `contacts` WHERE `id` = '".$lead["parent"]."'",__FILE__,__LINE__);
+            $lead1 = $db->fetchAssoc($res);
+            $lead1["income_total"] += $lead["income"];
+            $db->query("UPDATE `contacts` SET `income_total` = '".$lead1["income_total"]."' WHERE `id` = '".$lead["parent"]."'",__FILE__,__LINE__);
+            $db->query("
+              UPDATE `contacts` SET
+                `invoice_status` = '".$lead["invoice_status"]."',
+                `income` = '".$lead["income"]."'
+              WHERE `id` = '".$lead["id"]."'",__FILE__,__LINE__);
+          }
+          $show_personal_infos = true;
+        }
+      }
+    }
+    elseif (isset($_POST["reject-option"]) && isset($_POST["reject-reason"]) && $show_reject_options) {
+      switch ($_POST["reject-option"]) {
+        case 0: $reject_reason = "Coordonnées inexploitables";
+          break;
+        case 1: $reject_reason = "Le produit demandé ne correspond pas à ma gamme de produits";
+          break;
+        default: $reject_reason = "";
+      }
+      if (strlen($_POST["reject-reason"]) >= 10 && !empty($reject_reason)) {
+        $reject_reason .= empty($_POST["reject-reason"]) ? "" : " | ".$_POST["reject-reason"];
+
+        if ($lead['invoice_status'] & __LEAD_CHARGEABLE__)
+          $updatedInvoiceStatus = __LEAD_INVOICE_STATUS_CHARGEABLE_REJECTED_WAIT__;
+        else
+          $updatedInvoiceStatus = __LEAD_INVOICE_STATUS_REJECTED_WAIT__;
+
+        $db->query("UPDATE contacts SET invoice_status = ".$updatedInvoiceStatus.", reject_reason = '".$db->escape($reject_reason)."' WHERE id = ".$lead["id"],__FILE__,__LINE__);
+        $lead["invoice_status"] = $updatedInvoiceStatus;
+
+        echo '
+          <div class="DB-bg-rejet"></div>
+          <div id="reject-info" class="DB_rejet">
+
+  Votre demande de rejet a bien été soumise.<br/>
+        Le contact sera informé que vous ne pouvez traiter sa demande pour le motif indiqué :<br/>
+  <br/>
+        <div id="reject-motive">'.$reject_reason.'</div><br/>
+  <br/>
+  <input type="button" id="close-reject-info" value="Fermer"/>
+</div>';
+      }
+      else {
+        $error_reject = true;
+      }
+    }
+
+    switch ($lead["type"]) {
+      case 1 : $lead_type = COMMON_CONTACT_TYPE_ASK;
+        break;
+      case 2 : $lead_type = COMMON_CONTACT_TYPE_TEL;
+        break;
+      case 3 : $lead_type = COMMON_CONTACT_TYPE_ESTIMATE;
+        break;
+      case 4 : $lead_type = COMMON_CONTACT_TYPE_APPOINTMENT;
+        break;
+    }
+  }
+}
+if (!$error) {
+  $companyNameLink = $show_personal_infos ? trim(str_replace(' ', '+', strtolower($lead["societe"]))) : '';
+  $timestampM = date('m', $lead['timestamp']);
+  $timestampY = date('Y', $lead['timestamp']);
+  $expiryDate = mktime(23,59,59,$timestampM+1,date(5),$timestampY);
+}
+?>
+<?php if ($error) : ?>
+  <div class="centre">
+    <div class="bloc">
+      <div class="bloc-titre">
+        <center><?php echo REQUEST_DETAIL_ERROR_ID ?></center>
+      </div>
+    </div>
+  </div>
+<?php else : ?>
+<style type="text/css">
+.DB-bg { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: #000000; -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=40)"; filter: alpha(opacity=40); opacity:.40 }
+.DB { display: none; position: absolute; padding: 10px; font: small-caps bold 15px tahoma, arial, sans-serif; color: #ffffff; text-align: center; border: 1px solid #cccccc; background: #c42623 }
+#CQDB { left: 200px; top: 50px; width: 500px; height: 150px; margin: 200px 0 0 }
+#reject-info { left: 200px; top: 550px; width: 500px; height: 200px; margin: 200px 0 0 }
+.DB_rejet { position: absolute; padding: 10px; font: small-caps bold 15px tahoma, arial, sans-serif; color: #ffffff; text-align: center; border: 1px solid #cccccc; background: #c42623 }
+.DB-bg-rejet { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: #000000; -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=40)"; filter: alpha(opacity=40); opacity:.40 }
+#conversation{display:none}
+</style>
+<script type="text/javascript">
+$(function(){
+  $("a.invoice-link").click(function(){
+    $("div.DB-bg").show();
+    $("#CQDB").show();
+    $(window).scrollTop(100);
+    return false;
+  });
+  //CQDB = Charge Question Dialog Box
+  $("#CQDB input[type='button']:first").click(function(){
+    $("form[name='charge-form']").submit();
+  });
+  $("#CQDB input[type='button']:last").click(function(){
+    $("div.DB-bg").hide();
+    $("#CQDB").hide();
+  });
+  $("form[name='reject-form'] input[type='button']").click(function(){
+    $("form[name='reject-form']").submit();
+  });
+
+  $('#close-reject-info').click(function(){
+    $("div.DB-bg-rejet").hide();
+    $('#reject-info').hide();
+  });
+  
+});
+</script>
+
+<!-- Dialog Boxes -->
+<div class="DB-bg"></div>
+<form name="charge-form" method="post" action="">
+<div id="CQDB" class="DB">
+  <input type="hidden" name="charge" value="1"/>
+  Afin d'accéder aux coordonnées complètes de ce contact ne rentrant pas dans votre champs de facturation, vous pouvez l'accepter.<br/>
+  Il vous sera alors facturé au tarif applicable aux contacts rentrant dans vos modalités contractuelles.<br/>
+  <br/>
+  Souhaitez-vous accepter ce contact ?<br/>
+  <br/>
+  <input type="button" value="Oui"/> &nbsp; &nbsp; <input type="button" value="Non"/>
+</div>
+</form>
+
+<div class="centre">
+  <div class="bloc">
+    <div class="bloc-titre"><?php echo REQUEST_DETAIL_BLOC_TITLE ?> n°<?php echo $lead["id"] ?></div>
+    <div class="bloc-texte">
+    <?php if ($lead["pdt_id"]) { ?>
+      <div class="bloc-preview">
+      <?php if($lead["cat_id"]) { ?>
+        <a href="<?php echo URL."produits/".$lead["cat_id"]."-".$lead["pdt_id"]."-".$lead["pdt_ref_name"].".html" ?>" target="_blank"><?php echo REQUEST_DETAIL_SEE_PRODUCT ?></a>
+      <?php } else { ?>
+        <?php echo REQUEST_DETAIL_PRODUCT_DELETED ?>
+      <?php } ?>
+      </div>
+      <?php echo REQUEST_DETAIL_BLOC_DESC_1 ?> "<strong><?php echo $lead["pdt_name"] ?><?php if(trim($lead["pdt_fastdesc"])) echo " - ".$lead["pdt_fastdesc"] ?></strong>".<br/>
+      <?php echo REQUEST_DETAIL_BLOC_DESC_2 ?>
+    <?php } else { ?>
+      <div class="bloc-preview">
+        <a href="<?php echo URL."fournisseur/".$lead["idAdvertiser"].".html" ?>" target="_blank">Voir gamme sur Techni-Contact</a>
+      </div>
+      Cette page vous présente le détail de la demande de conseil sur votre gamme de produits.<br/>
+      Vous y trouverez les coordonnées du prospect, ainsi que des précisions sur sa demande.
+    <?php } ?>
+    </div>
+  </div>
+  <a class="picto-link" href="javascript:window.print();">
+    <div class="picto picto-printer"></div>
+    <div class="text">Imprimer ce contact</div>
+  </a>
+  <div class="miseAZero"></div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2"><?php echo REQUEST_DETAIL_CONTACT_INFOS ?></div>
+    <div class="bloc-texte">
+      <div class="champ-label"><?php echo "Date de la demande" ?> :</div>
+      <div class="champ-form"><?php echo date('d/m/Y H:i:s', $lead["timestamp"]) ?></div>
+      <div class="miseAZero"></div>
+    <?php if (!empty($lead["pdt_id"])) { ?>
+      <div class="champ-label"><?php echo REQUEST_DETAIL_PRODUCT ?> :</div>
+      <div class="champ-form"><?php echo $lead["pdt_name"] ?><?php if(trim($lead["pdt_fastdesc"])) echo " - ".$lead["pdt_fastdesc"] ?></div>
+    <?php } else { ?>
+      <div class="champ-label"><?php echo "Votre gamme de produits" ?> :</div>
+      <div class="champ-form"><?php echo $lead["cat_name"] ?></div>
+    <?php } ?>
+      <div class="miseAZero"></div>
+    <?php if ($user->id == __ID_TECHNI_CONTACT__ && $lead["idAdvertiser"] != __ID_TECHNI_CONTACT__) { ?>
+      <div class="champ-label"><?php echo COMMON_SUPPLIER ?> :</div>
+      <div class="champ-form"><?php echo $lead["nom1"] ?></div>
+      <div class="miseAZero"></div>
+    <?php } ?>
+      <div class="champ-label"><?php echo COMMON_CONTACT_TYPE ?></div>
+      <div class="champ-form"><?php echo $lead_type ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo "Etat de la demande" ?></div>
+      <div class="champ-form"><?php echo $lead_invoice_status_list[$lead["invoice_status"]].getCreditMonth($lead) ?></div>
+      <div class="miseAZero"></div>
+    <?php if($lead["reject_timestamp"]){ ?>
+      <div class="champ-label"><?php echo "Date de rejet" ?></div>
+      <div class="champ-form"><?php echo date('d/m/Y H:i:s', $lead["reject_timestamp"]) ?></div>
+      <div class="miseAZero"></div>
+    <?php }?>
+    </div>
+  </div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2"><?php echo REQUEST_DETAIL_CUSTOMER_INFOS ?></div>
+    <div class="bloc-texte">
+      <div class="champ-label"><?php echo INFOS_LAST_NAME ?> :</div>
+      <div class="champ-form"><?php echo $nom = $show_personal_infos ? $lead["nom"] : make_charge_link(INFOS_LAST_NAME) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_FIRST_NAME ?> :</div>
+      <div class="champ-form"><?php echo $prenom = $show_personal_infos ? ucwords(strtolower($lead["prenom"])) : make_charge_link(INFOS_FIRST_NAME) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_JOB ?> :</div>
+      <div class="champ-form"><?php echo ucwords(strtolower($lead["fonction"])) ?></div>
+     <?php if ($show_personal_infos) : ?>
+      <div class="miseAZero"></div>
+      <div class="champ-label">&nbsp;</div>
+      <div class="champ-form">
+        <a href="http://www.viadeo.com/recherche/transverse/index.jsp?lang=fr&queryString=<?php echo trim(strtolower($prenom)).'+'.trim(strtolower($nom)).'+'.$companyNameLink ?>&search=go" target="_blank">Voir son profil professionnel </a>
+        <a href="http://www.viadeo.com/recherche/transverse/index.jsp?lang=fr&queryString=<?php echo trim(strtolower($prenom)).'+'.trim(strtolower($nom)).'+'.$companyNameLink ?>&search=go" target="_blank"><img style="vertical-align:middle; margin-left: 10px" src="ressources/images/logo-viadeo.png" alt="Viadeo" /></a>
+      </div>
+     <?php endif ?>
+      <div class="champ-miseAZero"></div>
+      <br/>
+      <div class="champ-label"><?php echo INFOS_EMAIL ?> :</div>
+      <div class="champ-form"><?php echo $show_personal_infos ? strtolower($lead["email"]) : make_charge_link(INFOS_EMAIL) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_URL ?> :</div>
+      <div class="champ-form"><?php echo $lead["url"] ? ($show_personal_infos ? $lead["url"] : make_charge_link(INFOS_URL)) : "N/C" ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_TEL1 ?> :</div>
+      <div class="champ-form"><?php echo $show_personal_infos ? $lead["tel"] : make_charge_link(INFOS_TEL1) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_FAX1 ?> :</div>
+      <div class="champ-form"><?php echo $lead["fax"] ? ($show_personal_infos ? $lead["fax"] : make_charge_link(INFOS_FAX1)) : "N/C" ?></div>
+      <div class="miseAZero"></div>
+    </div>
+  </div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2"><?php echo REQUEST_DETAIL_COMPANY_INFOS ?></div>
+    <div class="bloc-texte">
+      <div class="champ-label"><?php echo REQUEST_DETAIL_COMPANY_NAME ?> :</div>
+      <div class="champ-form"><?php echo $show_personal_infos ? $lead["societe"] : make_charge_link(REQUEST_DETAIL_COMPANY_NAME) ?></div>
+     <?php if ($show_personal_infos) : ?>
+      <div class="miseAZero"></div>
+      <div class="champ-label">&nbsp;</div>
+      <div class="champ-form"><a href="http://www.societe.com/cgi-bin/liste?nom=<?php echo $companyNameLink ?>&dep=<?php echo substr($lead["cp"], 0, 2) ?>" target="_blank">Voir ses bilans gratuits</a></div>
+     <?php endif ?>
+      <div class="champ-miseAZero"></div><br/>
+      <div class="champ-label"><?php echo INFOS_NUMBER_OF_EMPLOYEES ?> :</div>
+      <div class="champ-form"><?php echo $lead["salaries"] ? $lead["salaries"] : "N/C" ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_ACTIVITY_SECTOR ?> :</div>
+      <div class="champ-form"><?php echo ucwords(strtolower($lead["secteur"])) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_NAF_CODE ?> :</div>
+      <div class="champ-form"><?php echo $lead["naf"] ? ($show_personal_infos ? $lead["naf"] : make_charge_link(INFOS_NAF_CODE)) : "N/C" ?> </div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_SIREN_NUMBER ?> :</div>
+      <div class="champ-form"><?php echo $lead["siret"] ? ($show_personal_infos ? $lead["siret"] : make_charge_link(INFOS_SIREN_NUMBER)) : "N/C" ?></div>
+      <div class="champ-miseAZero"></div>
+      <br/>
+      <div class="champ-label"><?php echo INFOS_ADDRESS ?> :</div>
+      <div class="champ-form">
+        <?php echo $show_personal_infos ? ucwords(strtolower($lead["adresse"])) : make_charge_link(INFOS_ADDRESS) ?>
+       <?php if ($show_personal_infos && $lead["cadresse"]) : ?>
+        <br/><?php echo ucwords(strtolower($lead["cadresse"])) ?>
+       <?php endif ?>
+      </div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_PC ?> :</div>
+      <div class="champ-form"><?php echo $lead["cp"] ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_CITY ?> :</div>
+      <div class="champ-form"><?php echo $lead["ville"] ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo INFOS_COUNTRY ?> :</div>
+      <div class="champ-form"><?php echo $lead["pays"] ?></div>
+      <div class="miseAZero"></div>
+      <?php foreach ($customFields as $fieldName => $fieldData) : ?>
+        <div class="champ-label"><?php echo $fieldName ?> :</div>
+        <div class="champ-form"><?php echo $fieldData ?></div>
+        <div class="miseAZero"></div>
+      <?php endforeach ?>
+    </div>
+  </div>
+  <br/>
+  
+  <?php if(!empty($lead["precisions"])) : ?>
+  <div class="bloc" style="width: 800px">
+    <div class="bloc-titre2 bloc-blue">Projet de l'entreprise</div>
+    <div class="bloc-texte">
+      Description du projet : <?php echo $lead["precisions"]; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+  
+ <?php if ($lead['invoice_status'] & Contacts::STATUS_IS_VISIBLE) : ?>
+  <?php $conv = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__, $lead['clt_id'], $lead['id']); ?>
+  <br/>
+  <div class="bloc-IM">
+    <div class="bloc-titre2">Conversations avec le contact</div>
+    <div class="bloc-texte">
+      Répondez directement à vos contacts depuis votre extranet. Saisissez votre message dans le champs ci-dessous.<br />
+      Vous pouvez joindre à votre message un document.<br />
+      <br />
+      <textarea name="contenu_message"></textarea><br />
+      <input type="checkbox" name="copy_to_sender"></label for="copy_to_sender">M'envoyer une copie de ce message</label>
+      <div class="attachments">
+        <button id="add-msn-attachment" type="button" class="btn ui-state-default ui-corner-all">Ajouter une pièce jointe</button>
+        <ul id="attachment-list" class="attachment-list">
+        </ul>
+      </div>
+      <div class="bloc-preview"><a href="#" onClick="sendMessage();return false;">Envoyer</a></div>
+    </div>
+  </div>
+  <div class="zero"></div>
+  <br/>
+  <div id="conversation" class="conversation">
+    <div class="conv-title">Conversation liée à ce contact</div>
+    <ul></ul>
+  </div>
+  
+  <!-- attachment dialog box -->
+  <div id="upload-msn-attachment-db" title="Ajouter une pièce jointe" class="db">
+    <form name="loadDoc" method="post" action="" enctype="multipart/form-data">
+    <img class="loading-gif" src="<?php echo EXTRANET_URL ?>ressources/images/lightbox-ico-loading.gif">
+    <input type="hidden" name="action" value="load-doc" />
+    <input type="hidden" name="supplier" value="" />
+    <input type="hidden" name="cmdId" value="<?php echo $o['id'] ?>" />
+    Nom : <input type="text" name="aliasPjMessFileName" value="" /><br />
+    <br />
+    Sélectionnez le document à lier au message<br />
+    <br />
+    <input type="file" name="pjMessFile"  id="pjMessFile"  accept="application/pdf, application/msword, image/jpeg" /><br />
+    </form>
+  </div>
+  
+  <script type="text/javascript">
+//<![CDATA[
+var client_post = {
+  sender_name: "<?php echo htmlspecialchars($lead['societe']) ?>",
+  timestamp: <?php echo $lead['timestamp'] ?>,
+  text: "<?php echo str_replace(array("\r\n","\n"), "\\n", htmlspecialchars($lead['precisions'])) ?>",
+  attachments: ''
+};
+
+function getConversation(){
+  $.ajax({
+    url: "AJAX_conversation.php",
+    data: "idUser="+<?php echo $user->id ?>+"&action=get&lead="+<?php echo $lead['id'] ?>,
+    type: "POST",
+    dataType: "json",
+    error: function (jqXHR, textStatus, errorThrown) {
+      $("#conversation ul").empty().append("<div class=\"bloc-titre2\">"+HN.TC.getAjaxErrorText(jqXHR, textStatus, errorThrown)+"</div>");
+      $("#conversation").show();
+    },
+    success: function (data, textStatus, jqXHR) {
+      if (data.conversations && data.conversations != 'vide') {
+        var html = "";
+        if (client_post.text != ""){
+          html += getPostHtml(client_post);
+        }
+        for (var i=0; i<data.conversations.length; i++) {
+          html += getPostHtml(data.conversations[i]);
+        };
+        $("#conversation ul").empty().html(html);
+        $("#conversation").show();
+      }
+      else if(data.conversations == 'vide'){
+        var html = "";
+        if (client_post.text != ""){
+          html += getPostHtml(client_post);
+          $("#conversation ul").empty().html(html);
+          $("#conversation").show();
+        }
+      }
+      else if (data.result) {
+        var textarea = $("textarea[name='contenu_message']");
+        textarea.val("");
+        $("div.DB-bg").show();
+        $("#CQDB").show()
+      }
+    }
+  });
+}
+function getPostHtml(post){
+  var html = "<li>"+
+               "<div class=\"post-title\">Message de "+post.sender_name+" envoyé le "+HN.TC.get_formated_datetime(post.timestamp, " à ")+"</div>";
+  if (post.attachments.length) {
+    html += "<div class=\"clip icon attach\" title=\"Pièces jointes\"></div>"+
+            "<div class=\"files\">";
+    for (var ai=0; ai<post.attachments.length; ai++) {
+      var f = post.attachments[ai].file;
+      html += "<a href=\""+f.url+"\" class=\"_blank\">"+f.shown_name+"</a><br/>";
+    }
+    html += "</div>";
+  }
+  html +=   "<div class=\"post-text\">"+post.text+"</div>"+
+          "</li>";
+  return html;
+}
+
+function sendMessage(){
+  var contenuMessage = $("textarea[name='contenu_message']").val(),
+      copyToSender = $("input[name='copy_to_sender']").prop("checked")|0;
+  $.ajax({
+    url: "AJAX_conversation.php",
+    data: "idUser="+<?php echo $user->id ?>+"&contenu="+encodeURIComponent(contenuMessage)+"&copyToSender="+copyToSender+"&action=add&lead="+<?php echo $lead['id'] ?>,
+    type: "POST",
+    dataType: "json",
+    error: function (jqXHR, textStatus, errorThrown) {
+      $("#conversation ul").empty().append("<div class=\"bloc-titre2\">"+HN.TC.getAjaxErrorText(jqXHR, textStatus, errorThrown)+"</div>");
+    },
+    success: function (data, textStatus) {
+      $("textarea[name='contenu_message']").val("");
+      getConversation();
+    }
+  });
+}
+$("#conversation").on("click", ".attach", function(){
+  var $this = $(this);
+  $this.next().css({ left: $this.position().left+20 }).toggle(300);
+});
+
+$(document).ready(function(){
+ getConversation(); 
+})
+
+$("#reject-options-cb").click(function(){
+  if ($(this).attr("checked"))
+    $("#reject-options").show();
+  else
+    $("#reject-options").hide();
+});
+if ($("#reject-options-cb").attr("checked"))
+  $("#reject-options").show();
+else 
+  $("#reject-options").hide();
+
+
+// attachments
+var pjMessFile = new HN.TC.ajaxUploadFile({
+  itemId: <?php echo $lead['id'] ?>,
+  context: "lead-tmppjmess",
+  fileElementId: "pjMessFile"
+});
+function getPjMessFilesList(){
+  var pjMessFiles = new HN.TC.getUploadedFiles({
+    itemId: pjMessFile.itemId,
+    context: pjMessFile.context
+  });
+  pjMessFiles = pjMessFiles.getUploadedFilesList();
+  
+  $("#attachment-list").empty();
+  for (var i=0; i<pjMessFiles.list.length; i++) (function(){
+    var f = pjMessFiles.list[i],
+        fn = f.alias_filename || f.filename;
+    $("<li>")
+      .append("<span>"+fn+"."+f.extension+"</span>")
+      .append($("<a>", {
+        "class": "_blank",
+        "title": "Voir",
+        href: pjMessFiles.directory+f.filename+"."+f.extension,
+        html: "<span class=\"icon eye\"></span>"
+      }))
+      .append($("<span>", {
+        "class": "icon cross",
+        "title": "Supprimer",
+        click: function(){ deletePjMessFile(f.id, fn+"."+f.extension); }
+      }))
+      .appendTo("#attachment-list");
+  }());
+};
+function deletePjMessFile(fileId, filename){
+  if (confirm("Souhaitez-vous supprimer le fichier "+filename+" ?")) {
+    var deletePjFile = new HN.TC.deleteUploadedFile(fileId);
+    deletePjFile.context = pjMessFile.context;
+    deletePjFile.deleteFileFunction();
+  }
+  getPjMessFilesList();
+};
+var $uploadMsnAttachmentDb = $("#upload-msn-attachment-db").dialog({
+  width: 400,
+  autoOpen: false,
+  modal: true,
+  buttons: {
+    "Annuler": function(){
+      $(this).dialog("close");
+    },
+    "Envoyer": function(){
+      pjMessFile.aliasFileName = $(this).find("input[name='aliasPjMessFileName']").val();
+      pjMessFile.loadingImg = $(this).find("img.loading-gif");
+      pjMessFile.doAjaxFileUpload(function(){
+        $uploadMsnAttachmentDb.dialog("close");
+        getPjMessFilesList();
+      });
+    }
+  }
+});
+$("#add-msn-attachment").on("click", function(){
+  $uploadMsnAttachmentDb.dialog("open");
+});
+
+getPjMessFilesList();
+//]]>
+  </script>
+ <?php endif // lead visible ?>
+ 
+ <?php if ($show_reject_options && time() < $expiryDate ) : ?>
+  <br />
+  <div class="bloc">
+    <form name="reject-form" method="post" action="#form_lead_action" id="form_lead_action">
+    <div class="bloc-titre2">
+      <input type="checkbox" id="reject-options-cb" name="show_reject_options" <?php if (isset($_POST["show_reject_options"])) { ?>checked="checked"<?php } ?>/> Je ne souhaite pas valider ce contact.<br />
+      Date limite de rejet de ce contact : <?php echo date('d/m/Y à H\hi', $expiryDate) ?><br />
+      <br />
+      <strong>Note importante :</strong><br />
+      <span style="font-weight : normal;">
+      Ce contact peut être rejeté jusq'au 5 minuit du mois suivant sa réception.<br />
+      Ce contact, s'il est rejeté, ne vous sera pas facturé.<br />
+      Techni-Contact s'autorise à mettre en oeuvre les moyens humains ou techniques pour détecter tout abus lors des rejets.
+      </span>
+    </div>
+    
+    <div class="bloc-texte" id="reject-options">
+     <?php if ($lead["invoice_status"] == __LEAD_INVOICE_STATUS_REJECTED_WAIT__ || $lead["invoice_status"] ==  __LEAD_INVOICE_STATUS_CHARGEABLE_REJECTED_WAIT__) : ?>
+      <div class="champ-form"><strong>Demande de rejet envoyée - en attente de validation. Votre demande sera traitée dans les 24H.</strong></div>
+      <div class="champ-miseAZero"></div><br/>
+     <?php else : ?>
+      <div class="champ-label"><?php echo "Option de rejet" ?> :</div>
+      <div class="champ-form">
+        <select name="reject-option">
+          <option value="0">Coordonnées inexploitables</option>
+          <option value="1">Le produit demandé ne correspond pas à ma gamme de produits</option>
+        </select>
+      </div>
+      <div class="miseAZero"></div>
+      <div class="champ-label"><?php echo "Justificatif du refus" ?> :</div>
+      <div class="champ-form"><input type="text" name="reject-reason" size="50" value="<?php if ($error_reject && isset($_POST["reject-reason"])) echo $_POST["reject-reason"] ?>"/> <input id="reject" type="button" value="Envoyer ma demande"/></div>
+      <div class="miseAZero"></div>
+     <?php endif ?>
+     <?php if ($error_reject) : ?>
+      <div style="color: #b00000">Le justificatif de refus est obligatoire et doit faire au moins 10 lettres.</div>
+     <?php endif ?>
+    </div>
+    </form>
+  </div>
+  
+ <?php elseif ($show_reject_options && time() > $expiryDate) : ?>
+  <div class="bloc">
+    <div class="bloc-titre2">
+      Date limite de rejet de ce contact dépassée.
+    </div>
+  </div>
+ <?php endif // show reject options or not ?>
+<?php endif // no error ?>
+
+<?php require(EXTRANET."tail.php") ?>

@@ -1,0 +1,11 @@
+ Bonjour<br />
+<br />
+Le fournisseur SUPPLIER_NAME vous contacte à propos de sa commande n°<a href="LIEN_CMD">CMD_NUMBER</a><br />
+<br />
+Voici son message :<br />
+<br />
+MESSAGE_CONTENT<br />
+<br />
+Vous pouvez directement répondre à ce fournisseur en accédant à sa fiche commande en manager.<br />
+<br />
+<a href="LIEN_CMD">Voir fiche commande</a>

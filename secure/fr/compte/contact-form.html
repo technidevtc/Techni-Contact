@@ -1,0 +1,360 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS.'CUserSession.php');
+require(ICLASS.'CCustomerUser.php');
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+  header("Location: " . COMPTE_URL . "login.html");
+  exit();
+}
+
+$cfType = isset($_POST["type"]) ? (int)$_POST["type"] : (isset($_GET["type"]) ? (int)$_GET["type"] : 0);
+$cfID = isset($_POST["id"]) ? (int)$_POST["id"] : (isset($_GET["id"]) ? (int)$_GET["id"] : 0);
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  $fields = array();
+  $fields["type"]    = isset($_POST["type"])    ? trim($_POST["type"]) : null;
+  $fields["id"]      = isset($_POST["id"])      ? trim($_POST["id"]) : null;
+  $fields["object"]  = isset($_POST["object"])  ? trim($_POST["object"]) : null;
+  $fields["message"] = isset($_POST["message"]) ? substr(trim($_POST["message"]), 0, 2000) : null;
+
+  if (empty($fields["type"]) || ($fields["type"] != "1" && $fields["type"] != "2" & $fields["type"] != "3" & $fields["type"] != "4"))
+    $error["type"] = true;
+  if (empty($fields["id"]))
+    $error["id"] = true;
+  if ($fields["type"] == "1" && empty($fields['object']))
+    $error['object'] = true;
+  if (empty($fields["message"]))
+    $error["message"] = true;
+  
+  if (empty($error)) {
+    $infos = $user->getCoordFromArray();
+   
+    // 04/05/2011 OD : correction bug : Parfois le mail du client n'apparait pas dans le message
+    // tâche http://www.hook-network.com/storm/tasks/2011/05/03/rajout-mail-compte-client-etat-commande-annul%C3%A9e
+    $customerMail = empty($infos['email']) ? $infos['login'] : $infos['email'];
+
+    $mail_infos = array(
+      'CLIENT_LASTNAME' => $infos['nom'],
+      'CLIENT_FIRSTNAME' => $infos['prenom'],
+      'CLIENT_COMPANY' => $infos['societe'],
+      'CLIENT_PHONE' => $infos['tel1'],
+      'CLIENT_FAX' => $infos['fax1'],
+      'CLIENT_ADDRESS' => $infos['adresse'],
+      'CLIENT_PC' => $infos['cp'],
+      'CLIENT_CITY' => $infos['ville'],
+      'CLIENT_COUNTRY' => $infos['pays'],
+      'CLIENT_EMAIL' => $customerMail,
+      'CONTACT_DATE' => date('d/m/Y - H:i:s'),
+      'OBJECT_NUM' => $fields['id'],
+      'CONTACT_MESSAGE' => $fields['message'],
+      'CLIENT_LINK' => "<a href=\"".ADMIN_URL."clients?idClient=".$infos['id']."\">Voir la fiche client</a>"
+    );
+
+    switch ($fields['type']) {
+      case '1': // order
+        $mail_infos['OBJECT_TYPE'] = 'commande';
+        $mail_infos['OBJECT_LINK'] = "<a href=\"".ADMIN_URL."orders/order-detail.php?id=".$fields['id']."\">Voir la commande du client</a>";
+        
+        $msg = "Commande n°".$fields['id']." - ";
+        switch ($fields['object']) {
+          case "1": $msg .= "Info livraison"; break;
+          case "2": $msg .= "Commande incomplète"; break;
+          case "3": $msg .= "Erreur produit"; break;
+          case "4": $msg .= "Produit endommagé"; break;
+          case "5":
+          default : $msg .= "Autre"; break;
+        }
+        $mail_infos['CONTACT_MESSAGE'] = $fields['message'] = $msg."\r\n".$fields['message'];
+        
+        $o_date = Doctrine_Query::create()
+          ->select('created')
+          ->from('Order')
+          ->where('id = ?', $fields['id'])
+          ->andWhere('client_id = ?', $session->userID)
+          ->fetchOne(array(), Doctrine_Core::HYDRATE_SINGLE_SCALAR);
+        $mail_infos['OBJECT_DATE'] = date('d/m/Y - H:i:s', $o_date);
+        $mail = new Email(array(
+          'email' => "commandes@techni-contact.com",
+          'subject' => "Demande client concernant ".$msg,
+          'headers' => "From: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n".
+                       "Reply-To: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n",
+          'template' => "tc-sfo_account-client_question_notification",
+          'data' => $mail_infos
+        ));
+        $mail->send();
+        
+        $m = new Messenger();
+        $m->context = __MSGR_CTXT_CUSTOMER_TC_CMD__;
+        $m->type_sender = __MSGR_USR_TYPE_INT__;
+        $m->id_sender = $user->id;
+        $m->type_recipient = __MSGR_USR_TYPE_BOU__;
+        $m->id_recipient = __ID_TECHNI_CONTACT_BOUSER__;
+        $m->reference_to = $fields['id'];
+        $m->text = $fields['message'];
+        $m->save();
+        break;
+      
+      case '2': // pdf estimate
+        // loading pdf estimates
+        $estimates = Cart::getEstimates($session->userID, "create_time", "desc");
+        $js_estimates = array();
+        foreach($estimates as &$estimate) { $js_estimates[] = array("id" => $estimate["estimate"], "date" => date('d/m/Y à H:i', $estimate["create_time"])); }
+
+        $mail_infos['OBJECT_TYPE'] = 'devis pdf';
+        $mail_infos['OBJECT_LINK'] = "Il n'est actuellement pas possible d'accéder à la fiche devis";
+        foreach($estimates as &$estimate)
+          if ($estimate['estimate'] == $fields['id'])
+          break;
+        $mail_infos['OBJECT_DATE'] = date('d/m/Y - H:i:s', $estimate['create_time']);
+        $mail = new Email(array(
+          'email' => "devis@techni-contact.com",
+          'subject' => "Demande client concernant ".$mail_infos['OBJECT_TYPE']." n°".$fields['id'],
+          'headers' => "From: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n".
+                       "Reply-To: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n",
+          'template' => "tc-sfo_account-client_question_notification",
+          'data' => $mail_infos
+        ));
+        $mail->send();
+
+        $m = new Messenger();
+        $m->context = __MSGR_CTXT_CUSTOMER_TC_DEVIS_PDF__;
+        $m->type_sender = __MSGR_USR_TYPE_INT__;
+        $m->id_sender = $user->id;
+        $m->type_recipient = __MSGR_USR_TYPE_BOU__;
+        $m->id_recipient = __ID_TECHNI_CONTACT_BOUSER__;
+        $m->reference_to = $fields['id'];
+        $m->text = $fields['message'];
+        $m->save();
+        break;
+      
+      case '3': // manager estimate
+        $mail_infos['OBJECT_TYPE'] = 'devis commercial';
+        $mail_infos['OBJECT_LINK'] = "<a href=\"".ADMIN_URL."estimates/estimate-detail.php?id=".$fields['id']."\">Voir le devis du client</a>";
+        $e = Doctrine_Query::create()
+          ->select('e.created, cu.email as created_user_email')
+          ->from('Estimate e')
+          ->leftJoin('e.created_user cu')
+          ->where('e.id = ?', $fields['id'])
+          ->andWhere('e.client_id = ?', $session->userID)
+          ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+        $mail_infos['OBJECT_DATE'] = date('d/m/Y - H:i:s', $e['created']);
+        $mail = new Email(array(
+          'email' => !empty($e['created_user_email']) ? $e['created_user_email'] : "devis@techni-contact.com",
+          'subject' => "Demande client concernant ".$mail_infos['OBJECT_TYPE']." n°".$fields['id'],
+          'headers' => "From: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n".
+                       "Reply-To: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n",
+          'template' => "tc-sfo_account-client_question_notification",
+          'data' => $mail_infos
+        ));
+        $mail->send();
+        
+        $m = new Messenger();
+        $m->context = __MSGR_CTXT_CUSTOMER_TC_ESTIMATE__;
+        $m->type_sender = __MSGR_USR_TYPE_INT__;
+        $m->id_sender = $user->id;
+        $m->type_recipient = __MSGR_USR_TYPE_BOU__;
+        $m->id_recipient = __ID_TECHNI_CONTACT_BOUSER__;
+        $m->reference_to = $fields['id'];
+        $m->text = $fields['message'];
+        $m->save();
+        break;
+      
+      case '4': // lead
+        $mail_infos['OBJECT_TYPE'] = 'Demande information - devis';
+        $mail_infos['OBJECT_LINK'] = "<a href=\"".ADMIN_URL."contacts/lead-detail.php?id=".$fields['id']."\">Voir la demande du client</a>";
+        $c = Doctrine_Query::create()
+          ->select('c.create_time, c.idAdvertiser, adv.email as advertiser_email')
+          ->from('Contacts c')
+          ->leftJoin('c.created_user cu')
+          ->leftJoin('c.advertiser adv')
+          ->where('c.id = ?', $fields['id'])
+          ->andWhere('c.email = ?', $user->login)
+          ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+        $mail_infos['OBJECT_DATE'] = date('d/m/Y - H:i:s', $c['create_time']);
+        $mail = new Email(array(
+          'email' => "conv-annonceurs-clients@techni-contact.com",
+          'subject' => "Demande client concernant ".$mail_infos['OBJECT_TYPE']." n°".$fields['id'],
+          'headers' => "From: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n".
+                       "Reply-To: ".$mail_infos['CLIENT_COMPANY']."<".$mail_infos['CLIENT_EMAIL'].">\r\n",
+          'template' => "tc-sfo_account-client_question_notification",
+          'data' => $mail_infos
+        ));
+        $mail->send();
+        
+        // envoyer au mail du compte annonceur
+        $m = new Messenger();
+        $m->context = __MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__;
+        $m->type_sender = __MSGR_USR_TYPE_INT__;
+        $m->id_sender = $user->id;
+        $m->type_recipient = __MSGR_USR_TYPE_ADV__;
+        $m->id_recipient = $c['idAdvertiser'];
+        $m->reference_to = $fields['id'];
+        $m->text = $fields['message'];
+        $m->save();
+      break;
+    }
+    
+    include(ADMIN.'generator.php');
+    $contactID = generateID(1, 0x7fffffff, 'id', 'contacts_form', $db);
+    $db = DBHandle::get_instance();
+    
+    $db->query("
+      INSERT INTO contacts_form (
+        id, timestamp, nom, prenom, societe,
+        adresse, cadresse, cp, ville, pays,
+        tel, fax, email, source, objet,
+        message)
+      VALUES (
+      '".$contactID."', '".time()."', '".$db->escape($infos["nom"])."', '".$db->escape($infos["prenom"])."', '".$db->escape($infos["societe"])."',
+      '".$db->escape($infos["adresse"])."', '".$db->escape($infos["complement"])."', '".$db->escape($infos["cp"])."', '".$db->escape($infos["ville"])."', '".$db->escape($infos["pays"])."',
+      '".$db->escape($infos["tel1"])."', '".$db->escape($infos["fax1"])."', '".$db->escape($infos["email"])."', 'contact-client-compte', '".$mail_infos["OBJECT_TYPE"]." n°".$mail_infos["OBJECT_NUM"]." du ".$mail_infos["OBJECT_DATE"]."',
+      '".$db->escape($fields["message"])."')", __FILE__, __LINE__);
+    
+    $session = new UserSession();
+    $session->authorized_contact_account_infos = $mail_infos;
+    
+    if (Utils::is_ajax_requested())
+      print('ok');
+    else
+      header("Location: ".COMPTE_URL."contact-form-success.html");
+    
+  } elseif (Utils::is_ajax_requested()) {
+    print json_encode($error);
+  }
+
+} else { // not POST
+
+  switch ($cfType) {
+    case '1': // order
+    $oc = Doctrine_Query::create()
+      ->select('id, FROM_UNIXTIME(created,"%d/%m/%Y à %H:%i") AS date, total_ttc')
+      ->from('Order')
+      ->where('client_id = ?', $session->userID)
+      ->andWhere('id = ?', $cfID)
+      ->orderBy('created DESC')
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+      
+      if(empty($oc))
+        $error = 'Commande introuvable';
+      
+      $contexte = "<strong><i>le SAV</i></strong> concernant la commande n°".$cfID."<br />du ".$oc['date']." d'un montant de ".$oc['total_ttc']." € TTC.";
+    break;
+    
+    case '2': // devis pdf
+      $es = Doctrine_Query::create()
+        ->select('p.*, FROM_UNIXTIME(p.create_time,"%d/%m/%Y à %H:%i") AS date')
+        ->from('Paniers p')
+        ->where('p.estimate = ?', $cfID)
+        ->andWhere('p.idClient = ?', $session->userID)
+        ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+        
+      $contexte = "<strong><i>Techni-contact</i></strong> à propos du devis<br />n°".$cfID." du ".$es['date']." d'un montant de ".$es['totalTTC']." € TTC.";
+    break;
+    
+    case '3': // devis manager
+    $ec = Doctrine_Query::create()
+      ->select('e.*, cu.*, FROM_UNIXTIME(e.created,"%d/%m/%Y à %H:%i") AS date')
+      ->from('Estimate e')
+      ->leftJoin('e.created_user as cu')
+      ->where('client_id = ?', $session->userID)
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+      
+      if(empty($ec))
+        $error = 'Commande introuvable';
+      
+      $contexte = "<strong><i>".$ec['created_user']['name']."</i></strong> à propos du devis<br />n°".$cfID." du ".$ec['date']." d'un montant de ".$ec['total_ttc']." € TTC.";
+    break;
+    
+    case '4': // lead
+    $lc = Doctrine_Query::create()
+      ->select('c.id, FROM_UNIXTIME(c.timestamp,"%d/%m/%Y à %H:%i") AS date, ca.nom1 as adv_name, c.parent, c.idProduct')
+      ->from('Contacts c')
+      ->leftJoin('c.advertiser ca')
+      ->where('c.email = ?',$user->login)
+      ->andWhere('c.id = ?', $cfID)
+    //  ->andWhere('ca.category != ? OR ca.category != ?', array(__ADV_CAT_BLOCKED__,__ADV_CAT_LITIGATION__))
+    //  ->andWhere('c.invoice_status = ? OR c.invoice_status = ? OR c.invoice_status = ? OR c.invoice_status = ?', array(__LEAD_INVOICE_STATUS_CHARGEABLE__,__LEAD_INVOICE_STATUS_CHARGED__,__LEAD_INVOICE_STATUS_IN_FORFEIT__,__LEAD_INVOICE_STATUS_DOUBLET__))
+     // ->orderBy('c.create_time DESC')
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+      if (empty($lc))
+        $error = 'Demande introuvable';
+
+     // $contexte = 'demande de devis concernant '.$lc['income_total'].' € HT.';
+
+      $lead = $lc;
+      if ($lead['parent'] == 0)
+        $idProduct = $lead['idProduct'];
+      else
+        $idProduct = Doctrine_Query::create()->select('idProduct')->from('Contacts')->where('id = ?', $lead['parent'])->fetchOne(array(), Doctrine_Core::HYDRATE_SINGLE_SCALAR);
+
+      $product = Doctrine_Query::create()
+        ->select('id, fastdesc, name')
+        ->from('ProductsFr')
+        ->where('id = ?', $idProduct)
+        ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+      $contexte = "la société <strong><i>".$lc['adv_name']."</i></strong> à propos de votre demande de devis concernant ".strtoupper($product['name']).".";
+
+    break;
+  
+  }
+  if (!empty($error)) {
+    echo $error;
+  } else {
+?>
+<div id="body">
+  <script type="text/javascript">
+  HN.TC.GVars.account_orders = <?php echo json_encode($oc) ?>;
+  HN.TC.GVars.account_estimates = <?php echo json_encode($js_estimates) ?>;   
+  HN.TC.GVars.account_bo_estimates = <?php echo json_encode($ec) ?>;
+  HN.TC.GVars.account_leads = <?php echo json_encode($lc) ?>;
+  HN.TC.GVars.account_cfType = "<?php echo $cfType ?>";
+  HN.TC.GVars.account_cfID = "<?php echo $cfID ?>";
+  </script>
+  <div class="account">
+    <div class="box account-box">
+      <div class="box-out">
+        <div>
+          <div class="contact-form">
+            Vous êtes sur le point de contacter <?php echo $contexte ?>
+            <form name="account_contact_form" action="<?php echo COMPTE_URL."contact-form.html" ?>" method="post">
+              <div class="contact-infos">
+                <input type="hidden" name="type" value="<?php echo $cfType ?>" />
+                <input type="hidden" name="id" value="<?php echo $cfID ?>" />
+               <?php if ($cfType == 1) : ?>
+                <label for="object" class="ib">Motif :</label>
+                <select name="object" class="edit ib" >
+                  <option value="1"> - Où en est ma commande ?</option>
+                  <option value="2"> - Ma commande reçue est incomplète</option>
+                  <option value="3"> - Je n'ai pas reçu le produit commandé</option>
+                  <option value="4"> - Mon produit est arrivé endommagé ou ne fonctionne pas</option>
+                  <option value="5"> - Autre</option>
+                </select>
+                <br/>
+               <? endif ?>
+                <textarea class="edit contact-message" name="message" rows="4">Quelle est votre question ?</textarea>
+                <br/>
+                <br/>
+                <div class="link-send-contact-request send-contact-request blue-title fr">Envoyer ma question</div>
+                <div class="zero"></div>
+                <a href="javascript:void(0);" onClick="javascript:$('#account-contact-dialog').dialog('close');" class="blue-title fl">[ Fermer ]</a>
+             </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="btl"></div><div class="btr"></div>
+      <div class="bbl"></div><div class="bbr"></div>
+    </div>
+  </div>
+</div>
+<?php
+  }
+}
+  

@@ -1,0 +1,20 @@
+<p>Un utilisateur client Techni-Contact a envoyé le mail suivant :</p>
+
+<p>Date : CONTACT_DATE</p>
+
+<p>
+Objet : CONTACT_SUBJECT<br/>
+Message : CONTACT_MESSAGE
+</p>
+
+<p>
+Société : CUSTOMER_COMPANY_NAME<br/>
+Nom : CUSTOMER_LASTNAME<br/>
+Prénom : CUSTOMER_FIRSTNAME<br/>
+Adresse : CUSTOMER_ADDRESS<br/>
+Code postal : CUSTOMER_PC<br/>
+Ville : CUSTOMER_CITY<br/>
+Pays : CUSTOMER_COUNTRY<br/>
+Tel : CUSTOMER_PHONE<br/>
+Adresse mail : CUSTOMER_EMAIL<br/>
+</p>

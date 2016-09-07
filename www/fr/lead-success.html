@@ -1,0 +1,136 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$session = new UserSession();
+
+$infos = $session->authorized_adv_infos;
+
+if (!isset($infos)) {
+  $infos = array(
+    'Customer-RequestType' => 3,
+    'Customer-Email2' => "t.henryg@techni-contact.com",
+    'MainProduct-Advertiser-Category' => 1,
+    'MainProduct-Advertiser-ShowInfosOnline' => 0,
+    'MainProduct-GeneratedContactID' => ""
+  );
+}
+
+define("__PAGE_LEAD_SUCCESS__", true);
+define("__BR_NO_AD__", true);
+define("__TOP_NO_AD__", true);
+
+if ($infos["MAINPRODUCT_ADVERTISER_CATEGORY"] != __ADV_CAT_SUPPLIER__) {
+  define("NO_SUPPLIER_PRODUCT", true);
+  if ($infos["MAINPRODUCT_ADVERTISER_CATEGORY"] != __ADV_CAT_ADVERTISER__)
+    define("NOR_ADVERTISER_PRODUCT", true);
+}
+$meta_desc = "";
+
+$criteo = $infos['criteo'];
+require SITE.'head.php';
+?>
+  <div id="body" class="white-bg">
+    <div class="lead-form blocks-left">
+      <div class="bigger-blue-title padding-top-20">Votre demande a bien été prise en compte</div>
+     
+      <div class="fl">
+        <div class="grey-block lead-success-block">
+          <div class="blue-title">Résumé de votre demande</div>
+          <div class="lead-success-pic">
+            <div class="picture fl">
+              <div class="lead-success-picture-border">
+                <img class="vmaib" alt="" src="<?php echo Utils::get_pdt_pic_url($infos["MAINPRODUCT_ID"]) ?>"><div class="vsma"></div>
+              </div>
+            </div>
+            <div class="lead-success-infos fr">
+              <?php echo $infos['MAINPRODUCT_NAME'] ?><br />
+              <br />
+              <?php echo $infos['MAINPRODUCT_FASTDESC'] ?><br />
+              Code fiche produit : <span class="color-blue"><?php echo $infos['MAINPRODUCT_ID'] ?></span><br />
+            </div>
+            <div class="zero"></div>
+            <div class="lead-success-project">
+             <?php if (!empty($infos['MAINPRODUCT_PRECISIONS'])) : ?>
+              <br /><br /><p class="font-size-11"><span class="font-size-12">Votre projet</span><br /><br /><?php echo $infos['MAINPRODUCT_PRECISIONS'] ?></p>
+             <?php else : ?>
+              <br />Vous n'avez pas détaillé votre projet.
+             <?php endif ?>
+           </div>
+          </div>
+        </div>
+        
+        <div id="block-lead-recommended-products" class="grey-block lead-success-recommended-products">
+          <div class="grey-block-title">Ces produits pourraient vous intéresser</div>
+          <div class="grey-block-inlay">
+            <script type="text/javascript">
+              HN.TC.GetNuukikRecommendedProducts("block-lead-recommended-products", [95, "products", "<?php echo $infos['MAINPRODUCT_ID'] ?>", "recommendation"], "", "?campaignID=999999", function(){
+                window._gaq && _gaq.push(['_trackEvent', 'Nuukik', 'Reco Confirmation Lead', $(this).parent().data("pdt").infos.name]);
+              });
+            </script>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grey-block lead-success-block fr">
+        <div class="blue-title">Votre demande a été transmise à notre expert</div>
+        <br/>
+       <?php if ($infos["MAINPRODUCT_ADVERTISER_CATEGORY"] == __ADV_CAT_SUPPLIER__) : ?>
+        Merci de faire confiance à Techni-Contact pour la fourniture de vos matériels professionnels.<br/>
+        Votre demande d'avis a été transmise à notre expert qui reviendra vers vous dans les plus brefs délais.<br/>
+        <br/>
+        Voici ses coordonnées :<br/>
+        <br/>
+        <?php echo $infos['BOUSER_NAME'] ?><br/>
+        <?php echo $infos['BOUSER_PHONE'] ?><br/>
+        <a href="mailto:<?php echo $infos['BOUSER_EMAIL']; ?>?subject=Demande concernant mon devis" class="color-blue"><?php echo $infos['BOUSER_EMAIL']; ?></a><br/>
+       <?php else : ?>
+        <?php if ($infos["MAINPRODUCT_ADVERTISER_SHOWINFOSONLINE"] == 1) : ?>
+         <?php if (!empty($infos["ML_ADV_INFOS"])) : ?>
+          Merci de votre confiance.<br/>
+          <br/>
+          Ce produit est délivré par l'un de nos partenaires fournisseurs, qui a été informé de votre demande et qui prendra directement contact avec vous dans les plus brefs délais.<br/>
+          <br/>
+          Les coordonnées de ce partenaire sont les suivantes :<br/>
+          <br/>
+          <?php echo $infos["ML_ADV_INFOS"] ?>
+         <?php else : ?>
+           <div class="lead-success-no-advertiser fl">
+           Ce partenaire spécifique ne pourra malheureusement pas répondre à votre demande.<br/>
+            <br/>
+            Les raisons peuvent être les suivantes :<br/>
+            <br/>
+            <ul class="reasons-enum">
+              <li>Ne fait plus ce produit ou ne l'a plus en stock</li>
+              <li>Ne travaille pas dans votre secteur géographique</li>
+              <li>Ne travaille qu'avec les professionnels</li>
+            </ul>
+          </div>
+          <div class="fr">
+            <img src="<?php echo URL; ?>/ressources/images/no-advertiser.jpg" alt="attention!" />
+          </div>
+          <div class="zero"></div>
+         <?php endif ?>
+        <?php endif ?>
+       <?php endif ?>
+       <?php if (!empty($infos["SL_ADV_INFOS"])) : ?>
+        <?php echo $infos["SL_ADV_INFOS"] ?>
+       <?php endif ?>
+      </div>
+      
+    </div>
+
+    <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+  </div>
+<?php 
+	if (SHOW_TAGS) { 
+
+	//Tags
+
+	} 
+?>
+
+<!--Bing code-->
+<script type="text/javascript"> if (!window.mstag) mstag = {loadTag : function(){},time : (new Date()).getTime()};</script> <script id="mstag_tops" type="text/javascript" src="//flex.atdmt.com/mstag/site/3f0d7f32-37b4-473e-94fb-9d540a5dfe7b/mstag.js"></script> <script type="text/javascript"> mstag.loadTag("conversion", {cp:"5050",dedup:"1"})</script> <noscript> <iframe src="//flex.atdmt.com/mstag/tag/3f0d7f32-37b4-473e-94fb-9d540a5dfe7b/conversion.html?cp=5050&dedup=1" frameborder="0" scrolling="no" width="1" height="1" style="visibility:hidden;display:none"> </iframe> </noscript>
+<!--Bing code-->
+<?php require SITE.'foot.php' ?>

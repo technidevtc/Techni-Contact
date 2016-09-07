@@ -1,0 +1,45 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS . 'CUserSession.php');
+
+$handle = DBHandle::get_instance();
+$session = & new UserSession($handle);
+
+if (!$session->logged){
+	header("Location: " . COMPTE_URL . "index.html");
+	exit();
+}
+
+$infos = $session->authorized_contact_account_infos;
+
+if (!isset($infos)) {
+	header("Location: " . COMPTE_URL . "index.html");
+	exit();
+}
+
+define("SECURE", true);
+require(SITE . 'head.php');
+?>
+					<div class="account">
+						<div class="box account-box">
+							<div class="box-out">
+								<div class="box-in">
+								
+									<div class="contact-form">
+										<div class="title">Votre message a bien été envoyé</div>
+										<br/>
+										Merci pour votre message.<br/>
+										<br/>
+										Notre service commercial reprendra contact avec sous 24H<br/>
+										<br/>
+										<a href="<?php echo COMPTE_URL."index.html" ?>">Retourner à votre espace client.</a><br/>
+										<br/>
+									</div>
+									
+								</div>
+							</div>
+							<div class="btl"></div><div class="btr"></div>
+							<div class="bbl"></div><div class="bbr"></div>
+						</div>
+					</div>								
+<?php require(SITE . 'foot.php') ?>

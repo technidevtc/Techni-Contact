@@ -1,0 +1,298 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$title = "Notez nos produits";
+$pageName = "Notez nos produits";
+
+$db = DBHandle::get_instance();
+
+$session = new UserSession($db);
+
+$pdtID = $_GET['pdtID'];
+$catID = $_GET['catID'];
+$token = $_GET['token'];
+$clientId = $_GET['c'];
+
+if (!$pdtID || !$catID || !$token || !$clientId)
+  require("404.php");
+
+
+//Format des URL
+//L?url des pages d?avis doivent comprendre une variable comme c?est le cas pour la page lead.html
+//Ex : http://www.techni-contact.com/lead.html?pdtID=203571&catID=3522
+//?	Afin de pouvoir mettre en place des objectif analytics et du A/B testing.
+
+// if url has to look like products page
+//$pdtID = filter_input(INPUT_GET, "pdtID", FILTER_VALIDATE_INT);
+//$catID = filter_input(INPUT_GET, "catID", FILTER_VALIDATE_INT);
+//$pdtRefName = filter_input(INPUT_GET, "pdtRefName", FILTER_UNSAFE_RAW); // <=> $_GET["pdtRefName"]
+
+$user = new CustomerUser($db, $clientId);
+
+// Loading Product
+$res = $db->query("
+  SELECT
+    p.id,
+    IFNULL(rc.id, p.idTC) as idtc,
+    IFNULL(rc.price+rc.ecotax, p.price)+0 AS price,
+    IFNULL(rc.price2, p.price2)+0 AS price2,
+    p.unite,
+    p.idTVA,
+    p.contrainteProduit,
+    p.ean,
+    IF(p.warranty='', a.warranty, p.warranty) AS warranty,
+    IF(pfr.delai_livraison='', a.delai_livraison, pfr.delai_livraison) AS delivery_time,
+    p.shipping_fee,
+    p.video_code,
+    p.docs,
+    pfr.name,
+    pfr.ref_name,
+    (SELECT COUNT(id) FROM products_fr WHERE ref_name = pfr.ref_name) AS same_ref_name_count,
+    pfr.alias,
+    pfr.fastdesc,
+    pfr.descc,
+    pfr.descd,
+    ffr3.id AS cat3_id,
+    ffr3.ref_name AS cat3_ref_name,
+    ffr3.name AS cat3_name,
+    ffr2.id AS cat2_id,
+    ffr2.ref_name AS cat2_ref_name,
+    ffr2.name AS cat2_name,
+    ffr1.id AS cat1_id,
+    ffr1.ref_name AS cat1_ref_name,
+    ffr1.name AS cat1_name,
+    (SELECT GROUP_CONCAT(idFamily) FROM products_families WHERE idProduct = p.id) AS cat3_ids,
+    a.id AS adv_id,
+    a.category AS adv_cat,
+    a.help_show AS adv_help_show,
+    a.help_msg AS adv_help_msg,
+    a.catalog_code AS adv_catalog_code,
+    IF(a.contraintePrix>0 AND IFNULL(rc.price2, p.price2)>0, a.contraintePrix, 0) AS adv_min_amount,
+    IFNULL(rc.price, p.price) > 0 AS hasPrice,
+    IFNULL(rc.price, p.price) > 0 AND a.category = ".__ADV_CAT_SUPPLIER__." AS saleable,
+    IF(IFNULL(rc.price, p.price) < fdp.fdp_franco, fdp.fdp, 0) AS fdp
+  FROM products p
+  INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1
+  INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+  LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+  LEFT JOIN families_fr ffr3 ON ffr3.id = ".$catID."
+  LEFT JOIN families f3 ON f3.id = ffr3.id
+  LEFT JOIN families_fr ffr2 ON ffr2.id = f3.idParent
+  LEFT JOIN families f2 ON f2.id = ffr2.id
+  LEFT JOIN families_fr ffr1 ON ffr1.id = f2.idParent
+  STRAIGHT_JOIN (
+      SELECT
+        SUM(IF(config_name='fdp', config_value, 0)) AS fdp,
+        SUM(IF(config_name='fdp_franco', config_value, 0)) AS fdp_franco
+      FROM config
+      WHERE config_name IN ('fdp', 'fdp_franco')
+  ) fdp
+  WHERE p.id = ".$pdtID, __FILE__, __LINE__);
+
+if ($db->numrows($res) != 1)
+  require("404.php");
+
+$pdt = $db->fetchAssoc($res);
+
+// loading Images
+define("MAX_PDT_PIC_COUNT", 3);
+$i = 1;
+while (is_file(PRODUCTS_IMAGE_INC."zoom/".$pdt["id"]."-".$i.".jpg") && $i <= MAX_PDT_PIC_COUNT) {
+  $pdt["pic_url"][$i-1]["zoom"] = PRODUCTS_IMAGE_URL."zoom/".$pdt["id"]."-".$i.".jpg";
+  $pdt["pic_url"][$i-1]["card"] = PRODUCTS_IMAGE_URL."card/".$pdt["id"]."-".$i.".jpg";
+  $pdt["pic_url"][$i-1]["thumb_small"] = PRODUCTS_IMAGE_URL."thumb_small/".$pdt["id"]."-".$i.".jpg";
+  $i++;
+}
+if (count($pdt["pic_url"]) == 0) {
+  $pdt["pic_url"][0]["zoom"] = PRODUCTS_IMAGE_URL."no-pic-zoom.gif";
+  $pdt["pic_url"][0]["card"] = PRODUCTS_IMAGE_URL."no-pic-card.gif";
+  $pdt["pic_url"][0]["thumb_small"] = PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+}
+$pdt["pic_url_count"] = count($pdt["pic_url"]);
+
+$alreadyNoted = false;
+
+$product_notation = ProductNotation::get('id_client = '.$clientId , 'id_product = '.$pdt['id']);
+
+$testToken = md5('notationproduit'.$clientId.$pdtID);
+
+if(count($product_notation) != 1)
+  require("404.php");
+elseif($testToken != $product_notation[0]['token'] || $testToken != $token)
+  require("404.php");
+elseif($product_notation[0]['note'] != 0)
+  $alreadyNoted = true;
+
+if($_POST){
+  $err_mess = '';
+  if(!empty($_POST['notation']) && $_POST['notation']>=1 && $_POST['notation']<=10)
+    $notation  = (int) $_POST['notation'];
+  else
+    $err_mess .= 'Vous devez noter le produit.';
+
+  $notation_commentaire = trim($_POST['notation_commentaire']);
+  if(!empty($notation_commentaire))
+    $notation_commentaire = $notation_commentaire;
+  else{
+    if(!empty ($err_mess))
+      $err_mess .= '<br />';
+    $err_mess .= 'Vous devez laisser un commentaire.';
+  }
+
+  $set_anonymous = !empty ($_POST['set_anonymous']) ? true : false;
+
+  if(!$err_mess){
+    $productNotation = new ProductNotation($product_notation[0]['id']);
+    $args_product_notation = array(
+      "id_commande" => 0,
+      "timestamp" => time(),
+      "note" => $notation,
+      "comment" => $notation_commentaire,//html_entity_decode($notation_commentaire),
+      "anonymous" => $set_anonymous,
+      "inactive" => 0
+    );
+    $productNotation->setData($args_product_notation);
+    
+    if(!$productNotation->save())
+      $err_mess = 'Erreur à l\'enregistrement de l\'avis du produit';
+    else{
+      // TC mail
+      $arrayEmail = array(
+        "email" => 't.henryg@techni-contact.com , f.stumm@techni-contact.com , b.dieterlen@techni-contact.com',
+        "subject" => "Nouvel avis sur fiche ".$pdt['name'],
+        "headers" => "From: Avis client sur produit TC<web@techni-contact.com>\nReply-To: web@techni-contact.com<web@techni-contact.com>\r\nCc: c.otele@techni-contact.com\r\nCc: feedback-clients@techni-contact.com\r\nCc: s.nguele@techni-contact.com\r\n",
+        "template" => "user-bo_product-new_notation",
+        "data" => array(
+          "PRODUCT_NAME" => $pdt['name'],
+          'FO_PRODUCT_LINK' => URL.'produits/'.$pdt['cat3_id'].'-'.$pdt['id'].'-'.$pdt['ref_name'].'.html#avis',
+          'CUSTOMER_NAME' => $user->prenom.' '.$user->nom,
+          'CUSTOMER_COMPANY' => $user->societe,
+          'CUSTOMER_MAIL' => $user->email,
+          'NOTATION_DATE' => date('d/m/Y', time()),
+          'NOTATION_VALUE' => $notation,
+          'NOTATION_COMMENT' => $notation_commentaire,
+          'BO_PRODUCT_LINK' => ADMIN_URL.'products/edit.php?id='.$pdt['id'].'#avis'
+        )
+      );
+
+      $mail = new Email($arrayEmail);
+      $mail->send();
+
+      header("Location: ".URL."notation-produit-success.html");
+      exit;
+    }
+  }
+
+}
+
+require(SITE . "head.php");
+
+?>
+<div id="body" class="white-bg">
+					<div class="blocks-left">
+						<div class="blue-title">Notez nos produits</div>
+						<div class="zero"></div>
+						<div id="product-notation">
+                                                  <?php if($alreadyNoted == true){ ?>
+                                                    <br />
+                                                    <br />
+                                                    Désolé vous avez déjà rédigé un avis pour ce produit<br />
+                                                    <br />
+                                                    <div class="btn-prev-step" onClick="document.location.href = '<?php echo URL ?>'">
+                                                      <span>Retourner à l'accueil</span>
+                                                    </div>
+
+                                                  <?php }else{ ?>
+
+                                                  <form method="post" action="" name="notation-form">
+                                                    <br />
+                                                    Notez et commentez le produit ci-dessous afin d'aider les autres professionnels à faire leur choix !<br />
+                                                    <br />
+                                                    <strong>Important</strong> :<br />
+                                                    La rédaction des avis est soumise aux règles élémentaires de bonne conduite.Les commentaires litigieux sont susceptibles d'être supprimés.<br />
+                                                    <br />
+                                                    Les avis ont pour objectif de donner votre impression sur le produit, ses qualités, ses défaut, son utilisation...<br />
+                                                    <strong>Pour toute remarque concernant votre commande veuillez vous rapprocher de notre service client </strong>: <a href="mailto:sav@techni-contact.com">sav@techni-contact.com</a><br />
+                                                    <br />
+                                                    <div class="grey-block pdt-sheet padding-10">
+                                                      <div class="titles">
+                                                        <h1 class="blue-title">Notez <?php echo $pdt["name"] ?></h1>
+                                                        <div class="fastdesc padding-top-20"><?php echo $pdt["fastdesc"] ?></div>
+                                                        Code fiche produit : <?php echo $pdt["id"] ?>
+                                                      </div>
+                                                      <div class="zero"></div>
+                                                      <div class="picture-block">
+                                                        <div class="picture">
+                                                          <img class="vmaib" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"] ?>" src="<?php echo $pdt["pic_url"][0]["card"] ?>">
+                                                        </div>
+                                                      </div>
+                                                      <div class="infos">
+                                                        <table class="notation_product">
+                                                          <caption>Votre note (10 étant la meilleure note)</caption>
+                                                          <tr>
+                                                            <td><label for="notation1">1</label></td>
+                                                            <td><label for="notation2">2</label></td>
+                                                            <td><label for="notation3">3</label></td>
+                                                            <td><label for="notation4">4</label></td>
+                                                            <td><label for="notation5">5</label></td>
+                                                            <td><label for="notation6">6</label></td>
+                                                            <td><label for="notation7">7</label></td>
+                                                            <td><label for="notation8">8</label></td>
+                                                            <td><label for="notation9">9</label></td>
+                                                            <td><label for="notation10">10</label></td>
+                                                          </tr>
+                                                          <tr>
+                                                            <?php for($u=1; $u<=10;$u++){
+                                                              echo '<td><input type="radio" name="notation" id="notation'.$u.'" value="'.$u.'" '.((!empty ($notation) && $notation == $u) ? 'checked="checked"' : '').' /></td>';
+                                                            }?>
+                                                          </tr>
+                                                        </table>
+                                                        <br />
+                                                        Votre avis sur le produit :<br />
+                                                        <textarea name="notation_commentaire" class="notation_commentaire" cols="39" rows="9"><?php echo $notation_commentaire ?></textarea>
+                                                      </div>
+                                                      <div class="zero"></div>
+
+                                                    </div>
+
+                                                    Votre notation sera signée de votre prénom.<br />
+                                                    Cochez la case si vous ne souhaitez pas faire apparaître votre prénom <input type="checkbox" name="set_anonymous" <? echo $set_anonymous == true ? 'checked="checked"' : '' ?> /><br />
+                                                    <div class="leadform_error"><?php if($err_mess)echo $err_mess ?></div>
+                                                    <br />
+                                                    <br />
+                                                    <?php /*<div class="submit-notation">
+                                                      <input type="image" class="submit-notation" src="<?php echo URL ?>ressources/images/envoi-commentaire.png" alt="Soumettre mon avis" onClick="submit_notation();return false;" />
+                                                    </div>*/ ?>
+                                                    <div class="send-notation"  onClick="submit_notation();return false;">
+                                                    <span>Soumettre mon avis</span>
+                                                  </div>
+                                                  </form>
+
+                                                  <?php } ?>
+						</div>
+					</div>
+<script>
+  function submit_notation(){
+    var err_mess = '';
+
+    if(typeof($(":checked").val()) == 'undefined' || parseInt($(":checked").val()) < 1 && parseInt($(":checked").val()) > 10)
+      err_mess += 'Vous devez noter le produit.';
+
+    if($('textarea[name=notation_commentaire]').val() == ''){
+      if(err_mess != '')
+        err_mess += '\n\
+';
+      err_mess += 'Vous devez laisser un commentaire.';
+    }
+
+    if(err_mess != '')
+      alert(err_mess);
+    else
+      $('form[name=notation-form]').submit();
+
+  }
+</script>
+					
+<?php require(SITE . "blocks-right.php") ?>
+</div>
+<?php require(SITE . "foot.php") ?>

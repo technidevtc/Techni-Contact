@@ -1,0 +1,316 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+
+$session = new UserSession($db);
+// it's an estimate, directly handle things there
+if ($session->estimate) {
+  header("Location: ".COMMANDE_URL."estimate-step2.html");
+  exit();
+}
+
+// not logged in, go to the first step
+if (!$session->logged) {
+  header("Location: ".COMMANDE_URL."order-step1.html");
+  exit();
+}
+
+$cart2 = Doctrine_Query::create()
+  ->select('c.*, cl.*, cda.*, cba.*')
+  ->from('Paniers c')
+  ->innerJoin('c.lines cl')
+  ->leftJoin('c.delivery_address cda')
+  ->leftJoin('c.billing_address cba')
+  ->where('c.id = ?', $session->getID())
+  ->fetchOne();
+
+// empty cart, nothing to do here
+if (!count($cart2->lines) || !$cart2->valid) {
+  header("Location: ".URL."panier.html");
+  exit();
+}
+
+$client = Doctrine_Query::create()
+  ->select('c.id, ca.*')
+  ->from('Clients c')
+  ->innerJoin('c.addresses ca')
+  ->where('c.id = ?', $session->userID)
+  ->orderBy('ca.type_adresse ASC, ca.num ASC')
+  ->fetchOne();
+
+// this cart is not locked, so it either
+// - never led to an order
+// - led to an order that wasn't paid, and the cart changed (so the order will now never be paid from the FO)
+// so we make sure we will not update an invalid order in the step 3
+if ($cart2->locked == 0 && $session->orderID)
+  unset($session->orderID);
+
+// make sure this cart belong to the client and lock its items
+$cart2->client = $client;
+$cart2->locked = 1;
+
+$abt = ClientsAdresses::orderByType($client->addresses->toArray(false)); // deep = false
+
+// the client may have changed since the last time, we have to check if everything's fine
+if (!$cart2->checkAndCorrectAddresses($abt)) {
+  // future throw error
+}
+
+$cart2->save();
+
+// only load the old object now, to be sure it has the corrected values
+$cart = new Cart($db, $session->getID());
+$cart->calculateCart();
+
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC."list_country.csv","r")) {
+  while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+  $cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+
+define('SECURE', true);
+define('ORDER_STEP_2', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>  
+<script type="text/javascript">
+  var addressesByType = <?php echo json_encode($abt) ?>,
+      delivery_address_id = <?php echo $cart2->delivery_address_id ?>,
+      billing_address_id = <?php echo $cart2->billing_address_id ?>,
+      $cartID = '<?php echo $cart->id ?>';
+  HN.TC.CLIENT_MAX_ADDRESS_BY_TYPE = 5;
+  HN.TC.ClientsAdresses = {
+    TYPE_DELIVERY: <?php echo ClientsAdresses::TYPE_DELIVERY ?>,
+    TYPE_BILLING: <?php echo ClientsAdresses::TYPE_BILLING ?>,
+    typeList: <?php echo json_encode(ClientsAdresses::$typeList) ?>
+  };
+  HN.TC.Clients = {
+    titleList: <?php echo json_encode(Clients::$titleList) ?>
+  };
+</script>
+<div class="white-bg">
+  <div class="blocks-left">
+    
+    <div class="step-title">Livraison</div>
+    
+    <div class="order-steps step2">
+      
+      <div class="order-step2 cart-resume grey-block fl">
+        <div class="blue-title">Récapitulatif de votre commande</div>
+        <div class="cart-table">
+          <table cellspacing="0" cellpadding="0">
+            <thead>
+            <tr>
+              <th>Produit - désignation</th>
+              <th class="qty">Qté</th>
+              <th class="price">Prix total ht</th>
+            </tr>
+            </thead>
+            <tbody>
+             <?php foreach ($cart->items as $item) : ?>
+              <tr>
+                <td class="al"><a href="<?php echo $item['url'] ?>"><?php echo $item['cart_desc'] ?></a></td>
+                <td><?php echo $item['quantity'] ?></td>
+                <td class="price">
+                  <?php echo sprintf("%.02f", $item['sum_base']) ?> €
+                  <?php if ($item["sumEcotax"] > 0) : ?>
+                    <small>éco part : <?php echo $item["sumEcotax"] ?> €</small>
+                  <?php endif ?>
+                </td>
+                </td>
+              </tr>
+             <?php endforeach ?>
+            </tbody>
+          </table>
+        </div>
+        <table class="cart-totals" cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr class="stotal-ht">
+              <td></td>
+              <td class="label">Sous-total HT:</td>
+              <td class="amount"><?php echo sprintf("%.02f", $cart->stotalHT) ?> €</td>
+            </tr>
+            <tr class="fdp">
+              <td><img src="<?php echo $res_url.'images/picto-delivery.png' ?>" alt="logo" /></td>
+              <td class="label">Frais de port HT:</td>
+              <td class="amount"><?php echo sprintf("%.02f", $cart->fdpHT) ?> €</td>
+            </tr>
+            <tr class="total-ht">
+              <td></td>
+              <td class="label">Total HT:</td>
+              <td class="amount"><?php echo sprintf("%.02f", $cart->totalHT) ?> €</td>
+            </tr>
+            <tr class="tva">
+              <td></td>
+              <td class="label">TVA (20%):</td>
+              <td class="amount"><?php echo sprintf("%.02f", $cart->totalTVA) ?> €</td>
+            </tr>
+            <tr class="total-ttc">
+              <td></td>
+              <td class="label">Total TTC:</td>
+              <td class="amount"><?php echo sprintf("%.02f", $cart->totalTTC) ?> €</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="zero"></div>
+      </div>
+
+      <div id="cart-addresses-block" class="addresses-block fr">
+        <div id="cart-delivery-address-block" class="grey-block fl infos-resume" data-type="<?php echo ClientsAdresses::TYPE_DELIVERY ?>">
+          <div class="blue-title">Adresse de livraison</div>
+          <div class="address-infos">
+            <ul></ul>
+            <span class="address-action color-blue" data-action="edit">Modifier</span>
+          </div>
+          <br/>
+          <div class="address-selection">
+            Choisir une autre adresse<br />
+            <select></select>
+          </div>
+          <div class="create-address-link">
+            <span class="address-action color-blue">Créer une nouvelle adresse de livraison</span>
+          </div>
+        </div>
+
+        <div id="cart-billing-address-block" class="grey-block fr infos-resume" data-type="<?php echo ClientsAdresses::TYPE_BILLING ?>">
+          <div class="blue-title">Adresse de facturation</div>
+          <div class="address-infos">
+            <ul></ul>
+            <span class="address-action color-blue" data-action="edit">Modifier</span>
+          </div>
+          <br/>
+          <div class="address-selection">
+            Choisir une autre adresse<br />
+            <select></select>
+          </div>
+          <div class="create-address-link">
+            <span class="address-action color-blue">Créer une nouvelle adresse de facturation</span>
+          </div>
+        </div>
+        <div class="zero"></div>
+
+        <div class="order-bottom-submit-btns">
+          <div class="btn-prev-step fl"><span>Retour au panier</span></div>
+
+          <div class="btn-validate-step2-data btn-next-step fr"><span>Valider mes coordonnées</span></div>
+          <div class="zero"></div>
+        </div>
+      </div>
+      
+    </div><!-- order-steps step2 -->
+  </div><!-- blocks-left -->
+
+<?php require SITE.'blocks-right.php' ?>
+
+</div>
+
+<script type="text/javascript">
+  $('.btn-prev-step').click(function(){
+    document.location.href = HN.TC.Locals.URL+"panier.html";
+  })
+</script>
+
+<div id="account-contact-dialog"></div>
+<div id="account-edit-address-form-dialog">
+  <div class="contact-infos grey-block">
+    <div class="top">
+      <i>Coordonnées de <span id="aeafd-type">Livraison/Facturation</span></i><br />
+      Définir comme adresse principale <input type="checkbox" name="set_as_main" value="" />
+    </div>
+    <ul>
+      <li><label for="nom_adresse">Nom adresse :</label><input type="text" name="nom_adresse" value=""/></li>
+      <li><label for="titre">Civilité :</label><?php echo Clients::getTitleSelectTag(); ?></li>
+      <li><label for="nom">Nom :</label><input type="text" name="nom" value=""/></li>
+      <li><label for="prenom">Prénom :</label><input type="text" name="prenom" value=""/></li>
+      <li><label for="societe">Société :</label><input type="text" name="societe" value=""/></li>
+      <li><label for="tel1">Téléphone :</label><input type="text" name="tel1" value=""/></li>
+      <li><label for="fax1">Fax :</label><input type="text" name="fax1" value=""/></li>
+      <li><label for="adresse">Adresse :</label><textarea name="adresse" rows="3"></textarea></li>
+      <li><label for="complement">Complément :</label><input type="text" name="complement" value=""/></textarea></li>
+      <li><label for="cp">Code postal :</label><input type="text" name="cp" value=""/></li>
+      <li><label for="ville">Ville :</label><input type="text" name="ville" value=""/></li>
+      <li>
+        <label for="pays">Pays :</label>
+        <select name="pays" class="edit">
+         <?php for ($i=1; $i<=$cc; $i++) : ?>
+          <option value="<?php echo htmlspecialchars($cl[$i]) ?>" selected="selected"><?php echo htmlspecialchars($cl[$i]) ?></option>
+         <?php endfor ?>
+        </select>
+      </li>
+      <li id="aeafd-delivery-infos"><label for="infos_sup">Instruction de livraison :</label><textarea name="infos_sup"></textarea></li>
+    </ul>
+    <div class="actions"><span id="aeafd-btn" class="blue-title">Enregistrer/Créer adresse</span></div>
+    <div class="response-error error"></div>
+    <div class="blue-close"><span id="aeafd-close">[Fermer]</span></div>
+    <div class="zero"></div>
+  </div>
+</div>
+<script type="text/javascript">
+
+$('#account-contact-dialog').dialog({
+  width: 840,
+  autoOpen: false,
+  modal: true,
+  draggable: false,
+  resizable: false 
+})
+
+// Postal code autocomplete
+var champCodePostal = $('input[name^=cp]');
+
+champCodePostal.live('keyup', function(){
+  if($(this).val().match('[0-9]{5}') ){ //&& $("input[name='reversoReversed']").val() == 0
+    var $champRef = $(this);
+    var suffixe = $(this).attr('name').indexOf("_l") > 0 ? '_l' : '';
+    $.ajax({
+      type: "GET",
+      data: "code_postal="+$(this).val(),
+      dataType: "json",
+      url: HN.TC.Locals.RessourcesURL+"/ajax/AJAX_codesPostaux.php",
+      success: function(data) {
+
+        var refBox = $champRef.closest('ul').find('input[name=ville'+suffixe+']');
+        if(data['reponses'].length > 1){
+          var html = '<table id="cpAutocomplete" class="auto-completion-box" style="position: absolute; z-index: 1002; min-width: 221px; top: '+(refBox.offset().top + refBox.height() + 7)+'px; left: '+refBox.offset().left+'px; -moz-user-select: none;" >';
+          $.each(data['reponses'], function(){
+            html += '<tr class=""><td class="prop">'+this.commune+'</td><td class="results"></td></tr>';
+          });
+          html += '</table>';
+
+          $('#cpAutocomplete').remove(); // avoid multiple layers in case of multiple keyups
+          $('body').append(html);
+
+          $.each($('#cpAutocomplete tr'), function(){
+            $(this).mouseenter(function(){
+              $(this).addClass('over');
+            }).mouseleave(function(){
+              $(this).removeClass('over');
+            }).click(function(){
+              refBox.val($(this).find('td.prop').html());
+              $('#cpAutocomplete').remove();
+            });
+          });
+
+          refBox.blur(function(){
+            setTimeout(function(){$('#cpAutocomplete').remove();}, 200);
+          });
+
+        }else if(data['reponses'].length == 1){
+          refBox.val(data['reponses'][0].commune);
+        }
+      }
+    });
+  } // endif(id == champCodePostal)
+});
+// Postal code 
+
+// close an eventual postal code autocompletion layer on closing the popup
+$('#account-edit-address-form-dialog').bind('dialogclose', function() {
+  $('#cpAutocomplete').remove();
+});
+
+</script>
+
+<?php require SITE.'foot.php' ?>

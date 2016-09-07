@@ -1,0 +1,218 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+
+$pdtID = isset($_GET['pdtID']) ? (int)$_GET['pdtID'] : 0;
+$catID = isset($_GET['catID']) ? (int)$_GET['catID'] : 0;
+
+$res = $db->query("
+	select
+		p.id, p.idTC, p.refSupplier, p.price as pdt_price, p.unite, p.idTVA, p.contrainteProduit, p.ean, p.warranty, p.shipping_fee, p.price2, p.cat3_si, p.adv_si,
+		pfr.name, pfr.ref_name, pfr.alias, pfr.fastdesc, pfr.descc, pfr.descd, pfr.delai_livraison as delivery_time,
+		pf.idFamily as catID,
+		a.id as advID, a.category as adv_cat, a.help_show as adv_help_show, a.help_msg as adv_help_msg, a.delai_livraison as adv_delivery_time, a.warranty as adv_warranty, a.shipping_fee as adv_shipping_fee, a.contraintePrix as adv_min_amount,
+		rc.id as ref_idtc, rc.refSupplier as ref_refSupplier, rc.price+rc.ecotax as ref_price
+	from products p
+	inner join products_fr pfr on p.id = pfr.id
+	inner join products_families pf on p.id = pf.idProduct and pf.idFamily = ".$catID."
+	inner join advertisers a on p.idAdvertiser = a.id and a.actif = 1
+	left join
+		references_content rc on p.id = rc.idProduct and rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+	where
+		pfr.id = ".$pdtID."", __FILE__, __LINE__);
+
+if ($db->numrows($res) == 0) { header("Location: " . URL); exit(); }
+$pdt = $db->fetchAssoc($res);
+
+if ($pdt["delivery_time"] == "") $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+if ($pdt["warranty"] == "") $pdt["warranty"] = $pdt["adv_warranty"];
+$pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."card/".$pdtID."-1".".jpg") ? PRODUCTS_IMAGE_URL."card/".$pdtID."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-card.gif";
+
+// Loading Shipping Fee
+if ($res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ )) {
+	while ($rec = $db->fetch($res)) {
+		$$rec[0] = $rec[1];
+	}
+}
+
+// Determing main price and loading references if they exist
+$pdt["refs"] = array();
+$pdt["hasPrice"] = false;
+$pdt["price"] = $pdt["pdt_price"];
+$pdt["shipping_fee"] = "Offert";
+if ($pdt["price"] == "ref") {
+	$pdt["price"] = $pdt["ref_price"];
+	
+	$res = $db->query("
+		select content
+		from references_cols
+		where idProduct = '" . $db->escape($pdt["id"]) . "'", __FILE__, __LINE__);
+	$row = $db->fetch($res);
+	$content_cols = unserialize($row[0]);
+        if(is_array($content_cols))
+          if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__)
+                  $custom_cols = array_slice($content_cols, 3, -5);
+          else
+                  $custom_cols = array_slice($content_cols, 2, -1);
+	
+
+	$res = $db->query("
+		SELECT id, label, content, refSupplier, price+ecotax AS price, price2, idTVA, unite
+		FROM references_content
+		WHERE idProduct = '" . $db->escape($pdt["id"]) . "' AND vpc = 1 AND deleted = 0
+    ORDER BY classement", __FILE__, __LINE__);
+	while($row = $db->fetchAssoc($res)) {
+		$row["content"] = unserialize($row["content"]);
+		$row["cart_add_url"] = URL."panier/ajouter/".$pdt["catID"]."-".$pdt["id"]."-".$row["id"];
+		$pdt["refs"][] = $row;
+		if ((float)$row["price"] < $fdp_franco)
+			$pdt["shipping_fee"] = $fdp."€";
+	}
+}
+
+if (empty($pdt["price"])) { // empty price
+	$pdt["price"] = "sur devis";
+}
+elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+	$pdt["hasPrice"] = true;
+	if ((float)$pdt["price"] < $fdp_franco)
+		$pdt["shipping_fee"] = $fdp."€";
+}
+
+$pdt["saleable"] = $pdt["hasPrice"] && $pdt["adv_cat"] == __ADV_CAT_SUPPLIER__;
+$pdt["ref_count"] = count($pdt["refs"]);
+
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title><?php echo $pdt["name"]; ?></title>
+	<meta name="robots" content="noindex,follow"/>
+	<style type="text/css">
+body { background: #596774 none repeat scroll 0%; margin: 0; padding: 17px 0 0; }
+#hd { padding-top: 15px; background-color: white; }
+#hd .jn { border-top: solid 1px #404040; padding: 5px 2px 0 2px; position: relative; }
+#hd .hn { border: solid #d6d6d6; border-width: 5px 0; height: 53px; padding: 4px 0; text-align: left; overflow: hidden; }
+#hd .hn .logo { float: left; width: 155px; }
+#hd .hn .slogan { float: left; font: 12px Arial, Helvetica, sans-serif; font-weight: bold; line-height: 16px; color: #637382; letter-spacing: 1px; padding-top: 3px; width: 250px; }
+#hd .hn .lang { font: 10px Verdana, Arial, Helvetica, sans-serif; line-height: 10px; font-weight: bold; width: 120px; position: absolute; left: 520px; top: 15px; z-index: 2; }
+#hd .hn .lang a img { padding: 0 1px 0 0; }
+#hd .hn .man { position: absolute; left: 625px; top: -12px; z-index: 1; }
+.kn { border-top: 5px solid #D6D6D6; margin: 0 2px; padding: 4px 0; text-align: left; }
+.zero { clear: both; }
+
+.print-product { width: 754px; margin: 0 auto; padding: 0 5px; background: #FFFFFF; font: normal 12px Arial,Helvetica,sans-serif; }
+.print-product .product {  }
+.print-product h1.title { color: #637382; display: block; font-weight: bold; font-size: 16px; margin: 0; padding: 10px; text-transform: uppercase; border-bottom: 3px solid #C6D6D8 }
+.print-product h2 { background: url(/ressources/flecheQuatre.gif) no-repeat 0px 6px; color: #889C48; font-size: 12px; margin: 0 0 0 -10px; padding: 10px 0 5px 10px; }
+.print-product h2 span { color: #000000; font-weight: normal; }
+.print-product .body { padding: 10px 20px; }
+.print-product .img { float: right; padding: 5px 5px 0 0 ; }
+
+.label-price { color: #666465; padding: 0 30px 0 0; }
+.price { font-size: 18px; color: #666465; padding: 0; text-align: right; }
+
+.refs-table { padding: 10px; font: 11px Arial, Helvetica, sans-serif; text-align: left; position: relative; }
+.refs-table table { border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; }
+.refs-table thead tr { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+.refs-table tr th, .refs-table tr td { margin: 0; padding: 2px 10px 2px 5px; border-right: 1px solid #ccc; white-space: nowrap; text-align: center; }
+.refs-table tr th { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+.refs-table tr td { color: #000000; }
+.refs-table tr:hover td { background: #f0f0f0; }
+.refs-table tr.ref-2 { background-color: #F3F3F3; }
+.refs-table tr td.ref-prix { font-weight: bold; text-align: right; }
+.refs-table tr td.ref-qte { width: 28px; }
+.refs-table tr td.ref-qte input { font: bold 12px arial, helvetica, sans-serif; color: #f40309; width: 23px; height: 15px; padding: 0; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+.refs-table tr td.ref-buy { width: 75px; }
+
+</style>
+</head>
+<body>
+<div class="print-product">
+	<div id="hd">
+		<div class="jn">
+			<div class="hn">
+				<div class="logo"><img src="<?php echo URL ?>ressources/images/logo-tc-print.gif" alt="technicontact"/></div>
+				<div class="slogan">La galerie marchande des professionnels</div>
+				<div class="lang">
+					<a href="#"><img src="<?php echo URL ?>ressources/images/flags/uk.gif" alt="english" width="24" height="15" border="0"/></a>
+					<a href="#"><img src="<?php echo URL ?>ressources/images/flags/de.gif" alt="deutsch" width="24" height="15" border="0"/></a>
+					<a href="#"><img src="<?php echo URL ?>ressources/images/flags/es.gif" alt="espaniol" width="24" height="15" border="0"/></a>
+					<a href="#"><img src="<?php echo URL ?>ressources/images/flags/it.gif" alt="italiano" width="24" height="15" border="0"/></a>
+				</div>
+				<img class="man" src="<?php echo URL ?>ressources/images/homme.gif" alt="" border="0"/>
+				<div class="zero"></div>
+			</div>
+		</div>
+	</div>
+	<h1 class="title">Fiche produit : <?php echo $pdt["name"] ?></h1>
+	<div class="body" id="divpdt">
+		<div class="img" id="img">
+			<img src="<?php echo $pdt["pic_url"] ?>" alt="<?php echo $pdt["name"] ?>"/>
+		</div>
+		<h2>ID fiche produit : <span><?php echo $pdt["id"] ?></span></h2>
+		<h2>Description du produit :</h2>
+		<?php echo $pdt["descc"] ?> 
+	<?php if(!empty($pdt["descd"])) { ?>
+		<h2>Description technique</h2>
+		<?php echo $pdt["descd"] ?>
+	<?php } ?>
+	<?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+		<h2>Frais de port : <span><?php echo $pdt["shipping_fee"]; ?></span></h2>
+		<h2>Délai de livraison : <span><?php echo $pdt["delivery_time"]; ?></span></h2>
+		<h2>Garantie : <span><?php echo $pdt["warranty"]; ?></span></h2>
+	<?php } ?>
+
+	<?php if ($pdt["saleable"]) { ?>
+		<?php if ($pdt["ref_count"] > 1) {?>
+		<h2>Prix à partir de : <span><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?></span></h2>
+		<?php } else { ?>
+		<h2>Prix : <span><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?></span></h2>
+		<?php } ?>
+	<?php } else { ?>
+		<?php if ($pdt["hasPrice"]) { ?>
+		<h2>Prix indicatif : <span><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?></span></h2>
+		<?php } else { ?>
+		<h2>Prix : <span>sur devis</span></h2>
+		<?php } ?>
+	<?php } ?>
+	
+	<?php if ($pdt["ref_count"] > 0) { ?>
+		<div class="refs-table">
+			<table cellspacing="0" cellpadding="0">
+				<thead>
+				<tr>
+					<th>Réf. TC</th>
+					<th>Libellé</th>
+				<?php if(!empty($custom_cols))
+                                foreach($custom_cols as $colName) { ?>
+					<th><?php echo $colName; ?></th>
+				<?php } ?>
+					<th>P.U. HT</th>
+				</tr>
+				</thead>
+				<tbody>
+				<?php foreach($pdt["refs"] as $ref) {?>
+					<tr>
+						<td><?php echo $ref["id"]; ?></td>
+						<td><?php echo $ref["label"]; ?></td>
+					<?php if(!empty($ref["content"]))
+                                        foreach($ref["content"] as $colValue) { ?>
+						<td><?php echo $colValue; ?></td>
+					<?php } ?>
+						<td><?php echo $ref["price"] ?></td>
+					</tr>
+				<?php } ?>
+				</tbody>
+			</table>
+		</div>
+	<?php } ?>
+
+	</div>
+	<div class="kn"></div>
+</div>
+<script type="text/javascript"> window.print();</script>
+</body>
+</html>

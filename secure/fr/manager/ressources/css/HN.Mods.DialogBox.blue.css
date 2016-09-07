@@ -1,0 +1,17 @@
+.window_title_bar { height: 20px; font: bold 11px Verdana, Arial, Helvetica, sans-serif; color: #ffffff; text-align: left; text-transform: uppercase; background: #9694b2 url(../images/win-title-bar-bg-blue.gif) }
+.window_title_bar .close_img { float: right; width: 16px; height: 14px; margin: 3px; padding: 0; border: 0; }
+.window_title_bar .close_img_up { background: url(../images/window_close_up.gif) no-repeat; }
+.window_title_bar .close_img_down { background: url(../images/window_close_down.gif) no-repeat; }
+.window_title_bar .valid_img { float: right; width: 80px; height: 14px; margin: 3px; padding: 0px; border: 0; }
+.window_title_bar .valid_img_up { background: url(../images/window_valid_up.gif) no-repeat; }
+.window_title_bar .valid_img_down { background: url(../images/window_valid_down.gif) no-repeat; }
+.window_title_bar .cancel_img { float: right; width: 80px; height: 14px; margin: 3px; padding: 0px; border: 0; }
+.window_title_bar .cancel_img_up { background: url(../images/window_cancel_up.gif) no-repeat; }
+.window_title_bar .cancel_img_down { background: url(../images/window_cancel_down.gif) no-repeat; }
+.window_title_bar .move_img { float: left; width: 17px; height: 17px; margin: 1px 2px 2px 2px; background: url(../images/window-move-white.gif) no-repeat; }
+.window_title_bar .titletext { padding: 3px; cursor: default; }
+
+.window_subtitle_bar { display: block; padding: 4px 0px; font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background: #9694b2 url(../images/dot-bg.jpg); }
+.window_bg { margin: 10px; padding: 10px; border: 1px solid #999999; }
+.window_bg_small { margin: 5px; padding: 5px; border: 1px solid #999999; }
+

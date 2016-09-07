@@ -1,0 +1,36 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <b><a href="MAINPRODUCT_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-ar-produit-suggere">MAINPRODUCT_NAME</a></b>.<br/>
+	<br/>
+	Nous pensons que le produit ci-dessous pourrait aussi vous intéresser, ainsi que les coordonnées de son fournisseur.<br/>
+	<br/>
+	<a href="LINKEDPRODUCT_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-ar-produit-suggere">LINKEDPRODUCT_NAME</a><br/>
+	<br/>
+	<b>Coordonnées du fournisseur de <a href="LINKEDPRODUCT_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-ar-produit-suggere">LINKEDPRODUCT_NAME</a> :</b><br/>
+	<br/>
+	<b>LINKEDPRODUCT_ADVERTISER_NAME</b><br/>
+	LINKEDPRODUCT_ADVERTISER_ADDRESS<br/>
+	LINKEDPRODUCT_ADVERTISER_COMPLEMENT<br/>
+	LINKEDPRODUCT_ADVERTISER_PC – LINKEDPRODUCT_ADVERTISER_CITY<br/>
+	LINKEDPRODUCT_ADVERTISER_COUNTRY<br/>
+	Téléphone : LINKEDPRODUCT_ADVERTISER_PHONE<br/>
+	Fax : LINKEDPRODUCT_ADVERTISER_FAX<br/>
+	Contact : LINKEDPRODUCT_ADVERTISER_CONTACT LINKEDPRODUCT_ADVERTISER_EMAIL<br/>
+	LINKEDPRODUCT_ADVERTISER_URL
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 72 08 01 18<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

@@ -1,0 +1,370 @@
+<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+$db = DBHandle::get_instance();
+
+require("../../includes/fr/classV3/phpmailer_2014/PHPMailerAutoload.php");
+require("../../includes/fr/classV3/phpmailer_2014/Email_functions_external_mail_send.php");
+
+	function random($universal_key) {
+		$string1 = "";
+		$user_ramdom_key = "1234567890";
+		srand((double)microtime()*time());
+		for($i=0; $i<$universal_key; $i++) {
+		$string1 .= $user_ramdom_key[rand()%strlen($user_ramdom_key)];
+		}
+		return $string1;
+	}
+	
+	if($_POST['type_send'] == '1'){
+	
+		$client_id  =  mysql_real_escape_string($_POST['client_id']);
+		$order_id   =  mysql_real_escape_string($_POST['order_id']);
+		$lead_id    =  mysql_real_escape_string($_POST['lead_id']);
+		$societe    =  mysql_real_escape_string($_POST['societe']); 
+		$secteur    =  mysql_real_escape_string($_POST['secteur']);
+		$nom  		=  mysql_real_escape_string($_POST['nom']);
+		$prenom		=  mysql_real_escape_string($_POST['prenom']);
+		$adresse	=  mysql_real_escape_string(htmlentities($_POST['adresse']));
+		$email		=  mysql_real_escape_string($_POST['email']);
+		$tel		=  mysql_real_escape_string($_POST['tel']);
+		$cp			=  mysql_real_escape_string($_POST['cp']);
+		$ville		=  mysql_real_escape_string($_POST['ville']);
+		$pays		=  mysql_real_escape_string($_POST['pays']);
+		$action_type_sql		=  mysql_real_escape_string($_POST['action_type_sql']);
+		
+		$sql_insert_ann_client  = "INSERT INTO `annuaire_client` 
+					(`id`, `lead_id`, `client_id`,`order_id` ,`societe`, `secteur`, `nom`, `prenom`,`adresse`, `email`, `tel`, `cp`, `ville`, `pays`, `logo`, `date_create`, `date_update`,`type`) 
+					VALUES (NULL, '".$lead_id."','".$client_id."', '".$order_id."', '".$societe."', '".$secteur."', '".$nom."', '".$prenom."','".$adresse."', '".$email."', '".$tel."', '".$cp."', '".$ville."', '".$pays."', '', NOW(), '0000-00-00 00:00:00','".$action_type_sql."')";
+		mysql_query($sql_insert_ann_client);
+	}
+	
+	function string_to_url($string) {
+     $search = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
+     $replace = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
+     return urlencode(str_replace($search, $replace, strtolower($string)));
+	}
+	
+	$activite 		= mysql_real_escape_string($_POST['activite']);
+	$site_web 		= mysql_real_escape_string($_POST['site_web']);
+	$txt_equipement = mysql_real_escape_string($_POST['txt_equipement']);
+	$update_send 	= mysql_real_escape_string($_POST['update_send']);
+	$id_quest  		= $_POST['id_quest'];
+	$id_produit  	= $_POST['id_produit'];
+	$client_id      = $_POST['client_id'];
+	$type_action    = $_POST['type_action'];
+	$order_total    = $_POST['order_total'];
+	$lead_total     = $_POST['lead_total'];
+	
+	$key_1     		= random(10);
+    $key_2   		= random(10);
+	
+	$sql_client  =  "SELECT id,societe,secteur,date_create,lead_id,logo,client_id
+					 FROM   annuaire_client WHERE client_id='".$client_id."' ";
+	$req_client  =  mysql_query($sql_client);
+	$data_client = mysql_fetch_object($req_client);
+	
+	$sql_pdt  = "SELECT ref_name FROM products_fr WHERE id='".$id_produit."' ";
+	$req_pdt  = mysql_query($sql_pdt);
+	$data_pdt = mysql_fetch_object($req_pdt);
+	
+	$url_final = string_to_url($data_client->societe);
+	$url_send = URL.'utilisateurs/'.$data_client->id.'-'.$data_client->client_id.'-'.$url_final.'.html';
+	//http://test.techni-contact.com/utilisateurs/15-248384140-artisancream.html
+	/*if($type_action == 'order'){
+	$id_order       = $_POST['id_order'];
+	}else{
+	$lead_id        = $_POST['lead_id'];
+	$url_send 	= URL."fiche-utilisateur-survey.html?lead_id=".$lead_id."&client_id=".$client_id."&action_type=lead ";
+	}
+	*/
+	$send_mail = 0;
+    $target_path = "ressources/images/annuaire_client/".$client_id."/";
+	if (!is_dir($target_path)) {
+        mkdir("ressources/images/annuaire_client/".$client_id."/",0775, true);
+        chmod("ressources/images/annuaire_client/".$client_id."/",0775);
+	}
+	
+	
+    $validextensions = array("jpeg", "jpg", "png");
+    $ext = explode('.', basename($_FILES['adress_picture']['name']));
+    $file_extension = end($ext);                     
+    $name_adress_picture    =    $key_1;
+    $name_adress_picture    =    $name_adress_picture.$key_2;
+    $name_adress_picture    =    $name_adress_picture.'.';
+    $name_adress_picture    =    $name_adress_picture.$ext[count($ext) - 1];
+	
+        if (move_uploaded_file($_FILES['adress_picture']['tmp_name'], $target_path.$name_adress_picture)) {
+		
+			$sql_query  = "SELECT logo FROM annuaire_client WHERE client_id='".$client_id."'";
+			$req_query  = mysql_query($sql_query);
+			$rows_query = mysql_num_rows($req_query);
+			if($rows_query > 0){
+				$data_query  = mysql_fetch_object($req_query);
+				unlink ($data_query->logo);
+			}
+	
+		    $photo_facade_path    = $target_path.$name_adress_picture;
+            $sql_update = "UPDATE `annuaire_client` SET  
+								  `logo` =  '$photo_facade_path',
+								  `question_activite` =  '$activite',
+								  `site_web`   =  '$site_web',
+								  `etat`   =  '1',
+								  `date_update` = NOW()
+						   WHERE  `client_id` ='".$client_id."'";
+			mysql_query($sql_update);
+			
+		}else {
+		
+		$sql_update = "UPDATE `annuaire_client` 
+							   SET   `question_activite` =  '$activite',
+									 `site_web`   =  '$site_web',
+									 `etat`   =  '1',
+									 `date_update` = NOW()
+							   WHERE `client_id` ='".$client_id."'";
+		mysql_query($sql_update);
+		}
+	
+	if($order_total > 0){
+	for($i=0;$i<=$order_total;$i++){
+		$txt_equipement 		 = 	  mysql_real_escape_string($_POST['txt_equipement'.$i]);
+		$id_produit_order  		 = 	  $_POST['id_produit'.$i];
+		$id_quest  			 	 = 	  $_POST['id_quest'.$i];
+		 
+		 
+		$key_11    				 =    random(10);
+		$key_22    				 =    random(10);	
+		$name_adress_picture2    =    $key_11;
+		$name_adress_picture2    =    $name_adress_picture2.$key_22;
+		$name_adress_picture2    =    $name_adress_picture2.'.';
+		$name_adress_picture2    =    $name_adress_picture2.$ext[count($ext) - 1];
+		
+		if (move_uploaded_file($_FILES['adress_picture_produit'.$i]['tmp_name'], $target_path.$name_adress_picture2)) {
+		    $photo_facade_path2    = $target_path.$name_adress_picture2;
+ 
+			if(!empty($id_quest)){
+				$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+										`txt_equipement` =  '$txt_equipement',
+										`photo_equipement` =  '$photo_facade_path2',
+										`date_update` = NOW( ) ,
+										`etat`  =1
+								WHERE  `id` ='$id_quest' AND id_produit='$id_produit_order' ";
+				mysql_query($sql_insert);
+				  
+			}else{
+				if(!empty($txt_equipement) || !empty($_FILES['adress_picture_produit'.$i]['tmp_name'])){
+				$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit_order','$lead_id','$txt_equipement', '$photo_facade_path2', NOW() , '0000-00-00 00:00:00','1')";
+				mysql_query($sql_insert);
+				$send_mail = 1;
+				}
+				
+			}
+		}else {
+		if(!empty($id_quest)){
+			$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+									`txt_equipement` =  '$txt_equipement',
+									`date_update` = NOW( ), 
+									`etat`  ='1'
+							WHERE  `id` ='$id_quest' AND id_produit='$id_produit_order' ";
+			mysql_query($sql_insert);
+			
+		}else{
+			if(!empty($txt_equipement)){
+			$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit_order','$lead_id', '$txt_equipement', '', NOW() ,  '0000-00-00 00:00:00','1')";
+			mysql_query($sql_insert);
+			$send_mail = 1;
+			//echo $sql_insert.'<br />';
+			}
+		}
+		}
+	}
+
+	}else if($lead_total > 0){
+	
+		for($i=0;$i<=$lead_total;$i++){
+		$txt_equipement 		 = 	  mysql_real_escape_string($_POST['txt_equipement'.$i]);
+		$id_quest  			 	 = 	  $_POST['id_quest'.$i];
+		$id_produit		  		 = 	  $_POST['id_produit'.$i];
+		
+		
+		if(!empty($id_produit)){
+		$key_11    =    random(10);
+		$key_22    =    random(10);	
+		$name_adress_picture2    =    $key_11;
+		$name_adress_picture2    =    $name_adress_picture2.$key_22;
+		$name_adress_picture2    =    $name_adress_picture2.'.';
+		$name_adress_picture2    =    $name_adress_picture2.$ext[count($ext) - 1];
+		if (move_uploaded_file($_FILES['adress_picture_produit'.$i]['tmp_name'], $target_path.$name_adress_picture2)) {
+		    $photo_facade_path2    = $target_path.$name_adress_picture2;
+            if($update_send == 1 ){
+				$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+									`txt_equipement` =  '$txt_equipement',
+									`photo_equipement` =  '$photo_facade_path2',
+									`date_update` = NOW( ) WHERE  `id` ='$id_quest' AND id_produit='$id_produit'";
+				mysql_query($sql_insert);
+			}else{
+				$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit','$lead_id','$txt_equipement', '$photo_facade_path2', NOW() , '0000-00-00 00:00:00','1')";
+				mysql_query($sql_insert);
+				$send_mail = 1;
+			}
+	}else {
+		if($update_send == 1 ){
+			$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+									`txt_equipement` =  '$txt_equipement',
+									`date_update` = NOW( ) WHERE  `id` ='$id_quest' AND id_produit='$id_produit' ";
+			mysql_query($sql_insert);
+		}else{
+			$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit','$lead_id', '$txt_equipement', '', NOW() ,  '0000-00-00 00:00:00','1')";
+			mysql_query($sql_insert);
+			$send_mail = 1;
+		}
+	}
+	}
+	}
+	}
+
+$title = "Votre fiche utilisateur a bien &eacute;t&eacute; enregistr&eacute;e – Techni-Contact ";
+$meta_desc = "F&eacute;cilitations ! Votre fiche utilisateur Techni-Contact a bien &eacute;t&eacute; enregistr&eacute;e. Votre soci&eacute;t&eacute; est d&eacute;sormais visible sur notre site internet. ";
+$breadcrumb_label = 'Facilitations ! Votre fiche utilisateur a bien &eacute;t&eacute; enregistr&eacute;e ';
+require(SITE . "head.php");
+?>
+
+<div class="white-bg padding-top-20">
+		<div class="blocks-left">
+		<?php
+					$sql_send  = "SELECT societe ,lead_id
+								   FROM annuaire_client 
+								   WHERE client_id='".$client_id."'";
+					$req_send  = mysql_query($sql_send);
+					$data_send = mysql_fetch_object($req_send );
+					
+					$sql_ann_que = "SELECT date_create,lead_id FROM annuaire_questionnaire WHERE id ='$id_quest' ";
+					$req_ann_que = mysql_query($sql_ann_que);
+					$data_ann_que= mysql_fetch_object($req_ann_que);
+					
+		?>
+		
+			<div class="blue-title">Facilitations ! Votre fiche utilisateur a bien &eacute;t&eacute; enregistr&eacute;e  </div>
+			<div class="zero"></div>
+			<div id="help">
+				<div id="text-presentation">
+					
+					<p>Votre fiche utilisateur a bien &eacute;t&eacute; enregistr&eacute;e.</p>
+					<p>Vous pouvez d&egrave;s &agrave; pr&eacute;sent la 
+					<a href="<?= $url_send ?>">consulter</a>.
+					</p>
+					<p>Toutes les donn&eacute;es li&eacute;es &agrave; la page peuvent &ecirc;tre g&eacute;r&eacute;es depuis votre <a href="https://secure.techni-contact.com/fr/compte/login.html">[compte client]</a>.</p>
+					<p>Veuillez noter que Techni-Contact se r&eacute;serve un droit de regard sur tout le contenu post&eacute; par ses utilisateurs, afin d'en assurer la qualit&eacute; et son respect des r&eacute;glementations en vigueur.</p> 
+
+			</div>
+			</div>
+			</div>
+			
+				<?php
+
+					$header_from_name_new	= "Techni-Contact fiche client";
+					$header_from_email	= 'ugc@techni-contact.com';
+
+					$header_send1_name	= '';
+					$header_send1_email	= 'ugc@techni-contact.com';
+					//$header_send1_email	= 'outarocht.zakaria@gmail.com';
+					
+					$header_send2_name	= 'ugc@techni-contact.com';
+					$header_send2_email	= '';
+					
+					$header_reply1_name	= '';
+					$header_reply1_email= '';
+					
+					$header_copy2_name	= '';
+					$header_copy2_email	= '';
+					
+					$header_copy1_email	= 'outarocht.zakaria@gmail.com';
+					$header_copy1_name	= '';
+					$header_copy1_email	= '';
+					
+					
+					//$url = ''.URL.'produits/'.$pdt["cat3_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html';
+					
+					$sql_cliens  = "SELECT nom,prenom FROM clients WHERE id='".$client_id."' ";
+					$req_cliens  = mysql_query($sql_cliens);
+					$data_cliens = mysql_fetch_object($req_cliens);
+					
+					$date_creation = date("d/m/Y");
+					
+					$societe = htmlentities($data_send->societe, ENT_QUOTES) ;
+					
+					//$subject_envoi = $data_cliens->nom.' '.$data_cliens->prenom.' a publié ou modifié sa fiche sur Techni-Contact';
+					$subject_envoi = $societe.' a publié ou modifié sa fiche sur Techni-Contact';
+					$subject = utf8_decode($subject_envoi) ;
+					
+					$message_header = "<html><head>
+						<meta http-equiv=Content-Type content=text/html; charset=iso-8859-1>
+						</head>
+						<body bgcolor=#FFFFFF>";
+					$message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
+					$message_text	.= '<p>';
+						$message_text	.= 'Bonjour';
+						$message_text	.= '<br /><br />';
+						$message_text	.= 'Le '.$date_creation.',  <strong>'.$societe.' </strong> a publi&eacute; ou compl&eacute;t&eacute; sa fiche utilisateur sur techni-contact.com <a href="'.$url.'" >'.$name_ptd.'</a>.';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '<a href="'.$url_send.'">Voir sa fiche sur Techni-Contact </a>';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '<a href="'.ADMIN_URL.'clients/?idClient='.$client_id.'">G&eacute;rer son UGC sur manager  </a>';
+						$message_text	.= '<br /><br />';
+						$message_text	.= 'Le service marketing';
+						$message_text	.= '<br /><br />';
+						
+						$message_text	.= '</p>';
+
+					$message_bottom = "</body></html>";
+					$message_to_send = $message_header . $message_text . $message_bottom;	
+					
+					//if($send_mail == 1){
+					//$mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
+					//}
+
+
+?>				
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>
+. "foot.php"); ?>

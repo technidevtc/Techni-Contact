@@ -1,0 +1,95 @@
+/* box styles : borders/background/title/notes */
+
+.box { position: relative }
+.box .legend { position: absolute; left: 10px; top: -9px; padding: 0 3px }
+.box .blegend { position: absolute; right: 10px; bottom: 0; padding: 0 3px }
+.box .tr-note { position: absolute; right: 0; top: 0 }
+
+/* box borders positions */
+.box .btl { position: absolute; top: 0; left: 0 } /* top left */
+.box .btr { position: absolute; top: 0; right: 0 } /* top right */
+.box .bbl { position: absolute; bottom: 0; left: 0 } /* bottom left */
+.box .bbr { position: absolute; bottom: 0; right: 0 } /* bottom right */
+
+/* box styles */
+.main-box { position: relative; width: 974px }
+.main-box .bt { height: 6px; margin: 0 6px; background: url(../images/box/main-box-bt.gif) repeat-x }
+.main-box .bb { height: 6px; margin: 0 6px; background: url(../images/box/main-box-bb.gif) repeat-x }
+.main-box .btl { width: 22px; height: 22px; background: url(../images/box/main-box-borders.png) no-repeat 0 0 }
+.main-box .btr { width: 22px; height: 22px; background: url(../images/box/main-box-borders.png) no-repeat -22px 0 }
+.main-box .bbl { width: 22px; height: 22px; background: url(../images/box/main-box-borders.png) no-repeat 0 -22px }
+.main-box .bbr { width: 22px; height: 22px; background: url(../images/box/main-box-borders.png) no-repeat -22px -22px }
+.main-box .box-out { padding: 0 6px; background: url(../images/box/main-box-in.gif) repeat-y }
+.main-box .box-in { width: 960px; border: 1px solid #c0504d; background: #ffffff }
+
+.white-sr-box .btl { width: 5px; height: 5px; background: url(../images/box/white-sr-box-borders.png) no-repeat 0 0 }
+.white-sr-box .btr { width: 5px; height: 5px; background: url(../images/box/white-sr-box-borders.png) no-repeat -5px 0 }
+.white-sr-box .bbl { width: 5px; height: 5px; background: url(../images/box/white-sr-box-borders.png) no-repeat 0 -5px }
+.white-sr-box .bbr { width: 5px; height: 5px; background: url(../images/box/white-sr-box-borders.png) no-repeat -5px -5px }
+.white-sr-box .box-out { padding: 0; background: none }
+.white-sr-box .box-in { width: auto; border: 1px solid #4d4d4d; background: #ffffff }
+
+.white-mr-box .btl { width: 10px; height: 10px; background: url(../images/box/white-mr-box-borders.png) no-repeat 0 0 }
+.white-mr-box .btr { width: 10px; height: 10px; background: url(../images/box/white-mr-box-borders.png) no-repeat -10px 0 }
+.white-mr-box .bbl { width: 10px; height: 10px; background: url(../images/box/white-mr-box-borders.png) no-repeat 0 -10px }
+.white-mr-box .bbr { width: 10px; height: 10px; background: url(../images/box/white-mr-box-borders.png) no-repeat -10px -10px }
+.white-mr-box .box-out { padding: 0; background: none }
+.white-mr-box .box-in { width: auto; border: 1px solid #4d4d4d; background: #ffffff }
+
+.account-box .btl { width: 22px; height: 22px; background: url(../images/box/account-box-borders.png) no-repeat 0 0 }
+.account-box .btr { width: 22px; height: 22px; background: url(../images/box/account-box-borders.png) no-repeat -22px 0 }
+.account-box .bbl { width: 22px; height: 22px; background: url(../images/box/account-box-borders.png) no-repeat 0 -22px }
+.account-box .bbr { width: 22px; height: 22px; background: url(../images/box/account-box-borders.png) no-repeat -22px -22px }
+.account-box .box-out { padding: 0; background: none }
+.account-box .box-in { width: auto; border: 1px solid #808080; background: #ffffff }
+
+.grey-lr-box .btl { width: 18px; height: 18px; background: url(../images/box/grey-lr-box-borders.png) no-repeat 0 0 }
+.grey-lr-box .btr { width: 18px; height: 18px; background: url(../images/box/grey-lr-box-borders.png) no-repeat -18px 0 }
+.grey-lr-box .bbl { width: 18px; height: 18px; background: url(../images/box/grey-lr-box-borders.png) no-repeat 0 -18px }
+.grey-lr-box .bbr { width: 18px; height: 18px; background: url(../images/box/grey-lr-box-borders.png) no-repeat -18px -18px }
+.grey-lr-box .box-out { padding: 0; background: none }
+.grey-lr-box .box-in { width: auto; border: 1px solid #003c74; background: #f2f2f2 }
+
+.step-box .btl { width: 6px; height: 6px; background: url(../images/box/step-box-borders.png) no-repeat 0 0 }
+.step-box .btr { width: 6px; height: 6px; background: url(../images/box/step-box-borders.png) no-repeat -6px 0 }
+.step-box .bbl { width: 6px; height: 6px; background: url(../images/box/step-box-borders.png) no-repeat 0 -6px }
+.step-box .bbr { width: 6px; height: 6px; background: url(../images/box/step-box-borders.png) no-repeat -6px -6px }
+.step-box .box-out { padding: 0; background: none }
+.step-box .box-in { width: auto; border: 1px solid #89a4a7; background: #7f7f7f }
+
+.step-active-box .btl { width: 6px; height: 6px; background: url(../images/box/step-active-box-borders.png) no-repeat 0 0 }
+.step-active-box .btr { width: 6px; height: 6px; background: url(../images/box/step-active-box-borders.png) no-repeat -6px 0 }
+.step-active-box .bbl { width: 6px; height: 6px; background: url(../images/box/step-active-box-borders.png) no-repeat 0 -6px }
+.step-active-box .bbr { width: 6px; height: 6px; background: url(../images/box/step-active-box-borders.png) no-repeat -6px -6px }
+.step-active-box .box-out { padding: 0; background: none }
+.step-active-box .box-in { width: auto; border: 1px solid #89a4a7; background: #d9d9d9 }
+
+.account-order-box .btl { width: 13px; height: 13px; background: url(../images/box/account-order-box-borders.png) no-repeat 0 0 }
+.account-order-box .btr { width: 13px; height: 13px; background: url(../images/box/account-order-box-borders.png) no-repeat -13px 0 }
+.account-order-box .bbl { width: 13px; height: 13px; background: url(../images/box/account-order-box-borders.png) no-repeat 0 -13px }
+.account-order-box .bbr { width: 13px; height: 13px; background: url(../images/box/account-order-box-borders.png) no-repeat -13px -13px }
+.account-order-box .box-out { padding: 0; background: none }
+.account-order-box .box-in { width: auto; border: 2px solid #bcbcbc; background: #ffffff }
+
+.cat2-hover-box { width: 173px }
+.cat2-hover-box .btl { width: 5px; height: 8px; background: url(../images/box/cat2-hover-box-borders.png) no-repeat 0 0 }
+.cat2-hover-box .btr { width: 5px; height: 8px; background: url(../images/box/cat2-hover-box-borders.png) no-repeat -5px 0 }
+.cat2-hover-box .bbl { width: 5px; height: 8px; background: url(../images/box/cat2-hover-box-borders.png) no-repeat 0 -8px }
+.cat2-hover-box .bbr { width: 5px; height: 8px; background: url(../images/box/cat2-hover-box-borders.png) no-repeat -5px -8px }
+.cat2-hover-box .box-out { padding: 0 5px; background: url(../images/box/cat2-hover-box-bg.png) repeat-y }
+.cat2-hover-box .box-in { width: auto; border: 1px solid #c10303; background: #fefcfc }
+
+/* box content behaviour */
+.order-box .legend { font-size: 13px; background: #ffffff }
+.order-box .blegend { bottom: -5px; font-size: 11px; background: #ffffff }
+.order-box .tr-note { right: 0; top: 0; font-size: 9px }
+
+/* box style/behaviour intersection and overwrite */
+.white-sr-box .legend { background: #ffffff }
+.white-sr-box .blegend { background: #ffffff }
+.white-sr-box .tr-note { right: 5px; top: 5px; font-size: 9px }
+.white-mr-box .legend { background: #ffffff }
+
+.partner_lnk_pdt { cursor: pointer; font: 11px arial,helvetica,sans-serif; margin-left: 65px; color: #0234D1;}
+
+

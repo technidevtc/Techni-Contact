@@ -1,0 +1,35 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+  $db = DBHandle::get_instance();
+	
+	$sql_guide  = "SELECT guide_name , title_h, title_meta, desc_meta, quide_content
+				   FROM guides_achat WHERE id='".$_GET['id_guide']."' ";
+	$req_guide  =  mysql_query($sql_guide);
+	$data_guide =  mysql_fetch_object($req_guide); 
+ 
+$title = $data_guide->title_meta." - Techni-Contact";
+$meta_desc = $data_guide->desc_meta;
+//$pageName = "guide_achat";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+
+
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+		    <div class="very-big-blue-title" style="margin-bottom: 15px;"><h1><?= $data_guide->title_h ?></h1> </div>
+			<div>
+				<?= $data_guide->quide_content ?>
+			</div>	
+			
+          </div>
+  </div>
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+
+          
+<?php require(SITE."foot.php"); ?>

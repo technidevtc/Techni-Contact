@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<catalogue lang="FR" date="2007-04-02 16:00" GMT="+1" type="complete">
+	<product place="1" delete="true">
+		<name>Produit à effacer</name>
+	</product>
+	<product place="2">
+		<category>famille de test</category>
+		<name>Produit de test 1</name>
+		<fastdesc>Description rapide du produit de test 1</fastdesc>
+<!--	<alias>liste des alias du produit</alias>
+		<keywords>mot clés servant au moteur de recherche interne</keywords>-->
+		<description>
+			Description complète du produit de test 1
+			ligne 2
+			ligne 3
+			...
+			ligne n
+		</description>
+		<technical_data>
+			Données techniques du produit de test 1
+			ligne 2
+			ligne 3
+			...
+			ligne n
+		</technical_data>
+<!--	<delivery_fee>250</delivery_fee>-->
+		<delivery_time>de 24 à 48h sous conditions</delivery_time>
+		<url_image>www.sitedetest.com/image_produit_1056546.jpg</url_image>
+		
+		<ref_header unit="Kg" type="string" position="1">Poids</ref_header>
+		<ref_header unit="cm" type="integer" position="2">Hauteur</ref_header>
+		<ref_header>ex3</ref_header>
+		...
+		<ref_header>exn</ref_header>
+		
+		<reference place="1">
+			<supplier_reference>RACD46816</supplier_reference>
+			<label>reference 1 du produit de test 1</label>
+<!--		<brand>hook-nertwork inc.</brand>-->
+			<Poids>50</Poids>
+			<Hauteur>175</Hauteur>
+			<ex3></ex3>
+			...
+			<exn></exn>
+			<price currency="EUR">537</price>
+			<deleted_price>770</deleted_price>
+			<unit>2</unit>
+			<VAT>19.6</VAT>
+		</reference>
+	</product>
+</catalogue>
+
+<!--
+added/calculated fields for insertion in a temp table :
+	- idAdvertiser (advertiser's id selected for the import)
+//	- cg : cg = ("general" is in <catalogues>)
+//	- ci : ci = ("industry" is in <catalogues>)
+//	- cc : cc = ("collectivity" is in <catalogues>)
+	- reference_name = name in lower case without any special char
+		ex:	name = "téléphone portable pour garçon" -> reference_name = "telephone-portable-pour-garcon"
+	- delivery_time : if field is empty, take the advertiser's default delivery time
+	- price and price2 :
+		if supplier's publicPrice = true then
+			price2 = price
+			price = price2 + mark-up
+		else
+			price2 = price - discount
+		end
+	- marge : taken from advertiser's default mak-up/discount
+
+
+rules :
+	- products are identified by their reference_name
+	- reference_name is unique for all products in the db
+
+
+
+if complete_catalogue
+	delete all advertiser's products
+	insert all new products
+else
+	foreach product
+		if product.delete delete product
+		else
+		if product.reference_name exist in db
+			if oldproduct.idAvertiser == newproduct.idAdvertiser
+				update all fields except reference
+				delete all reference
+				add all newproduct.references
+			else
+				alert product -> duplicate reference_name (color)
+			end
+		else
+			add product with all its references
+		end
+	loop
+end
+
+table imports
+	id
+	timestamp
+	idAdvertiser
+	create_time
+	nb_product
+	type (complete, partial)
+
+table imports_products
+	id
+	id_import
+	id_family
+	name
+	ref_name
+	fastdesc
+	desc
+	tdata
+	delivery_time
+	url_image
+	ref_count
+	mixed_data_entitle { entitle 1; entitle 2; entitle 3; ... ; entitle n }
+	
+table imports_references_mixed_data
+	import_reference_id
+	mixed_data_position
+	mixed_data_value
+
+table imports_references
+	id
+	import_product_id
+	ref_supplier
+	label
+	price
+	price_deleted
+	price2
+	marge
+	unit
+	VAT
+	sort
+
+
+CREATE TABLE `products` (
+
+  `id` mediumint(8) unsigned NOT NULL default '0',
+  `idAdvertiser` smallint(5) unsigned NOT NULL default '0',
+  `idTC` int(10) unsigned NOT NULL default '0',
+  `timestamp` int(10) unsigned NOT NULL default '0',
+  `cg` tinyint(1) NOT NULL default '0',
+  `ci` tinyint(1) NOT NULL default '0',
+  `cc` tinyint(1) NOT NULL default '0',
+  `refSupplier` varchar(50) NOT NULL default '',
+  `price` varchar(255) NOT NULL default '0',
+  `price2` varchar(255) NOT NULL default '0',
+  `unite` mediumint(9) NOT NULL default '1',
+  `marge` float NOT NULL default '-1',
+  `idTVA` tinyint(4) NOT NULL default '0',
+  `contrainteProduit` int(11) NOT NULL default '0',
+  `tauxRemise` text NOT NULL,
+  PRIMARY KEY  (`id`),
+  KEY `idAdvertiser` (`idAdvertiser`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-->
+	

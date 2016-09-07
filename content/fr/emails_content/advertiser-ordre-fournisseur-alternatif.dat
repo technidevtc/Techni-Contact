@@ -1,0 +1,20 @@
+﻿<br /><br />
+Bonjour,
+<br /><br />
+Ceci est une notification de commande.
+<br /><br />
+En cliquant sur les lien ci-dessous, vous accéderez au détail de la commande ainsi qu'au bon de livraison à insérer dans le colis expédié.
+Ce bon de livraison contient toutes les informations relatives à l'expédition de la commande.
+<br /><br />
+<a href="LINKprint-purchase-order.php?idOrder=CMD_NUMBER&uid=AVERTISER_UID">Voir votre commande</a>
+<br />
+<a href="LINKprint-delivery-order.php?idOrder=CMD_NUMBER&uid=AVERTISER_UID">Voir bon de livraison</a>
+
+<br /><br />
+<a href="LINKcommande.html?idCommande=CMD_NUMBER&uid=AVERTISER_UID">Cette commande est aussi disponible dans votre extranet </a> 
+<br /><br />
+Notre équipe reste à votre disposition pour tout renseignement complémentaire :
+ <br /><br /> 
+Service Achat<br />
+achat@techni-contact.com<br />
+01 72 08 01 13<br />

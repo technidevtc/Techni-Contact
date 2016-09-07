@@ -1,0 +1,198 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V3 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 15 juillet 2005
+ Mise à jour le : 29 mai 2005
+ *  Mise à jour le : 04 février 2011 - OD
+ 
+ Fichier : /secure/extranet/index.html
+ Description : Fichier accueil extranet
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = COMMANDS_TITLE;
+
+define('WHERE', WHERE_COMMANDS);
+require(EXTRANET.'head.php');
+
+if ($user->parent != '61049') {
+  header('Location: '.EXTRANET_URL.'requests.html');
+  exit();
+}
+define('BEGIN_TIME', mktime(0,0,0,3,1,2011));
+
+require(DOCTRINE_MODEL_PATH.'SupplierOrder.php');
+require(EXTRANET.'head2.php');
+?>
+<style type="text/css">
+  .commandesForm { font-family: Arial,Helvetica,sans-serif;font-size: 12px;}
+  fieldset { margin: 0 0 5px; padding: 4px 8px 8px; border: 2px groove threedface ; width: 400px; }
+  legend { margin: 0 2px; font-weight: bold; font-size: 15px; }
+</style>
+<div class="barre">
+  <a href="index.html"><?php echo HEAD_HOMEPAGE ?></a>
+  &#x00bb; <?php echo HEAD_COMMAND_LIST ?>
+</div>
+<div class="miseAZero"></div>
+<?php require(EXTRANET.'alertmdp.php'); ?>
+<div class="centre">
+  <div class="bloc">
+    <div class="bloc-titre">Recherchez vos commandes</div>
+    <div class="bloc-texte">
+      <div>
+        Rechercher :
+        <select name="searchType">
+          <option value="0">-</option>
+          <option value="1">ref ordre</option>
+          <option value="2">ref produit fournisseur</option>
+        </select>
+        <input type="text" name="searchText" value="" />
+        <input id="do-search" type="button" value="OK" />
+      </div>
+    </div>
+  </div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2"><?php echo COMMANDS_LIST ?></div>
+    <div id="order-list" class="bloc-texte">
+    </div>
+  </div>
+  <br />
+  <br />
+  <br />
+  <br />
+</div>
+<script type="text/javascript">
+//<![CDATA[
+  $("#do-search").on("click", function(){
+    var search_val = $("input[name='searchText']").val();
+    switch (parseInt($("select[name='searchType']").val())) {
+      case 0:
+          sol.setSourceFilters([
+            ["where", ["so.sup_id = ?", <?php echo $user->id ?>]],
+            ["andWhere", ["so.mail_time > ?", <?php echo BEGIN_TIME ?>]],
+            ["andWhere", ["ol.sup_id = so.sup_id"]]
+          ]);
+          sol.updateView();
+          break;
+      case 1:
+        var parts = search_val.match(/^(\d+)(-(\d+))?$/),
+        order_id = parts ? parts[3] || parts[1] : false;
+        if (order_id) {
+          sol.setSourceFilters([
+            ["where", ["so.sup_id = ?", <?php echo $user->id ?>]],
+            ["andWhere", ["so.mail_time > ?", <?php echo BEGIN_TIME ?>]],
+            ["andWhere", ["ol.sup_id = so.sup_id"]],
+            ["andWhere", ["so.order_id = ?", order_id]]
+          ]);
+          sol.colsByName["mail_time"].sort("DESC");
+        }
+        break;
+      case 2:
+        sol.setSourceFilters([
+          ["where", ["so.sup_id = ?", <?php echo $user->id ?>]],
+          ["andWhere", ["so.mail_time > ?", <?php echo BEGIN_TIME ?>]],
+          ["andWhere", ["ol.sup_id = so.sup_id"]],
+          ["andWhere", ["ol.sup_ref = ?", search_val]]
+        ]);
+        sol.colsByName["mail_time"].sort("DESC");
+        break;
+    }
+  });
+  window.sol = new HN.TC.ItemList({
+    domHandle: "#order-list",
+    columns: [
+      { name: "id", label: "Ref.", type: "misc", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        },
+        onCellWrite: function(rowData, colName){
+          return rowData.rid;
+        }
+      },
+      { name: "mail_time", label: "Date", type: "date", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      },
+      { name: "content", label: "Contenu de la commande", type: "misc", sortable: false,
+        onCellWrite: function(rowData, colName){
+          var html = "<ul>";
+          for (var li=0; li<rowData.order.lines.length; li++)
+            html += "<li>"+rowData.order.lines[li].sup_ref+" x "+rowData.order.lines[li].quantity+"</li>";
+          return html+"</ul>";
+        }
+      },
+      { name: "total_ttc", label: "Montant T.T.C.", type: "float", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        },
+        onCellWrite: function(rowData, colName){
+          return sprintf("%0.2f", parseFloat(rowData[colName]))+" €";
+        }
+      }
+      /*{ name: "status", label: "Statut", type: "const", constStrings: HN.TC.SupplierOrder.processingStatusList, sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      }*/
+    ],
+    source: {
+      fields: "so.id,"+
+              "so.sup_id,"+
+              "so.order_id,"+
+              "so.total_ht,"+
+              "so.total_ttc,"+
+              "so.fdp_ht,"+
+              "so.fdp_ttc,"+
+              "so.processing_status AS status,"+
+              "so.processing_time,"+
+              "so.dispatch_time,"+
+              "so.mail_time,"+
+              "so.arc,"+
+              "so.cancellation,"+
+              "so.waiting_infos,"+
+              "o.created,"+
+              "ol.sup_ref,"+
+              "ol.quantity",
+      tables: [
+        ["from", "SupplierOrder so"],
+        ["innerJoin", "so.order o"],
+        ["innerJoin", "o.lines ol"]
+      ],
+      filters: [
+        ["where", ["so.sup_id = ?", <?php echo $user->id ?>]],
+        ["andWhere", ["so.mail_time > ?", <?php echo BEGIN_TIME ?>]],
+        ["andWhere", ["ol.sup_id = so.sup_id"]]
+      ]
+    },
+    onRowInsert: function(rowData){
+      if (rowData.cancellation != 0)
+        $(this).addClass("tr-cancelled");
+      else if (rowData.status <= HN.TC.SupplierOrder.PROCESSING_STATUS_NOT_VIEWED)
+        $(this).addClass("tr-new");
+      else if (rowData.status >= HN.TC.SupplierOrder.PROCESSING_STATUS_FORECAST_SHIPPING_DATE)
+        $(this).addClass("tr-dateFixed");
+      else
+        $(this).addClass("tr-normal");
+    },
+    onRowEvent: {
+      "click": function(rowData){
+        document.location.href = "commande.html?idCommande="+rowData.rid;
+      }
+    },
+    itemsPerPage: 20
+  });
+  sol.colsByName["mail_time"].sort("DESC");
+//]]>
+</script>
+</body>
+</html>

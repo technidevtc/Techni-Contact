@@ -1,0 +1,70 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-shopping-cart"></i> Produits</h1>
+    </div>
+	
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h4>
+						Mes produits
+					</h4>
+					
+				</div>
+				
+				<div class="panel-body">
+					
+					<div class="panel-form">
+						<?php require_once('extranet_v3_products_form.html'); ?>
+					</div>
+					
+					<div id="loader_panel-table">
+						<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</div>
+					
+					<div id="panel-table">
+						Produits
+					</div>
+
+					<script type="text/javascript">
+						products_lunch_search();
+					</script>
+					
+					<!-- To open a link in a new window ! -->
+					<form id="products_external_formid" method="GET" action="#" target="_blank"></form>
+					
+				</div><!-- end div .panel-heading -->
+			</div><!-- end div .panel panel-primary -->
+			
+			<!-- Start Product Delete Popup -->
+			
+				<div id="product-dialog-delete-confirm" title="Suppression fiche">
+					<p>
+						<span class="ui-icon ui-icon-alert" style="float:left; margin:22px 7px 40px 0;"></span>
+						&Ecirc;tes vous s&ucirc;r de vouloir demander la suppression de cette fiche ?
+					</p>
+				</div>
+				
+			<!-- End Product Delete Popup -->
+			
+			<!-- Start Product Delete Popup Confirmation -->
+			
+				<div id="product-dialog-delete-confirm-result" title="Suppression fiche">
+					<p id="product-dialog-delete-confirm-rloader" style="text-align: center;">
+							<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+					<p id="product-dialog-delete-confirm-response">
+						&nbsp;
+					</p>
+				</div>
+				
+			<!-- End Product Delete Popup Confirmation -->
+			
+			
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	
+
+</div><!-- end div .za -->

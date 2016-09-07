@@ -1,0 +1,1707 @@
+﻿<?php
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require("../../includes/fr/classV3/phpmailer_2014/PHPMailerAutoload.php");
+require("../../includes/fr/classV3/phpmailer_2014/Email_functions_external_mail_send.php");
+
+if (DEBUG) $tab_microtime["Product : config"] = microtime(true);
+$db = DBHandle::get_instance();
+if (DEBUG) $tab_microtime["Product : DBhandle"] = microtime(true);
+$session = new UserSession($db);
+if (DEBUG) $tab_microtime["Product : user session"] = microtime(true);
+
+define('IDTVA', 1);
+define('CAT3_SIBLINGS_PDT_COUNT', 15);
+$ttcPrice = (isset($_GET['pricettc']) && $_GET['pricettc'] == 'true') ? true : false;
+
+
+// Loading Product
+//echo '$_SERVER["QUERY_STRING"]='.$_SERVER["QUERY_STRING"]."<br/>";
+//pp($_GET);
+//$start = microtime(true);
+//echo "TIME = ".((microtime(true)-$start)*1000)."ms<br/>";
+$pdtID = filter_input(INPUT_GET, "pdtID", FILTER_VALIDATE_INT);
+$catID = filter_input(INPUT_GET, "catID", FILTER_VALIDATE_INT);
+$pdtRefName = filter_input(INPUT_GET, "pdtRefName", FILTER_UNSAFE_RAW); // <=> $_GET["pdtRefName"]
+if (!$pdtID || !$catID)
+  require("404.php");
+
+// Loading Product
+if (DEBUG) $tab_microtime["Product : vars & config"] = microtime(true);
+
+//Suppresion la condition AND pfr.active = 1
+
+$res = $db->query("
+  SELECT
+    p.id,
+    IFNULL(rc.id, p.idTC) as idtc,
+    IFNULL(rc.price+rc.ecotax, p.price)+0 AS price,
+    IFNULL(rc.price2, p.price2)+0 AS price2,
+    p.unite,
+    p.idTVA,
+    p.contrainteProduit,
+    p.ean,
+    IF(p.warranty='', a.warranty, p.warranty) AS warranty,
+    IF(pfr.delai_livraison='', a.delai_livraison, pfr.delai_livraison) AS delivery_time,
+    p.title_tag,
+    p.meta_desc_tag,
+    p.shipping_fee,
+    p.video_code,
+    p.docs,
+    pfr.name,
+    pfr.ref_name,
+    pfr.active,
+    (SELECT COUNT(id) FROM products_fr WHERE ref_name = pfr.ref_name) AS same_ref_name_count,
+    pfr.alias,
+    pfr.fastdesc,
+    pfr.descc,
+    pfr.descd,
+    pfr.deleted,
+    ffr3.id AS cat3_id,
+    ffr3.ref_name AS cat3_ref_name,
+    ffr3.name AS cat3_name,
+    ffr2.id AS cat2_id,
+    ffr2.ref_name AS cat2_ref_name,
+    ffr2.name AS cat2_name,
+    ffr1.id AS cat1_id,
+    ffr1.ref_name AS cat1_ref_name,
+    ffr1.name AS cat1_name,
+    (SELECT GROUP_CONCAT(CONCAT(idFamily) ORDER BY orderFamily ASC) FROM products_families WHERE idProduct = p.id) AS cat3_ids,
+    a.id AS adv_id,
+    a.nom1 AS adv_name,
+    a.category AS adv_cat,
+    a.help_show AS adv_help_show,
+    a.help_msg AS adv_help_msg,
+    a.catalog_code AS adv_catalog_code,
+    a.idCommercial,
+    a.actif AS adv_active,
+    IF(a.contraintePrix>0 AND IFNULL(rc.price2, p.price2)>0, a.contraintePrix, 0) AS adv_min_amount,
+    IFNULL(rc.price, p.price) > 0 AS hasPrice,
+    IFNULL(rc.price, p.price) > 0 AND a.category = ".__ADV_CAT_SUPPLIER__." AS saleable,
+    IF(IFNULL(rc.price+rc.ecotax, p.price) < fdp.fdp_franco, fdp.fdp, 0) AS fdp,
+    (p.as_estimate + a.as_estimate) as product_as_estimate
+  FROM products p
+  INNER JOIN products_fr pfr ON p.id = pfr.id
+  INNER JOIN advertisers a ON p.idAdvertiser = a.id
+  LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+  LEFT JOIN families_fr ffr3 ON ffr3.id = ".$catID."
+  LEFT JOIN families f3 ON f3.id = ffr3.id
+  LEFT JOIN families_fr ffr2 ON ffr2.id = f3.idParent
+  LEFT JOIN families f2 ON f2.id = ffr2.id
+  LEFT JOIN families_fr ffr1 ON ffr1.id = f2.idParent
+  STRAIGHT_JOIN (
+      SELECT
+        SUM(IF(config_name='fdp', config_value, 0)) AS fdp,
+        SUM(IF(config_name='fdp_franco', config_value, 0)) AS fdp_franco
+      FROM config
+      WHERE config_name IN ('fdp', 'fdp_franco')
+  ) fdp
+  WHERE p.id = ".$pdtID, __FILE__, __LINE__);
+if (DEBUG) $tab_microtime["Product : infos"] = microtime(true);
+
+if ($db->numrows($res) == 0){
+  require("404.php");
+}
+
+$pdt = $db->fetchAssoc($res);
+$pdt["cat3_ids"] = explode(",", $pdt["cat3_ids"]);
+if (!in_array($catID, $pdt["cat3_ids"]) || $pdtRefName != $pdt["ref_name"]) {
+  header("Location: ".URL."produits/".$pdt["cat3_ids"][0]."-".$pdt["id"]."-".$pdt["ref_name"].".html", true, 301);
+  exit();
+}
+
+$deleted = !!$pdt["deleted"] || !$pdt["adv_active"];
+$active  =   $pdt["active"];
+if ( ($deleted != 1) && ($active == 1) ){
+  // loading references if saleable
+  $pdt["refs"] = array();
+  $max_margin = 1;
+  if ($pdt["saleable"]) {
+    $res = $db->query("
+      SELECT content
+      FROM references_cols
+      WHERE idProduct = ".$pdt["id"], __FILE__, __LINE__);
+    list($content_cols) = $db->fetch($res);
+    $content_cols = mb_unserialize($content_cols);
+    $custom_cols = array_slice($content_cols, 3, -6);
+
+    $res = $db->query("
+      SELECT id, label, content, refSupplier, price+ecotax AS price, price2, ecotax, idTVA, unite
+      FROM references_content
+      WHERE idProduct = ".$pdt["id"]." AND vpc = 1 AND deleted = 0
+      ORDER BY classement", __FILE__, __LINE__);
+    while ($ref = $db->fetchAssoc($res)) {
+      $ref["content"] = mb_unserialize($ref["content"]);
+      $ref["cart_add_url"] = "panier:".$pdt["cat3_id"]."-".$pdt["id"]."-".$ref["id"];
+      if ($ref["price2"] > 0 && $max_margin < $ref["price"]/$ref["price2"])
+        $max_margin = $ref["price"]/$ref["price2"];
+      $pdt["refs"][] = $ref;
+    }
+  }
+  elseif ($pdt["price2"] > 0) {
+    $max_margin = $pdt["price"]/$pdt["price2"];
+  }
+  if (DEBUG) $tab_microtime["Product : refs"] = microtime(true);
+
+  // setting some vars
+  $pdt["price"] = $pdt["hasPrice"] ? $pdt["price"] : "sur devis";
+  $pdt["adv_min_amount"] *= $max_margin;
+  $pdt["ref_count"] = count($pdt["refs"]);
+  if ($pdt["fdp"] == 0) {
+    $pdt["shipping_fee"] = $pdt["hasPrice"] ? "Offerts" : "N/D";
+  } else {
+    if ($ttcPrice) {
+      $tvaValues = Tva::calculatePriceFromId(IDTVA, $pdt['fdp']);
+      $pdt["shipping_fee"] = sprintf("%.2f", $tvaValues['priceTTC'])."€ TTC";
+    } else {
+      $pdt["shipping_fee"] = $pdt["fdp"]."€ HT";
+    }
+  }
+  $pdt["url"] = URL."produits/".$pdt["cat3_id"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+  $pdt["print_url"] = URL."produits/imprimer/".$pdt["cat3_id"]."-".$pdt["id"];
+  $pdt["cart_add_url"] = "panier:".$pdt["cat3_id"]."-".$pdt["id"]."-".$pdt["idtc"];
+
+  // loading Images
+  //define("MAX_PDT_PIC_COUNT", 3);
+  $i = 1;
+  while (is_file(PRODUCTS_IMAGE_INC."zoom/".$pdt["id"]."-".$i.".jpg")) {
+    $pdt["pic_url"][$i-1]["zoom"] = PRODUCTS_IMAGE_URL."zoom/".$pdt["ref_name"]."-".$pdt["id"]."-".$i.".jpg";
+    $pdt["pic_url"][$i-1]["card"] = PRODUCTS_IMAGE_URL."card/".$pdt["ref_name"]."-".$pdt["id"]."-".$i.".jpg";
+    $pdt["pic_url"][$i-1]["thumb_small"] = PRODUCTS_IMAGE_URL."thumb_small/".$pdt["ref_name"]."-".$pdt["id"]."-".$i.".jpg";
+    $i++;
+  }
+  if (count($pdt["pic_url"]) == 0) {
+    $pdt["pic_url"][0]["zoom"] = PRODUCTS_IMAGE_URL."no-pic-zoom.gif";
+    $pdt["pic_url"][0]["card"] = PRODUCTS_IMAGE_URL."no-pic-card.gif";
+    $pdt["pic_url"][0]["thumb_small"] = PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+  }
+  $pdt["pic_url_count"] = count($pdt["pic_url"]);
+  if (DEBUG) $tab_microtime["Product : images"] = microtime(true);
+
+  // loading docs
+  define("MAX_PDT_DOC_COUNT", 3);
+  $pdt["docs"] = mb_unserialize($pdt["docs"]);
+  if (!is_array($pdt["docs"]))
+    $pdt["docs"] = array();
+  $pdt["docs_count"] = 0;
+  foreach($pdt["docs"] as $doc)
+    if ($doc["uploaded"] == 2)
+      $pdt["docs_count"]++;
+  if (DEBUG) $tab_microtime["Product : docs"] = microtime(true);
+
+} else { // deleted
+  $pdt["pic_url"][0]["zoom"] = PRODUCTS_IMAGE_URL."no-pic-zoom.gif";
+  $pdt["pic_url"][0]["card"] = PRODUCTS_IMAGE_URL."no-pic-card.gif";
+  $pdt["pic_url"][0]["thumb_small"] = PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+  $pdt["pic_url_count"] = 0;
+  $pdt["ref_count"] = 0;
+}
+
+// Comments
+$pdt["comments"] = array();
+$res = $db->query("
+  SELECT text
+  FROM products_comments
+  WHERE productID = ".$pdt["id"]." AND `show` = 1
+  ORDER BY timestamp DESC LIMIT 0,30", __FILE__, __LINE__);
+while ($comment = $db->fetchAssoc($res)) {
+  $text = $comment["text"];
+  // replacing at output thoses two sentences when alone on the same line
+  // "besoin d'un devis"
+  // "besoin immédiat merci"
+  $text = trim(preg_replace("/(\R|^)((\s*besoin\s+d\s*['´`]\s*un\s+devis\s*\d\s*)|(\s*besoin\s+im+[eéè]diat\s+merci\s*))(?=\R|$)/iu", "", $text));
+  $pdt["comments"][] = $text;
+}
+$pdt["comments_count"] = count($pdt["comments"]);
+
+if (DEBUG) $tab_microtime["Product : comments"] = microtime(true);
+
+// Similar products from the same advertiser
+/*$res = $db->query("
+  SELECT
+    p.id,
+    IFNULL(rc.id, p.idTC) as idtc,
+    IFNULL(rc.price, p.price)+0 AS price,
+    pfr.ref_name,
+    pfr.name,
+    pfr.fastdesc,
+    (SELECT idFamily FROM products_families WHERE idProduct = p.id LIMIT 0,1) AS cat3_id,
+    a.category AS adv_cat,
+    IFNULL(rc.price, p.price) > 0 AS hasPrice
+  FROM products p
+  INNER JOIN products_fr pfr ON pfr.id = p.id AND pfr.active = 1 AND pfr.deleted != 1
+  INNER JOIN advertisers a ON a.id = p.idAdvertiser AND a.actif = 1
+  LEFT JOIN references_content rc ON rc.idProduct = p.id AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+  INNER JOIN (
+    SELECT id
+    FROM products
+    WHERE idAdvertiser = ".$pdt["adv_id"]."
+    ORDER BY RAND(UNIX_TIMESTAMP()-UNIX_TIMESTAMP()%86400)
+  ) AS rnd ON rnd.id = p.id
+  WHERE p.id != ".$pdt["id"]." HAVING cat3_id IS NOT NULL
+  LIMIT 0,4", __FILE__, __LINE__);
+if (DEBUG) $tab_microtime["Product : same adv items"] = microtime(true);
+while ($si = $db->fetchAssoc($res)) {
+  $si["price"] = $si["hasPrice"] ? $si["price"] : "sur devis";
+  $si["url"] = URL."produits/".$si["cat3_id"]."-".$si["id"]."-".$si["ref_name"].".html";
+  $si["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_small/".$si["id"]."-1.jpg") ? PRODUCTS_IMAGE_URL."thumb_small/".$si["id"]."-1.jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+  $adv_sil[] = $si;
+}
+$adv_sill = count($adv_sil);
+
+if (DEBUG) $tab_microtime["Product : related products before"] = microtime(true);
+*/
+
+// get fixed related products
+$rPdtList = Products::getRelatedProducts($pdt['id']);
+$rPdtListCount = count($rPdtList);
+
+// if not enough fixed products get some new to complete
+if ($rPdtListCount < Products::SHOWN_PRODUCTS_RELATED_COUNT) {
+  $rPdtIdList = array($pdt['id']);
+  foreach ($rPdtList as $rPdt)
+    $rPdtIdList[] = $rPdt['id'];
+
+  $rPdtListNew = Products::getNewRelatedProducts($rPdtIdList, $pdt['cat3_id'], Products::SHOWN_PRODUCTS_RELATED_COUNT - $rPdtListCount);
+
+  // if we do have new products available, update the db then merge with fixed ones
+  if (count($rPdtListNew) > 0) {
+    array_shift($rPdtIdList);
+    foreach ($rPdtListNew as $rPdt)
+      $rPdtIdList[] = $rPdt['id'];
+
+    Products::setRelatedProducts($pdt['id'], $rPdtIdList);
+
+    $rPdtList = array_merge($rPdtList, $rPdtListNew);
+    $rPdtListCount = count($rPdtList);
+  }
+}
+
+if (DEBUG) $tab_microtime["Product : related products"] = microtime(true);
+
+
+$lPdtList = Products::getLinkedProducts($pdt['id']);
+$lPdtListCount = count($lPdtList);
+
+if (DEBUG) $tab_microtime["Product : linked products"] = microtime(true);
+
+
+// Mini Stores
+$cat3IDs = array($pdt["cat3_id"]);
+$msl = MiniStore::getMiniStoresByCatIDs($cat3IDs);
+if (DEBUG) $tab_microtime["Product : mini stores"] = microtime(true);
+
+// get cat3 siblings with CAT3_SIBLINGS_PDT_COUNT products
+$dbh = $conn->getDbh();
+$sth = $dbh->prepare("
+  SELECT
+    p.id,
+    pfr.name,
+    pfr.ref_name,
+    ps.hits AS hits,
+    ps.leads AS leads,
+    ps.orders AS orders,
+    ps.first_hit_time AS first_hit_time,
+    f.id AS cat3_id,
+    ffr.name AS cat3_name,
+    ffr.ref_name AS cat3_ref_name
+  FROM products p
+  INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1 AND pfr.deleted = 0
+  INNER JOIN products_stats ps ON ps.id = p.id
+  INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+  INNER JOIN products_families pf ON p.id = pf.idProduct
+  INNER JOIN families f ON f.id = pf.idFamily
+  INNER JOIN families_fr ffr ON ffr.id = f.id
+  WHERE f.idParent = :cat2Id");
+$sth->execute(array(':cat2Id' => $pdt['cat2_id']));
+$cat2Pdts = $sth->fetchAll(PDO::FETCH_ASSOC);
+
+// set score 2
+Products::setProductsPerformanceScore($cat2Pdts);
+
+// sort by cat3 name, and then by score 2 to have the best products first
+Utils::sortDbInPlace($cat2Pdts, "cat3_name", SORT_ASC, SORT_STRING, "score2", SORT_DESC, SORT_NUMERIC, "id", SORT_ASC, SORT_NUMERIC);
+
+// organize products by cat 3
+$cat2Cat3s = array();
+foreach ($cat2Pdts as $cat2Pdt) {
+  $c2c3id = $cat2Pdt['cat3_id'];
+  if (!isset($cat2Cat3s[$c2c3id])) {
+    $cat2Cat3s[$c2c3id] = array(
+      'id' => $c2c3id,
+      'name' => $cat2Pdt['cat3_name'],
+      'ref_name' => $cat2Pdt['cat3_ref_name'],
+      'pdtCount' => 0,
+      'pdtList' => array()
+    );
+  }
+  if ($cat2Cat3s[$c2c3id]['pdtCount'] >= CAT3_SIBLINGS_PDT_COUNT)
+    continue;
+  $cat2Cat3s[$c2c3id]['pdtList'][] = array(
+    'id' => $cat2Pdt['id'],
+    'name' => $cat2Pdt['name'],
+    'ref_name' => $cat2Pdt['ref_name']
+  );
+  $cat2Cat3s[$c2c3id]['pdtCount']++;
+}
+
+if (DEBUG) $tab_microtime["Product : cat 3 siblings"] = microtime(true);
+
+// Local Includes
+include_once(LANG_LOCAL_INC . "meta-titles-" . DB_LANGUAGE . "_local.php");
+
+// Building meta's
+if(!empty($pdt["fastdesc"])) {
+  $m_k = " " . WWW_COMMON_META_DESC_SUPPLIER_3 . " " . str_replace("|", ", ", $pdt["fastdesc"]);
+  $k_k = ", " . str_replace("|", ", ", $pdt["fastdesc"]);
+}
+
+// Add product id to title if there is multiple product with the same name
+/*if ($pdt["same_ref_name_count"] > 1) {
+  $title = $pdt["name"]." (".$pdt["id"].") - ".$pdt["cat3_name"];
+}
+else {
+  if (str_word_count($pdt["name"]) < 3 || count($pdt["cat3_ids"]) > 1)
+    $title = $pdt["name"]." - ".$pdt["cat3_name"];
+  else
+    $title = $pdt["name"];
+}*/
+// since DC0909 - Optimisation SEO Partie 3 , title is Nom produit (ID fiche) - Famille 3 - Techni-Contact
+$title = !empty($pdt["title_tag"]) ? $pdt["title_tag"] : $pdt["name"]." - ".$pdt["cat3_name"].' - Techni-Contact';
+$strippedDesc = !empty($pdt["meta_desc_tag"]) ? htmlentities($pdt["meta_desc_tag"]) : htmlentities(substr(preg_replace(array('/(\r\n)+/', '/(\r)+/', '/(\n)+/'), ' ', preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES))),0,190))." - ".$pdt["id"];
+list($meta_desc, $meta_keys) = str_replace(
+  array("%PDT_ID%", "%PDT_NAME%", "%PDT_FASTDESC%"),
+  array($pdt["id"], $pdt["name"], $pdt["fastdesc"]),
+  array($strippedDesc, PDT_META_KEYS));
+
+define("PRODUCT_PAGE", true);
+if ($pdt["adv_cat"] != __ADV_CAT_SUPPLIER__) {
+  define("NO_SUPPLIER_PRODUCT", true);
+  if ($pdt["adv_cat"] != __ADV_CAT_ADVERTISER__)
+    define("NOR_ADVERTISER_PRODUCT", true);
+}
+
+$targetPub="famille1=".$pdt["cat1_ref_name"].";famille2=".$pdt["cat2_ref_name"].";famille3=".$pdt["cat3_ref_name"].";produit=".$pdt["ref_name"];
+$pageName = "fiche_produit";
+
+// customer tracking
+$session->track("product",$pdt["id"]);
+
+// seen products
+$session->seenProductAdd($pdt["id"]);
+
+// Avail
+// var name is $avail_saveSearch_js instead of $avail_saveSearch because if the var has the same name than the session one,
+// the global var is considered as being the session one (php<5 bugged behaviour)
+$avail_saveSearch_js = $session->avail_saveSearch;
+
+// canonical tag if current cat = product's second cat
+if (isset($pdt["cat3_ids"][1]) && $pdt["cat3_id"] == $pdt["cat3_ids"][1])
+  $canonicalLink = $pdt["cat3_ids"][0]."-".$pdt["id"]."-".$pdt["ref_name"];
+
+// set if product is set as default estimate
+$pdt_set_as_estimate = false;
+if($pdt['price'] >= __THRESHOLD_PRICE_FOR_ESTIMATE__) $pdt_set_as_estimate = true;
+if($pdt['product_as_estimate']) $pdt_set_as_estimate = true;
+
+// already viewed products
+$viewed_products = array_slice($_SESSION['seenProducts'],1,7); // 1 to avoid the current product
+
+//determining commercial id for help message and phone
+$pdt_referent_commercial_id = $pdt['idCommercial'];
+
+require(SITE."head.php");
+
+// getting notation and commentaries
+    require ('star-rater.php');
+    $notations = ProductNotation::get('id_product = '.$pdt['id'], 'inactive = 0');
+    if(!empty ($notations)){
+      $a=0;
+      foreach ($notations as $i => $notation){
+        $notation_maker = new CustomerUser($handle, $notation['id_client']);
+
+        if(!empty ($notation_maker) && count($notation_maker) == 1){
+          $notations[$i]['prenom'] = $notation['anonymous'] == true ? 'Client' : $notation_maker->prenom;
+          $notations[$i]['ville'] = $notation_maker->ville;
+        }  else {
+          $notations[$i]['prenom'] = 'Prénom non défini';
+          $notations[$i]['ville'] = '';
+        }
+        $sumNote += $notation['note'];
+        $a++;
+      }
+      $pdt['average_note'] = round($sumNote/$a);
+      $pdt['nb_comments'] = $a;
+    }
+/*
+ * function to clean product description from 'ugly' html font formatting
+ *
+ */
+function cleanDescHtml($str){
+  $descc3 = preg_replace("`<font .*>`siU", '', $str);
+  $descc2 = preg_replace("`</font.*>`siU", '', $descc3);
+  $descc = preg_replace("`style=\".*\"`siU", '', $descc2);
+  return $descc;
+}
+// tâche ULTRA URGENT - Intervention Google Shopping - 19/02/2013
+// vu avec tristan par tel, on considère que tous les taux de tva de tous les produits sont au taux normal en vigueur
+$tvaValues = Tva::calculatePriceFromId(IDTVA, $pdt['price']);
+$pdt['priceTTC'] = $tvaValues['priceTTC'];
+
+?>
+        <script type="text/javascript">
+          HN.TC.GVars.pdtID = <?php echo $pdt["id"] ?>;
+          HN.TC.GVars.showTtcPrice = <?php echo $ttcPrice ? 'true' : 'false'; ?>;
+          HN.TC.GVars.catID = <?php echo $pdt["cat3_id"] ?>;
+          HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE["email"]) ? $_COOKIE["email"] : "") ?>";
+         <?php if (!is_null($avail_saveSearch_js)) { ?>
+          HN.TC.GVars.avail_saveSearch = "<?php echo str_replace('"','\"',$avail_saveSearch_js); ?>";
+         <?php }?>
+          var pic_url_list = <?php echo json_encode($pdt["pic_url"]) ?>;
+        </script>
+        <div id="body" class="white-bg">
+        <div class="product-page" itemscope="itemscope" itemtype="http://schema.org/Product">
+          <div class="mobile-infos product-page-category-link">
+            <a href="<?php echo URL.'familles/'.$pdt['cat3_ref_name'].'.html' ?>"><?php echo $pdt['cat3_name'] ?></a>
+          </div>
+          <div class="product-page-title">
+      <?php
+
+
+      if(!empty($_GET['tokens_active'])){
+
+        $tokens_active  = $_GET['tokens_active'];
+        $id_product     = $_GET['id_product'];
+        $id_question     = $_GET['id_question'];
+        $sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' ";
+        $req_client		= mysql_query($sql_client);
+        $rows_client 	= mysql_num_rows($req_client);
+
+        if($rows_client > 0){
+          $data_client = mysql_fetch_object($req_client);
+          $sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
+          mysql_query($sql_update_client);
+
+          $sql_question_update = "UPDATE `q_a_questions` SET `etat` = '1' WHERE `id` ='".$id_question."'";
+          mysql_query($sql_question_update);
+
+          $sql_update = "SELECT id,question,date_create,pseudo FROM `q_a_questions` WHERE `id` ='".$id_question."' ";
+          $req_update = mysql_query($sql_update);
+          $data_update= mysql_fetch_object($req_update);
+
+          $sql_product_mail = "SELECT name FROM products_fr WHERE id='".$id_product."'";
+          $req_product_mail = mysql_query($sql_product_mail);
+          $data_product_mail = mysql_fetch_object($req_product_mail);
+
+          $date_creation = date("d/m/Y",strtotime($data_update->date_create));
+
+
+
+          $name_ptd 	  = htmlentities($data_product_mail->name, ENT_QUOTES);
+          //$question 	  = htmlentities($data_update->question, ENT_QUOTES);
+          $question    = utf8_decode($data_update->question);
+
+          $reponse  	  = htmlentities($reponse, ENT_QUOTES);
+          $pseudo   	  = htmlentities($data_update->pseudo, ENT_QUOTES);
+          $subject_name = utf8_decode($data_product_mail->name);
+
+
+          $header_from_name_new	= "Techni-contact";
+          $header_from_email	= 'ugc@techni-contact.com';
+
+          $header_send1_name	= '';
+          $header_send1_email	= 'ugc@techni-contact.com';
+
+          $header_send2_name	= '';
+          $header_send2_email	= '';
+
+          $header_reply1_name	= '';
+          $header_reply1_email= '';
+
+          $header_copy2_name	= '';
+          $header_copy2_email	= '';
+
+          $header_copy1_email	= '';
+          $header_copy1_name	= '';
+          $header_copy1_email	= '';
+
+
+          $url = ''.URL.'produits/'.$pdt["cat3_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html';
+
+
+          $subject = 'Question posee sur fiche '.$subject_name.' ';
+
+          $message_header = "<html><head>
+            <meta http-equiv=Content-Type content=text/html; charset=iso-8859-1>
+            </head>
+            <body bgcolor=#FFFFFF>";
+          $message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
+          $message_text	.= '<p>';
+            $message_text	.= 'Bonjour';
+            $message_text	.= '<br /><br />';
+            $message_text	.= 'Le '.$date_creation.',  <strong>'.$pseudo.'</strong> un internaute a publi&eacute; une question sur la fiche du produit <a href="'.$url.'" >'.$name_ptd.'</a>.';
+            $message_text	.= '<br /><br />';
+            $message_text	.= '<strong>Adresse mail : </strong>'.$data_client->email.'<br />';
+            $message_text	.= '<strong>Question :     </strong>'.$question;
+            $message_text	.= '<br /><br />';
+
+            $message_text	.= '<a href="'.ADMIN_URL.'q_a_products/fiche_q_a.php?id_product='.$id_product.'">R&eacute;pondre &agrave; la question </a> | <a href="'.$url.'"> Voir la fiche produit </a>';
+            $message_text	.= '<br /><br />';
+            $message_text	.= '</p>';
+
+          $message_bottom = "</body></html>";
+          $message_to_send = $message_header . $message_text . $message_bottom;
+
+          $mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
+
+        }
+      }
+
+      if(!empty($_GET['tokens_active_reponse'])){
+        $tokens_active  = $_GET['tokens_active_reponse'];
+        $sql_client 	= "SELECT id,email FROM clients WHERE activationCode='$tokens_active' ";
+        $req_client		= mysql_query($sql_client);
+        $rows_client 	= mysql_num_rows($req_client);
+        if($rows_client > 0){
+          $data_client = mysql_fetch_object($req_client);
+          $sql_update_client = "UPDATE `clients` SET  `activationCode` =  '' WHERE `id` ='".$data_client->id."'";
+          mysql_query($sql_update_client);
+          $sql_question_update = "UPDATE `q_a_reponses` SET `etat` = '1' WHERE `id_user` ='".$data_client->id."'";
+          mysql_query($sql_question_update);
+        }
+      }
+      ?>
+          <h1 class="bigger-blue-title" itemprop="name"><?php echo $pdt['name'] ?></h1>
+          <h2 class="medium-blue-title"><?php echo $pdt['fastdesc'] ?></h2>
+        </div>
+
+
+      <?php if (!empty ($pdt['average_note'])) { ?>
+                  <div class="cat3-checked-line" style="float: right;    margin-bottom: 5px;">
+                   <?php /* <img src="<?php echo URL ?>ressources/images/picto-avis.png" alt="picto-avis" /> Avis client*/ ?>
+                    <?php showStarRater($pdt['average_note']) ?>
+          <br />
+          <span style="margin-left: 14px;">
+                    <a class="color-blue avis" href="#block-product-notation">Lire les avis</a>
+          </span>
+                  </div>
+           <?php } ?>
+
+       <?php
+        $sql_check_f3 = "SELECT glf.id, glf.id_guide , ga.ref_name
+                 FROM guides_linked_familles  glf, guides_achat ga
+                 WHERE glf.id_guide = ga.id
+                 AND id_familles_three='".$pdt["cat3_ids"][0]."' ";
+        $req_check_f3  =  mysql_query($sql_check_f3);
+        $rows_check_f3 =  mysql_num_rows($req_check_f3);
+
+        if($rows_check_f3 > 0){
+        if (empty ($pdt['average_note'])) {
+          $class_dyn = " style='margin-top:10px;' ";
+        }
+
+        $data_check_f3 = mysql_fetch_object($req_check_f3);
+         ?>
+        <div class="lien_guide_product" <?= $class_dyn ?>>
+          <a href="<?= URL ?>guides-achat/<?= $data_check_f3->id_guide ?>-<?= $data_check_f3->ref_name ?>.html" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Fiches produit', 'Lien vers guide d'achat', '<?= $pdt["name"] ?>');"<?php endif; ?>><span>Lire guide d'achat </span><img src="<?= URL ?>ressources/images/buying-guide-picto-2.jpg" class="img-guide-picto-pdt" /></a>
+        </div>
+        <?php } ?>
+
+
+          <div class="product-page-main-zone"  id="product-sheet">
+            <div class="product-page-pic-zone fl">
+              <div class="product-page-pdt-code">Code fiche produit : <span class="color-blue"><?php echo $pdt["id"]; ?></span></div>
+              <div class="product-page-picture">
+                <img <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Zoom image']);" <?php endif ?>itemprop="image" src="<?php echo $pdt["pic_url"][0]["card"]; ?>" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"]; ?>" class="vmaib" data-index="0">
+                <div class="vsma"></div>
+              </div>
+
+            <?php if ($pdt["pic_url_count"] > 1 || !empty($pdt["video_code"])) { ?>
+              <div class="product-page-carrousel">
+                <div class="grey-block">
+                  <ul class="items">
+                    <?php $nb_video = 0;
+                    if (!empty($pdt["video_code"])) {
+                      $nb_video = 1;?>
+                    <li><a class="video" <?php if(!TEST): ?>onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Ouverture pop up', 'Pop up vidéo fiche produit']);" <?php endif; ?>rel="fancyboxvideo" href="#"><img alt="video" src="<?php echo $res_url; ?>images/picto-video.png"></a></li>
+              <?php } ?>
+                   <?php for($i=1; $i <= $pdt["pic_url_count"]; $i++) { ?>
+                <li><img alt="" src="<?php echo $pdt["pic_url"][$i-1]["card"]; ?>" /></li>
+                   <?php } ?>
+                  </ul>
+                </div>
+                <?php if(($i-1 + $nb_video) > 3){ ?>
+                <div class="scroll-l-product-page"><img alt="" src="<?php echo $res_url; ?>images/carrousel-arrow-left.png"></div>
+                <div class="scroll-r-product-page"><img alt="" src="<?php echo $res_url; ?>images/carrousel-arrow-right.png"></div>
+                <?php } ?>
+              </div>
+              <?php } ?>
+            </div>
+
+              <div id="video_code" style="display:none">
+                <?php if (!empty($pdt["video_code"])) { ?>
+                <?php echo $pdt["video_code"]; ?>
+                <?php } ?>
+            </div>
+
+
+           <?php
+
+      if ( ($deleted != 1) && ($active == 1) ){ ?>
+        <div class="product-page-text-zone fr">
+              <div class="product-page-main-zone-desc">
+                <?php if (($pdt["saleable"] && !$pdt_set_as_estimate) || ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ && $pdt_set_as_estimate)) { ?>
+                  <span class="atseo expert-advice"></span>
+                <?php } else { ?>
+                  <span class="atseo multiple-estimates"></span>
+                <?php } ?>
+                <h3 class="product-paragraph">
+        <?php
+        $delete_balise = strip_tags($pdt["descc"]);
+        $chaine = ereg_replace("<[^>]*>", " ", $pdt["descc"]);
+
+        echo substr($chaine , 0, 270).'...'; ?>
+                  <?php //echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,220))."..." ?>
+                  <a class="color-blue" href="#product-desc">Lire la suite</a>
+                </h3>
+              </div>
+
+              <div class="product-page-main-zone-left fl">
+                <?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { ?>
+                  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png"><span class="atseo shipping-fee"></span> <?php echo $pdt["shipping_fee"]; ?></div>
+                  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Commande minimum: <?php echo ($pdt["adv_min_amount"] > 0 ? sprintf("%.0f", $pdt["adv_min_amount"])."€" : "non"); ?></div>
+                  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Livraison: <?php echo $pdt["delivery_time"]; ?></div>
+                  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Garantie: <?php echo $pdt["warranty"]; ?></div>
+                  <div class="zero"></div>
+                <?php } ?>
+        <br />
+                <div class="cat3-checked-line">
+
+
+          <?php
+          //echo $pdt['adv_cat'];
+
+          if($pdt['adv_cat'] == 1){
+          $sql_quest = "SELECT id,question,pseudo,id_user
+                    FROM q_a_questions
+                    WHERE id_produit='".$pdt["id"]."'
+                    AND etat='1' ";
+            $req_quest = mysql_query($sql_quest);
+            $rows_quest= mysql_num_rows($req_quest);
+            if( $rows_quest > 0){
+          ?>
+          <div class="left_point">
+            <div class="point_style">?</div>
+          </div>
+
+          <div style="overflow: hidden;">
+          <?php
+            if($rows_quest ==1) $in_ss = "";
+            else $in_ss = "s";
+
+          ?>
+                    <?= $rows_quest ?> question<?= $in_ss  ?> <a class="color-blue" href="#Plus_infos">Plus d'infos</a><br />
+          <a href="#" id="" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');"><strong>Poser une question</strong></a>
+          </div>
+          <?php }else{ ?>
+          <div class="left_point">
+            <div class="point_style">?</div>
+          </div>
+
+          <div style="overflow: hidden;">
+                    <a href="#" id="" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');"><strong>Poser une question sur <br /> le produit</strong></a>
+          </div>
+          <br />
+          <?php }
+            }
+          ?>
+
+                </div>
+
+        <div id="create-question">
+        <div class="blue-title fl" id="title_quest_bar">Poser une question sur <?php echo $pdt["name"]; ?></div>
+
+        <div class="zero"></div>
+
+
+        <div id="product-refs" class="product-page-cart-table cart-table" style="height: auto;border-top: medium none;">
+        <div style="padding: 10px;">
+          <div style="margin-bottom: 15px;" id="parag_desc">
+            <p>Besoin d'un complément d'information sur notre produit?<br />
+              Posez votre question, notre expert ou la communauté vous répondront en ligne !<br />
+              Votre contribution profitera directement aux autres visiteurs.
+            </p>
+          </div>
+        <div id="result_message"></div>
+        <div id="formss-question">
+          <div>
+            <label><strong>Votre question</strong></label><br />
+            <textarea cols="65" rows="5" name="question" id="question" ></textarea>
+          </div>
+          <div>
+            <div style="float:left;margin-right:10px;">
+            <label><strong>Email (pour recevoir la réponse)</strong></label><br />
+            <input type="email" name="email" id="email" value="" class="form-question" />
+            </div>
+
+            <div>
+            <label><strong>Votre pseudo</strong></label><br />
+            <input type="text" name="pseudo" id="pseudo" value="" class="form-question" />
+            </div>
+          </div>
+
+          <div>
+            <div style="float:left;margin-right:10px;">
+            <label><strong>Téléphone (optionnel)</strong></label><br />
+            <input type="text" name="siteweb" id="telephone" value="" class="form-question" />
+            </div>
+
+            <div>
+            <label><strong>Votre site web (optionnel)</strong></label><br />
+            <input type="text" name="siteweb" id="siteweb" value="" class="form-question" />
+            </div>
+          </div>
+          <div>
+          <center>
+            <div class="btn-create_question" id="create_users">Posez votre question</div>
+            <div style="margin: 15px auto auto; width: 20px;"><img src="/ressources/images/loding.gif" style="display:none;" id="loding"/></div>
+          </center>
+            </div>
+        </div>
+        </div>
+        </div>
+        </div>
+
+               <?php if ($pdt["docs_count"] > 0 || !empty ($pdt['average_note'])) { ?>
+                <div class="product-page-notation-docs">
+               <?php } ?>
+
+                 <?php /* if ($pdt["docs_count"] > 0) : ?>
+                  <div class="cat3-checked-line">
+                    <img src="<?php echo $res_url ?>images/picto-docs.png" alt="picto-docs" />
+                    Documentation produit <a class="color-blue" href="#block-product-document">Plus d'infos</a>
+                  </div>
+                 <? endif */?>
+               <?php if ($pdt["docs_count"] > 0 || !empty ($pdt['average_note'])) { ?>
+                </div>
+               <?php } ?>
+              </div>
+
+              <div class="product-page-main-zone-right fr">
+                <?php //var_dump($pdt["adv_cat"], $pdt["saleable"], $pdt_set_as_estimate, $pdt["hasPrice"]); ?>
+               <?php if ($pdt["saleable"] && !$pdt_set_as_estimate) : ?>
+
+               <?php if ($pdt["ref_count"] > 1) { // faire affichage tableau prix en calque pour mise au panier ?>
+                  <div class="hidden" itemscope="itemscope" itemtype="http://schema.org/Organization">
+                    <span itemprop="name" content="Techni-Contact">Techni-Contact</span>
+                    <span itemprop="url" content="http://www.techni-contact.com">http://www.techni-contact.com</span>
+                    <span itemprop="telephone" content="01 55 60 29 29">01 55 60 29 29</span>
+                  </div>
+                  <div itemscope="itemscope" itemtype="http://schema.org/Offer">
+                    <div class="product-page-price">
+                      à partir de :
+                      <div>
+                        <span itemprop="price"><?php echo sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]); ?></span>
+                        <span >€</span> <?php echo $ttcPrice?'TTC':'HT'?>
+                        <span class="hidden" itemprop="priceCurrency">EUR</span>
+                      </div>
+                    <?php
+                      //Change on 31/12/2014
+                      //Add Js vars for iAdvize (Product price or 0 for Devis)
+                      echo('<script type="text/javascript">');
+                        echo('var idz_fiche_product_price = "'.sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"]).'";');
+                      echo('</script>');
+                    ?>
+                    </div>
+                    <span class="hidden" itemprop="url"><?php echo $pdt["url"]; ?></span>
+                    <span class="hidden" itemprop="sku"><?php echo $pdt["id"]; ?></span>
+                    <div class="product-page-action">
+                      <a class="btn-cart-add-big-pink"<?php if(!TEST): ?> onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Ouverture choix du modèle']);"<?php endif; ?> href="<?php echo $pdt["cart_add_url"]; ?>">Ajouter au panier11</a><br />
+                      <a href="<?php echo $pdt["cart_add_url"]; ?>"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="btn-esti-ask ask-estimate-link"><img alt="" src="<?php echo $res_url; ?>images/puce-estimate-small.png" class="fl"><span class="atseo ask-estimate">Demander un devis</span></a><br />
+
+                      <div class="zero"></div>
+                      <?php /*<a href="<?php echo $url.'pdf/commande-fax/'.$pdt["cat3_id"].'-'.$pdt['id']; ?>"><div class="puce puce-7"></div>Commander par FAX</a>*/ ?>
+                      <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+                        <?php $productList = new ProductsSavedList();
+                        if ($productList->isProductInSavedList($pdt['id'])) { ?>
+                          <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                          <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+                        <?php }else{ ?>
+                          <div class="zero"></div>
+                        <?php } ?>
+                      </div>
+                    </div>
+                  </div>
+
+                    <?php }else{// one ref ?>
+                    <div class="product-page-price">
+                      <div><?php echo sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"])."€ "; ?><?php echo $ttcPrice?'TTC':'HT'?></div>
+                    </div>
+                    <div class="product-page-action">
+                      <a class="btn-cart-add-small-single" <?php if(!TEST): ?>onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Mise au panier directe']);"<?php endif; ?> href="<?php echo $pdt["cart_add_url"]; ?>">Ajouter au panier</a><br />
+                      <a href="<?php echo $pdt["cart_add_url"]; ?>" data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="btn-esti-ask ask-estimate-link"><img alt="" src="<?php echo $res_url; ?>images/puce-estimate-small.png" class="fl"><span class="atseo ask-estimate"></span></a><br />
+
+                      <div class="zero"></div>
+                      <?php /*<a href="<?php echo url.'pdf/commande/'.$pdt['web_id']; ?>"><div class="puce puce-7"></div>Commander par FAX</a><br />*/ ?>
+
+                      <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+                        <?php $productList = new ProductsSavedList();
+                        if ($productList->isProductInSavedList($pdt['id'])) {?>
+                          <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                          <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+                        <?php }else{ ?>
+
+                      <div class="zero"></div>
+                       <?php } ?>
+                      </div>
+                    </div>
+                    <?php } // ref count ?>
+
+               <?php else : // not saleable ?>
+                <?php if ($pdt["hasPrice"] && !$pdt_set_as_estimate){ ?>
+                <div class="product-page-esti">
+                  Prix indicatif : <div><?php echo sprintf("%.2f",$ttcPrice?$pdt["priceTTC"]:$pdt["price"])."€ "; ?><?php echo $ttcPrice?'TTC':'HT'?></div>
+                </div>
+                <div class="product-page-action">
+                  <a href="<?php echo $pdt["cart_add_url"]; ?>" class="btn-esti-ask-orange" data-adv-type="<?php echo $pdt["adv_cat"]; ?>">Demander un devis</a><br />
+                  <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+                        <?php $productList = new ProductsSavedList();
+                        if ($productList->isProductInSavedList($pdt['id'])){ ?>
+                          <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                          <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+                        <?php }else{ ?>
+
+                  <div class="zero"></div>
+                  <?php } ?>
+                      </div>
+                </div>
+                <?php }else{ // no price ?>
+                <div class="product-page-esti">
+                  Prix :<div> sur devis</div>
+
+            <?php
+            //Change on 31/12/2014
+            //Add Js vars for iAdvize (Product price or 0 for Devis)
+            echo('<script type="text/javascript">');
+              echo('var idz_fiche_product_price = "0";');
+            echo('</script>');
+          ?>
+
+                </div>
+                <div class="product-page-action">
+                  <a href="<?php echo $pdt["cart_add_url"]; ?>" class="btn-esti-ask-orange"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>">Demander un devis </a><br />
+
+                  <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+                        <?php $productList = new ProductsSavedList();
+                        if ($productList->isProductInSavedList($pdt['id'])){ ?>
+                          <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                          <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+                        <?php }else{ ?>
+
+                  <div class="zero"></div>
+                  <?php } ?>
+                      </div>
+                </div>
+                <?php } // has price ?>
+               <?php endif // saleable ?>
+              </div>
+
+
+              <div class="zero"></div>
+              <div class="product-page-reseaux-sociaux">
+                <!-- google plusone button -->
+               <!-- <div style="padding-top:1px; float: left">
+                <g:plusone size="medium" count="false" href="<?php echo $pdt['url'].'?utm_source=google-1&utm_medium=reseaux-sociaux&utm_campaign=bouton-google-1&campaignID=8' ?>"></g:plusone>
+                </div>-->
+                <!-- google plusone button -->
+                <!-- FB like button -->
+                <iframe src="http://www.facebook.com/plugins/like.php?locale=fr_FR&app_id=249257591754502&amp;href=<?php echo $pdt['url'].'?utm_source=facebook&utm_medium=reseaux-sociaux&utm_campaign=bouton-recommandation-FB&campaignID=7';?>&amp;send=false&amp;layout=button_count&amp;width=450&amp;show_faces=false&amp;action=like&amp;colorscheme=light&amp;font&amp;height=21" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:90px; height:21px; padding: 2px 0 0 12px; float: left" allowTransparency="true"></iframe>
+                <!-- FB like button -->
+                <span class="option option-print fl"></span>
+                <?php /*<a href="" onclick="pageTracker._trackEvent('Lien', 'Lien-fiche-produit', 'Envoyer-a-un-collegue');" class="option option-send-friend fl" style="padding-right:20px">*/ ?>
+                <!-- AddThis Button BEGIN -->
+                <a class="addthis_button" href="http://www.addthis.com/bookmark.php?v=300&amp;pubid=technicontact"><img src="<?php echo $res_url; ?>images/btn-share-single.png" alt="Partager avec un collegue" style="border:0"/></a>
+                <script type="text/javascript">var addthis_config = {"data_track_addressbar":false};</script>
+                <script type="text/javascript" src="http://s7.addthis.com/js/300/addthis_widget.js#pubid=technicontact"></script>
+                <!-- AddThis Button END -->
+                </a>
+        <div class="puce_lien"> <a href="saveProductList:add-<?php echo $pdt['id']; ?>" <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Fiche produit', 'Clic', 'Sauvegarde produit']);"<?php endif; ?> class="btn-users-product-list"><div class="puce puce-5"></div><span>Sauvegarder ce produit</span></a>
+        </div>
+              </div>
+            </div>
+           <?php }else{ // deleted ?>
+            <div class="product-page-text-zone-deleted">
+              <div class="blue-small-title vmaib">Actuellement indisponible</div>
+              <div class="vsma"></div>
+            </div>
+           <?php } // deleted or not ?>
+
+
+
+
+            <div class="zero"></div>
+          </div>
+
+          <div class="product-page-shadow"></div>
+          <div class="product-page-bottom-zone">
+            <div class="product-page-bottom-left-col fl">
+              <div id="recommended-products-pdt-block" class="grey-block product-page-bottom-recommended">
+                <div class="product-page-top-arrow"></div>
+                <div class="blue-small-title blue-smaller-title">Vous aimerez aussi</div>
+                <div id="recommended-products-pdt">
+                  <ul></ul>
+                </div>
+                <script type="text/javascript">
+                  HN.TC.GetNuukikRecommendedProducts("recommended-products-pdt-block", [77, "products", "<?php echo $pdt['id'] ?>", "recommendation"], "list", null, function(){
+                    window._gaq && _gaq.push(['_trackEvent', 'Nuukik', 'Reco Fiche produit', "<?php echo addslashes($pdt['name']) ?>"]);
+                  });
+                </script>
+              </div>
+              <div class="grey-block product-page-bottom-seen">
+                <div class="product-page-top-arrow"></div>
+                <div class="blue-small-title blue-smaller-title">Déjà consultés</div>
+                <div id="already-seen-products">
+                  <ul></ul>
+                </div>
+                <script type="text/javascript">
+                  var seenProducts = <?php echo json_encode($viewed_products) ?>;
+                    HN.TC.GetSeenProducts(seenProducts,"already-seen-products", 'list');
+                </script>
+              </div>
+              <div class="cat-siblings">
+               <?php foreach ($cat2Cat3s as $cat2Cat3) : ?>
+                <div class="pdt-filtering-title"><a href="<?php echo URL."familles/".$cat2Cat3['ref_name'].".html" ?>"><?php echo $cat2Cat3['name'] ?></a></div>
+                <ul class="cat3-cat-filtering<?php if ($cat2Cat3['id'] == $pdt['cat3_id']) : ?> current<?php endif ?>">
+                 <?php foreach ($cat2Cat3['pdtList'] as $cat2Cat3Pdt) : ?>
+                  <li><a href="<?php echo Utils::get_pdt_fo_url($cat2Cat3Pdt['id'], $cat2Cat3Pdt['ref_name'], $cat2Cat3['id']) ?>"><?php echo $cat2Cat3Pdt['name'] ?></a></li>
+                 <?php endforeach ?>
+                  <li><a href="<?php echo URL."familles/".$cat2Cat3['ref_name'].".html" ?>" class="more">Voir tout <?php echo $cat2Cat3['name'] ?></a></li>
+                </ul>
+               <?php endforeach ?>
+              </div>
+            </div>
+            <div class="product-page-bottom-right-col fr">
+              <div class="grey-block product-page-bottom-desc"><a name="product-desc"></a>
+                <div class="product-page-top-arrow"></div>
+                <span class="atseo description"></span>
+                <br/>
+                <br/>
+                <span  itemprop="description">
+                <?php echo cleanDescHtml($pdt["descc"]); ?>
+                </span>
+                <div class="zero"></div>
+                <?php if(!empty ($pdt["descd"]))echo '<br/><br/>'.cleanDescHtml($pdt["descd"]); ?>
+                <div class="zero"></div>
+               <?php if (!empty($pdt["adv_catalog_code"])) { ?>
+                <br/>
+                <br/>
+                <div id="pdt-catalog" class="block-pdt-title">Catalogue produit interactif</div>
+                <?php echo $pdt["adv_catalog_code"]; ?>
+               <?php } ?>
+                <div id="desc-zone-video-code">
+                <?php if (!empty($pdt["video_code"])) { ?>
+                 <br/>
+                 <br/>
+                 <div id="pdt-video" class="block-pdt-title">Vidéo de présentation</div>
+                 <br/>
+                 <div id="desc-zone-video">
+                   <?php echo $pdt["video_code"]; ?>
+                 </div>
+                 <br/>
+                <?php } ?>
+                </div>
+               <?php if ($pdt["docs_count"] > 0) { ?>
+               <div class="zero"></div>
+                <div class="pdt-docs">
+                  <br/>
+                  <div class="block-pdt-title" id="block-product-document">Documentation complémentaire</div>
+                   <?php foreach($pdt["docs"] as $doc) if ($doc["uploaded"] == 2) { ?>
+                  <h4 class="pdt-doc-link">
+                    <a class="color-blue" href="<?php echo PRODUCTS_FILES_URL.$pdt["id"]."-".$doc["num"]."-".$doc["filename"].".pdf"; ?>" data-doc-location="<?php echo PRODUCTS_FILES_URL.$pdt["id"]."-".$doc["num"]."-".$doc["filename"].".pdf"; ?>">
+                      <img src="<?php echo $res_url; ?>images/picto-doc-big.png"/>
+                        <?php echo $doc["title"]; ?>
+                    </a>
+                  </h4>
+                   <?php } ?>
+                   <br/>
+                </div>
+               <?php } ?>
+               <div class="zero"></div>
+        <?php if ( ($deleted != 1) && ($active == 1) ){ ?>
+          <div class="product-page-supplier-products">
+          <a class="color-blue" href="<?php echo URL.'fournisseur/'.$pdt['adv_id'].'.html'?>"><u><b>Voir tous les produits de ce fournisseur</b></u></a>
+                </div>
+        <?php } ?>
+               <div class="zero"></div>
+                <div class="zero"></div>
+              </div><!-- /.product-page-bottom-desc -->
+
+             <?php if ($pdt['ref_count'] > 0) : ?>
+              <div class="grey-block product-page-bottom-prices display-infos">
+                <div class="product-page-top-arrow"></div>
+                <div class="blue-title fl">Choisir mon produit</div>
+                <a href="#header" class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
+                <div class="zero"></div>
+                <div id="product-refs" class="product-page-cart-table cart-table" >
+                  <div class="display-infos">
+                    <table cellspacing="0" cellpadding="0">
+                      <thead>
+                      <tr>
+                        <th>Réf. TC</th>
+                        <th>Libellé</th>
+                       <?php foreach($custom_cols as $colName) { ?>
+                        <th><?php echo $colName; ?></th>
+                       <?php }
+                        if(!$pdt_set_as_estimate){?>
+                        <th>Prix <?php echo $ttcPrice? 'TTC' : 'HT'; ?></th>
+                        <th>Quantité</th>
+                        <th>Ajouter au panier</th>
+                        <?php } ?>
+                      </tr>
+                      </thead>
+                      <tbody>
+                       <?php foreach($pdt["refs"] as $ref) {
+                          $tvaValues = Tva::calculatePriceFromId(IDTVA, $ref['price']);
+                          $ref['priceTTC'] = $tvaValues['priceTTC'];
+                         ?>
+                        <tr>
+                          <td class="first"><?php echo $ref["id"]; ?></td>
+                          <td><?php echo $ref["label"]; ?></td>
+                           <?php foreach($ref["content"] as $colValue) { ?>
+                            <td><?php echo $colValue; ?></td>
+                           <?php } ?>
+                           <?php if (!$pdt_set_as_estimate) : ?>
+                            <td class="price">
+                              <?php echo sprintf("%.2f",($ttcPrice?$ref["priceTTC"]:$ref["price"])); ?> €
+                             <?php if ($ref["ecotax"] > 0) : ?>
+                              <small>dont éco part : <?php echo $ref["ecotax"] ?> €</small>
+                             <?php endif ?>
+                            </td>
+                            <td class="quantity"><div class="vmaib"><div class="sub"></div><input type="text" name="qty" value="1"/><div class="add"></div></div></td>
+                            <td class="cart-add"><a <?php if(!TEST): ?>onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Tableau prix - Choix du modèle']);"<?php endif; ?>  href="<?php echo $ref["cart_add_url"]; ?>" class="btn-cart-add-small-btn vmaib" title="Ajouter au panier"></a></td>
+                           <?php endif ?>
+                        </tr>
+                       <?php } ?>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="mobile-infos">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Infos réf. produit</th>
+                         <?php if (!$pdt_set_as_estimate) : ?>
+                          <th>Qté</th>
+                          <th></th>
+                         <?php endif ?>
+                        </tr>
+                      </thead>
+                      <tbody>
+                       <?php foreach ($pdt["refs"] as $ref) {
+                          $tvaValues = Tva::calculatePriceFromId(IDTVA, $ref['price']);
+                          $ref['priceTTC'] = $tvaValues['priceTTC'];
+                         ?>
+                        <tr>
+                          <td class="infos">
+                            <ul>
+                              <li><div class="label">Référence :</div><div class="text"><?php echo $ref["id"] ?></div></li>
+                              <li><div class="label">Libellé :</div><div class="text"><?php echo $ref["label"] ?></div></li>
+                             <?php foreach ($ref["content"] as $k => $colValue) : ?>
+                              <li><div class="label"><?php echo $custom_cols[$k] ?></div><div class="text"><?php echo $colValue ?></div></li>
+                             <?php endforeach ?>
+                             <?php if (!$pdt_set_as_estimate) : ?>
+                              <li class="price">
+                                <div class="label">Prix <?php echo $ttcPrice? 'TTC' : 'HT' ?> :</div>
+                                <div class="text">
+                                  <?php echo sprintf("%.2f",($ttcPrice?$ref["priceTTC"]:$ref["price"])) ?>€
+                                 <?php if ($ref["ecotax"] > 0) : ?>
+                                  <small>dont éco part : <?php echo $ref["ecotax"] ?> €</small>
+                                 <?php endif ?>
+                                </div>
+                              </li>
+                             <?php endif ?>
+                            </ul>
+                          </td>
+                         <?php if (!$pdt_set_as_estimate) : ?>
+                          <td class="quantity"><input type="text" name="qty" value="1"/></td>
+                          <td class="cart-add"><a <?php if(!TEST): ?>onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Tableau prix - Choix du modèle']);"<?php endif; ?> href="<?php echo $ref["cart_add_url"] ?>" class="btn-cart-add-small-btn vmaib" title="Ajouter au panier"></a></td>
+                         <?php endif ?>
+                        </tr>
+                       <?php } ?>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="zero"></div>
+                </div><!-- /#product-refs -->
+              </div>
+
+
+
+
+
+
+        <!--   Questions Reponse  -->
+        <div class="grey-block product-page-bottom-prices display-infos" id="Plus_infos">
+        <div class="product-page-top-arrow"></div>
+          <div class="blue-title fl">Questions réponses utilisateurs</div>
+          <a class="goto-page-up fr" href="#poser_question"><img alt="^" src="../ressources/images/goto-page-up.png"></a>
+          <div class="zero"></div>
+          <div id="product-refs" class="product-page-cart-table cart-table"  style="height: auto;">
+          <div style="padding: 10px;">
+            <div style="margin-bottom: 15px;">
+            Il vous manque une information sur la fiche technique ?<br /> <strong><a href="#" onclick="javascript:HN.TC.ShowCreateAccountForm_create_question('show');">Posez votre question</a></strong> sur le produit <?= $pdt["name"] ?>. Techni-Contact, ou l'un de ses utilisateurs vous répondront.
+            </div>
+
+            <div>
+            <input type="hidden" id="name_products" value="<?php echo $pdt["name"]; ?>" />
+            <input type="hidden" id="ids_products" value="<?php echo $pdt["id"]; ?>" />
+            <input type="hidden" id="url" value="<?php  echo $pdt['url']; ?>" />
+            <?php if($rows_quest > 0){
+              $id_question_array = "";
+              while($data_quest = mysql_fetch_object($req_quest)){
+              $id_question_array .= $data_quest->id.'-';
+              echo '<input type="hidden" id="id_question'.$data_quest->id.'" value="'.$data_quest->id.'" />';
+            ?>
+              <div class="title_question" id="reponde" onclick="javascript:HN.TC.ShowCreateAccountForm_repondre<?= $data_quest->id ?>('show');">
+                <div class="picto_answer">
+                  <?= $data_quest->question ?>
+                </div>
+                <div class="picto_img">
+                <img src="../ressources/icons/page_white_wrench.png" alt="Répondre" title="Répondre" style="margin-right: 5px;" /> <span>Répondre</span></span>
+                </div>
+              </div>
+
+              <div id="product-reponse<?= $data_quest->id ?>" class="product-page-cart-table cart-table product-reponse">
+                <div id="result_message_reponse<?= $data_quest->id ?>"></div>
+                <div id="reponses_forms<?= $data_quest->id ?>">
+                <div class="blue-title fl" id="answer_title<?= $data_quest->id ?>">Réponse à question sur  produit <?php echo $pdt["name"]; ?></div>
+                <br />
+                  <div style="padding: 10px;">
+                  <input type="hidden" value="<?= $data_quest->id ?>" id="id_calque" />
+                    <div style="margin-bottom: 15px;">
+                      <p><strong>Question : </strong><?= $data_quest->question ?>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label><strong>Votre r&eacute;ponse : </strong></label><br />
+                      <textarea cols="65" rows="5" id="reponse_reponse<?= $data_quest->id ?>"></textarea>
+                    </div>
+                    <div>
+                      <div style="float:left;margin-right:10px;">
+                      <label><strong>Email (pour suivre la discution)</strong></label><br />
+                      <input type="email" id="email_reponse<?= $data_quest->id ?>" class="form-question" />
+                      </div>
+
+                      <div>
+                      <label><strong>Votre pseudo</strong></label><br />
+                      <input type="text" id="pseudo_reponse<?= $data_quest->id ?>"  class="form-question" />
+                      </div>
+                    </div>
+
+                    <div>
+                    <div style="float:left;margin-right:10px;">
+                      <label><strong>Téléphone (optionnel)</strong></label><br />
+                      <input type="text" id="telephone<?= $data_quest->id ?>" value="" class="form-question" />
+                    </div>
+                    <div>
+                      <label><strong>Votre site web (optionnel)</strong></label><br />
+                      <input type="text" id="siteweb_reponse<?= $data_quest->id ?>" value="" class="form-question" />
+                    </div>
+                    </div>
+                  </div>
+                  <div class="zero"></div>
+                    <center><div class="btn-answer_question create_reponse" id="<?= $data_quest->id ?>">Envoyez votre r&eacute;ponse</div></center>
+                  <div class="zero"></div>
+                  </div>
+              </div>
+              <?php
+                $sql_users_quest = "SELECT url FROM clients WHERE id='".$data_quest->id_user."' ";
+                $req_users_quest = mysql_query($sql_users_quest);
+                $data_users_quest = mysql_fetch_object($req_users_quest);
+                //echo $sql_users_quest;
+                if(!empty($data_users_quest->url)){
+                  echo '<div>Posée par <a href="http://'.$data_users_quest->url.'" target="_blink" >'.$data_quest->pseudo.'</a></div>';
+                }else {
+                  echo '<div>Posée par '.$data_quest->pseudo.'</div>';
+                }
+              ?>
+
+              <?php
+              $sql_reponse = "SELECT id_user,reponse,id,vote,pseudo
+                      FROM q_a_reponses
+                      WHERE id_question='".$data_quest->id."'
+                      AND etat='1'
+                      ORDER BY date_create ASC ";
+              $req_reponse = mysql_query($sql_reponse);
+              $rows_reponse = mysql_num_rows($req_reponse);
+
+              if($rows_reponse > 0){
+                echo '<div style="padding: 15px;">';
+                while($data_reponse = mysql_fetch_object($req_reponse)){
+                //$comment = 'style="overflow: hidden;"';
+                echo '<div style="margin-bottom: 10px; border-bottom: 1px dashed rgb(204, 204, 204); padding: 10px;">
+                    <div class="stl_psudo">R&eacute;ponse de '.$data_reponse->pseudo.' </div>
+                    <div style="float: left; margin-right: 5px;"><img src="../ressources/icons/arrow_right.png"  /></div>
+                    <div style="overflow: hidden;">'.$data_reponse->reponse.'</div>
+                    </div>';
+                }
+                echo '</div>';
+              }else {
+              echo '<div class="block-reponse">  0 R&eacute;ponse pour cette question </div>';
+              }
+              }
+              ?>
+              <input type="hidden" value="<?= $id_question_array ?>" id="id_question_array" />
+
+
+
+        <?php }else {
+           } ?>
+            </div>
+          </div>
+        </div>
+
+         </div>
+         <!--  Fin Questions Reponse  -->
+
+
+              <div class="product-page-bottom-prices mobile-infos">
+                <a class="btn-cart-add-big-pink"<?php if(!TEST): ?> onclick="_gaq.push(['_trackEvent', 'Fiche produit', 'Mise au panier', 'Bouton principal - Ouverture choix du modèle']);"<?php endif ?> href="<?php echo $pdt["cart_add_url"] ?>">Ajouter au panier</a>
+              </div>
+             <?php endif // pdt['ref_count'] > 0 ?>
+
+       <?php
+        $sql_products  = "SELECT id_client ,lead_id,photo_equipement,etat,txt_equipement
+                  FROM annuaire_questionnaire
+                WHERE id_produit='".$pdt["id"]."' ";
+        $req_products  = mysql_query($sql_products);
+
+
+        $req_products2  = mysql_query($sql_products);
+        $data_client    = mysql_fetch_object($req_products2);
+
+        $sql_client_verify  = "SELECT etat
+                   FROM annuaire_client
+                   WHERE client_id='".$data_client->id_client."' ";
+        $req_client_verify  = mysql_query($sql_client_verify);
+        $data_client_verify = mysql_fetch_object($req_client_verify);
+        if($data_client_verify->etat == 1){
+
+        $rows_products = mysql_num_rows($req_products);
+        if($rows_products > 0){
+        echo '<div class="grey-block product-page-bottom-related" style="overflow: hidden">
+            <div class="product-page-top-arrow"></div>
+            <div class="blue-title fl">Ils nous font confiance pour ce produit</div>
+            <a class="goto-page-up fr" href="#header"><img alt="^" src="http://test.techni-contact.com/ressources/images/goto-page-up.png"></a>
+            <div class="zero"></div>';
+        while($data_products = mysql_fetch_object($req_products)){
+        $sql_client  = "SELECT id,logo,societe,question_activite,client_id
+                FROM annuaire_client
+                WHERE client_id='".$data_products->id_client."' ";
+        $req_client  = mysql_query($sql_client);
+        $data_client = mysql_fetch_object($req_client);
+        ?>
+        <div  style="padding: 15px;overflow: hidden;">
+          <?php if($data_products->etat == 1){  ?>
+          <div style="margin-bottom: 10px;">
+          <div class="logo_activite" style="float: left; margin-right: 30px;">
+            <?php
+            if(!empty($data_client->logo)){
+              echo '<div style="margin-bottom: 27px;">
+                  <img src="'.URL.''.$data_client->logo.'" style="width: 80px;" />
+                  </div>';
+            }
+            ?>
+            <div class="title_societe">
+          <?php
+  $search    = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
+  $replace   = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
+  $url_final = urlencode(str_replace($search, $replace, strtolower($data_client->societe)));
+          ?>
+            <a href="<?= URL ?>utilisateurs/<?= $data_client->id ?>-<?= $data_client->client_id ?>-<?= $url_final ?>.html">
+            <?= $data_client->societe ?>
+            </a>
+          </div>
+          </div>
+          <?php
+            $txt_equipement = str_replace("\'","'",$data_products->txt_equipement);
+          ?>
+            <div style="overflow: hidden;"><?= nl2br($txt_equipement) ?></div>
+
+          </div>
+
+            <?php
+              if(!empty($data_products->photo_equipement)){
+                echo '<div class="photo_equipement">';
+                  echo '<div><center><img src="'.URL.''.$data_products->photo_equipement.'" style="width: 300px;" /></center></div>';
+                echo '</div>';
+              }
+            }
+            ?>
+        </div>
+              <?php }
+        echo '</div>';
+        }
+        } ?>
+
+
+             <?php if ($rPdtListCount > 0) : ?>
+              <div class="grey-block product-page-bottom-related">
+                <div class="product-page-top-arrow"></div>
+                <div class="blue-title fl">Autres <?php echo $pdt['cat3_name'] ?></div>
+                <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
+                <div class="zero"></div>
+                <ul class="list">
+                 <?php foreach ($rPdtList as $rPdt) :
+          $sql_url  = "SELECT pf.idFamily, ref_name
+                 FROM   products_fr ppf, products_families pf
+                 WHERE  pf.idProduct = ppf.id
+                 AND    ppf.id='".$rPdt['id']."'";
+          $req_url  =  mysql_query($sql_url);
+          $data_url =  mysql_fetch_object($req_url);
+
+         ?>
+                  <li>
+                    <div class="name">
+          <?php //echo Utils::get_pdt_fo_url($rPdt['id'], $rPdt['ref_name'], $pdt['cat3_id']) ?>
+                      <a href="<?= URL.'produits/'.$data_url->idFamily.'-'.$rPdt['id'].'-'.$data_url->ref_name ?>.html">
+              <?php echo $rPdt['name'] ?>
+            </a>
+                    </div>
+                    <div class="desc-autre">
+                      <?php echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($rPdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,150))."..." ?>
+                    </div>
+                  </li>
+                 <?php endforeach ?>
+              </div>
+             <?php endif // $rPdtListCount > 0 ?>
+
+
+
+              <?php if(!empty ($pdt['average_note'])) { ?>
+              <div class="grey-block product-page-bottom-notation" id="block-product-notation">
+                <div class="product-page-top-arrow"></div>
+                <h4 class="blue-title fl">Avis clients pour <?php echo $pdt["name"]; ?></h4>
+                <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
+                <div class="zero"></div>
+
+                <!--<div>Avis pour <?php echo $pdt["name"]; ?></div>-->
+                <div class="product-page-notation-list" itemscope="itemscope" itemtype="http://schema.org/Review">
+                  <span class="hidden" itemprop="itemReviewed"><?php echo $pdt["name"]; ?></span>
+                  <span class="hidden" itemprop="reviewRating"><?php echo round(($pdt["average_note"]/2),1); ?></span>
+                  <span class="hidden" itemprop="thumbnailUrl"><?php echo $pdt["pic_url"][0]["thumb_small"]; ?></span>
+                  <!--Il y a <?php echo $pdt['nb_comments']; ?> avis pour le produit <?php echo $pdt["name"]; ?>.<br />
+                  Note moyenne : <?php  showStarRater($pdt['average_note']); ?><br />-->
+                  <?php
+
+          if(!empty($notations)){
+          foreach($notations as $key => $notation){
+            $volume[$key]  = $notation['timestamp'];
+          }
+          array_multisort($volume, SORT_DESC, $notations);
+          //var_dump($notations);
+          ?>
+                    <?php foreach($notations as $notation){
+
+          ?>
+
+                      <?php echo '<img class="cat3-feedback-logo-client" src="'.$res_url.'images/upper-grey-account-logo.png" alt="face" /><span style="color: #333333">'.$notation["prenom"].'</span> <span  style="color: #999999">le '.date('d/m/Y', $notation["timestamp"]).'</span> ';
+                        showStarRater($notation["note"]);
+                      echo '<div class="product-page-feedback-comment">'.$notation["comment"].'</div>';
+                      } ?>
+                  <?php } ?>
+                </div>
+              </div>
+              <?php } ?>
+
+              <?php if ($pdt["comments_count"] > 0) { ?>
+              <div class="grey-block product-page-bottom-customer-askings">
+                <div class="product-page-top-arrow"></div>
+                <h4 class="blue-title fl">Demandes pour &laquo;<?php echo $pdt["name"]; ?>&raquo;</h4>
+                <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
+                <div class="zero"></div>
+                <div id="product-comments" class="comments">
+
+                  <ul class="list grey">
+                   <?php foreach ($pdt["comments"] as $comment) : ?>
+                    <li class="comment">
+                      <?php echo $comment ?>
+                    </li>
+                   <?php endforeach ?>
+                  </ul>
+                </div>
+              </div>
+              <?php } ?>
+
+             <?php if ($lPdtListCount > 0) : ?>
+              <div class="grey-block product-page-bottom-linked">
+                <div class="product-page-top-arrow"></div>
+                <div class="blue-title fl">Produits liés à <?php echo $pdt['cat3_name'] ?></div>
+                <a href="#header"  class="goto-page-up fr"><img src="<?php echo $res_url; ?>images/goto-page-up.png" alt="^" /></a>
+                <div class="zero"></div>
+                <ul class="list">
+                 <?php foreach ($lPdtList as $k => $lPdt) : ?>
+                  <?php if ($k == ceil($lPdtListCount/2)) : ?>
+                </ul>
+                <ul class="list">
+                  <?php endif ?>
+                  <li>
+                    <a href="<?php echo Utils::get_pdt_fo_url($lPdt['id'], $lPdt['ref_name'], $lPdt['cat_id']) ?>"><?php echo Utils::filter_limit_word_count($lPdt['name'], 4, true) ?> - <?php echo $lPdt['id'] ?></a>
+                  </li>
+                 <?php endforeach ?>
+                </ul>
+                <div class="zero"></div>
+              </div>
+             <?php endif // $lPdtListCount > 0 ?>
+
+              <div class="zero"></div>
+            </div><!-- /.product-page-bottom-right-col -->
+            <div class="zero"></div>
+          </div><!-- /.product-page-bottom-zone -->
+
+
+
+          <?php if (SHOW_TAGS) { ?>
+            <img src="<?php echo STATS_URL."?".$pdt["id"]."-".time()."-".$pdt["adv_id"]."-".$pdt["cat3_id"]."-".$pdt["idtc"]; ?>" width="0" height="0" style="display: none" />
+          <?php } ?>
+        <div id="page-product-zoom-image-dialog" title=""></div>
+        <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+        <span class="hidden" itemprop="category" content="<?php echo $pdt['cat3_name']; ?>"><?php echo $pdt['cat3_name']; ?></span>
+        <span class="hidden" itemprop="sku" content="<?php echo $pdt['id']; ?>"><?php echo $pdt['id']; ?></span>
+        <div class="hidden" itemprop="brand" itemscope="itemscope" itemtype="http://schema.org/Organization">
+          <span itemprop="name" content="Techni-Contact">Techni-Contact</span>
+          <span itemprop="url" content="http://www.techni-contact.com">http://www.techni-contact.com</span>
+          <span itemprop="telephone" content="01 55 60 29 29">01 55 60 29 29</span>
+        </div>
+      </div><!-- /.product-page -->
+
+
+<?php require(SITE . "blocks-right.php"); ?>
+
+</div><!-- /.white-bg -->
+<?php require(SITE . "foot.php"); ?>
+
+<script type="text/javascript">
+<?php
+$id_array_explode = explode('-',$id_question_array);
+foreach($id_array_explode as $value_id){
+if(!empty($value_id)){
+?>
+
+HN.TC.ShowCreateAccountForm_repondre<?= $value_id ?> = function(){
+    $("#product-reponse<?= $value_id ?>").dialog("open");
+    $("#id_calque").val('<?= $value_id ?>');
+     var answer_title = $("#answer_title<?= $value_id ?>").text();
+     $("#answer_title<?= $value_id ?>").hide();
+     $("#ui-dialog-title-product-reponse<?= $value_id ?>").html(answer_title);
+
+}
+
+  $("#product-reponse<?= $value_id ?>").dialog({
+    width: 630,
+    autoOpen: false,
+    modal: true,
+    draggable: false,
+    resizable: false
+  });
+
+<?php } } ?>
+</script>
+
+
+<!-- treepodia video code -->
+<script type="text/javascript">
+
+function scrollToBottom(id){
+  div_height = $("#"+id).height();
+  div_offset = $("#"+id).offset().top;
+  window_height = $(window).height();
+  $('html,body').animate({
+    scrollTop: window_height+div_height+500
+  },'slow');
+}
+
+$("#poser_question_forms").click(function(){
+    scrollToBottom('question_forms');
+    $("#question_forms").show("slow");
+
+});
+
+
+$( ".create_reponse" ).click(function() {
+  var id = this.id;
+  var reponse 		= $("#reponse_reponse"+id).val();
+  var email	 		= $("#email_reponse"+id).val();
+  var pseudo	 		= $("#pseudo_reponse"+id).val();
+  var telephone		= $("#telephone"+id).val();
+  var siteweb			= $("#siteweb_reponse"+id).val();
+  var id_question 	= $("#id_question"+id).val();
+  var name_products 	= $("#name_products").val();
+  var url	 			= $("#url").val();
+  var ids_products	= $("#ids_products").val();
+
+  var textAreaString = reponse.replace(/\n\r/g,"<br />");
+  var textAreaString = reponse.replace(/\n/g,"<br />");
+
+  var n = pseudo.length;
+  var q = reponse.length;
+
+
+  if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
+         valid_forms_email = 1;
+    }else {
+         alert("Email invalide !");
+         valid_forms_email = 0;
+    }
+
+  if( (pseudo != '' || pseudo == null) && n>2 ){
+   valid_forms_pseudo = 1;
+  }else {
+    alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
+     valid_forms_pseudo = 0;
+  }
+
+  if( (reponse != '' || reponse == null) && q>9 ){
+   valid_forms_question = 1;
+  }else {
+    alert("Reponse est obligatoire 'Minimum 10 caractère' !");
+     valid_forms_question = 0;
+  }
+
+  if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
+    $.ajax({
+        url: '../ajax_question/ajax_create_reponse.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&reponse="+textAreaString+"&pseudo="+pseudo+"&url="+url+'&id_question='+id_question+'&telephone='+telephone,
+        type: 'GET',
+        success:function(data){
+          $('#result_message_reponse'+id).html(data);
+          $('#reponses_forms'+id).hide();
+        }
+    });
+  }
+
+});
+
+$( "#create_users" ).click(function() {
+  var question = $("#question").val();
+  var email	 = $("#email").val();
+  var pseudo	 = $("#pseudo").val();
+  var siteweb	 = $("#siteweb").val();
+  var url	 	 = $("#url").val();
+  var telephone= $("#telephone").val();
+  var name_products	 = $("#name_products").val();
+  var ids_products	 = $("#ids_products").val();
+  var n = pseudo.length;
+  var q = question.length;
+
+  var textAreaString = question.replace(/\n\r/g,"<br />");
+  var textAreaString = question.replace(/\n/g,"<br />");
+
+  if ((email.indexOf("@")>=0)&&(email.indexOf(".")>=0)) {
+         valid_forms_email = 1;
+    }else {
+         alert("Email invalide !");
+         valid_forms_email = 0;
+    }
+
+  if( (pseudo != '' || pseudo == null) && n>2 ){
+   valid_forms_pseudo = 1;
+  }else {
+    alert("Pseudo est obligatoire 'Minimum 3 caractère' !");
+     valid_forms_pseudo = 0;
+  }
+
+  if( (question != '' || question == null) && q>9 ){
+   valid_forms_question = 1;
+  }else {
+    alert("Question est obligatoire 'Minimum 10 caractère' !");
+     valid_forms_question = 0;
+  }
+
+
+  if(valid_forms_email == 1 && valid_forms_pseudo == 1  && valid_forms_question == 1 ){
+    $.ajax({
+        url: '../ajax_question/ajax_create_users.php?email='+email+'&name_products='+name_products+"&ids_products="+ids_products+"&siteweb="+siteweb+"&question="+textAreaString+"&pseudo="+pseudo+"&url="+url+"&telephone="+telephone,
+        type: 'GET',
+        beforeSend: function() {
+          $("#create_users").remove();
+          $("#loding").show();
+        },
+        success:function(data){
+          $('#parag_desc').hide();
+          $('#formss-question').hide("slow");
+          $('#result_message').html(data);
+        }
+    });
+  }
+});
+
+var product;
+function initTreepodia ()
+{
+   product = Treepodia.getProduct('UA-TECHNICONTACT','<?php echo $pdt['id']; ?>'); //UA-TECHNICONTACT
+   product.requestVideo(handleVideo);
+}
+
+var $video;
+var video_popup;
+function handleVideo(videoController)
+{
+ $video = videoController;
+ if ($video.hasVideos())
+   {
+     $video.setPlayer("BlackGreen"); $video.setChromeless(false);
+     $video.setWidth(564); $video.setHeight(423);
+     video_popup = $video;
+     video_popup.setAutoplay(false);
+     if($('#desc-zone-video').length){
+      $('#desc-zone-video').html('');
+     }else{
+       if($('.product-page-carrousel').length)
+        $('.product-page-carrousel div.grey-block ul.items').prepend('<li><a class="video" <?php if(!TEST): ?>onclick="_gaq.push([\'_trackEvent\', \'Fiche produit\', \'Ouverture pop up\', \'Pop up vidéo fiche produit\']);" <?php endif; ?>rel="fancyboxvideo" href="#"><img alt="video" src="<?php echo $res_url; ?>images/picto-video.png"></a></li>');
+       else{
+         $('.product-page-pic-zone').append('<div class="product-page-carrousel"><div class="grey-block"><ul class="items"><li><a class="video" <?php if(!TEST): ?>onclick="_gaq.push([\'_trackEvent\', \'Fiche produit\', \'Ouverture pop up\', \'Pop up vidéo fiche produit\']);" <?php endif; ?>rel="fancyboxvideo" href="#"><img alt="video" src="<?php echo $res_url; ?>images/picto-video.png"></a></li></ul></div></div>');
+       }
+       $('#desc-zone-video-code').html('<br /><br /><div id="pdt-video" class="block-pdt-title">Vidéo de présentation</div><br/><div id="desc-zone-video"></div><br/>');
+      }
+      $('#video_code').html('');
+      $video.show('video_code');
+      $video.show('desc-zone-video');
+   }
+}
+// Include Treepodia popup dialog Script
+document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa05szpct2ws.cloudfront.net/utils/trpdDialog/video-dialog.min.js' type='text/javascript'%3E%3C/script%3E"));
+// Include Treepodia main Script
+document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa05szpct2ws.cloudfront.net/TreepodiaAsyncLoader.js' type='text/javascript'%3E%3C/script%3E"));
+
+</script>
+
+<!-- /treepodia video code -->
+
+<script>
+
+  $(".product-page-pic-zone").on(
+    'click', "a[rel^='fancyboxvideo']", function(e){
+    var video_code = $('#video_code');
+    var video_url = video_code.find('embed, iframe').attr('src');
+
+    if($video.hasVideos()) // treepodia popup
+      showVideoDialog('<?php echo addslashes($pdt['name']);?>', $video, '#FFFFFF', false);
+    else if(typeof(video_url) != 'undefined')
+      $.fancybox({ // database embeded video
+      'type' : 'iframe',
+            'zoomOpacity'           : true,
+            'centerOnScroll'        : false,
+            'padding'           : 0,
+            'zoomSpeedIn'           : 500,
+            'zoomSpeedOut'          : 500,
+            'type' : 'iframe',
+        // hide the related video suggestions and autoplay the video
+        'href' : video_url.replace(new RegExp('watch\\?v=', 'i'), 'embed/') + '?rel=0&autoplay=1'
+        })
+        e.preventDefault();
+        return false;
+        });
+</script>
+
+<!-- /treepodia video code -->

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!ELEMENT categories (kid,stats_key,stats,category*)>
+
+<!ELEMENT category (kid,krn,stats?,title?,meta_desc?,pdt_pic?,pdt_selection?,preview_pdt_selection?,pdt_favourite?,pdt_mostviewed?,pdt_latest?,category*)>
+<!ATTLIST category id CDATA #REQUIRED ref_name CDATA #REQUIRED name CDATA #REQUIRED>
+
+<!ELEMENT kid EMPTY>
+<!ATTLIST kid v ID #REQUIRED>
+
+<!ELEMENT krn EMPTY>
+<!ATTLIST krn v ID #REQUIRED>
+
+<!ELEMENT stats_key (#PCDATA)>
+<!ELEMENT stats (#PCDATA)>
+<!ELEMENT title (#PCDATA)>
+<!ELEMENT meta_desc (#PCDATA)>
+<!ELEMENT pdt_pic (#PCDATA)>
+<!ELEMENT pdt_selection (#PCDATA)>
+<!ELEMENT preview_pdt_selection (#PCDATA)>
+<!ELEMENT pdt_favourite (#PCDATA)>
+<!ELEMENT pdt_mostviewed (#PCDATA)>
+<!ELEMENT pdt_latest (#PCDATA)>

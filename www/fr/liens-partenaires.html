@@ -1,0 +1,24 @@
+<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$title = "Quelques partenaires - Techni-Contact";
+$meta_desc = "";
+$breadcrumb_label = 'Quelques partenaires';
+define('NOINDEX_DOFOLLOW', true);
+require(SITE . "head.php");
+?>
+<div class="white-bg padding-top-20">
+					<div class="blocks-left">
+						<div class="blue-title">Quelques partenaires</div>
+						<div class="zero"></div>
+						<div id="help">
+<?php
+if (defined('PREVIEW')) echo $_POST['content'];
+else echo file_get_contents(MISC_INC."liens-partenaires.dat");
+?>
+						</div>
+					</div>
+					
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

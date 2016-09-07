@@ -1,0 +1,93 @@
+﻿<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+ $db = DBHandle::get_instance();
+	$sql_ff = "SELECT ffr.name
+			   FROM   guides_linked_familles glf, families_fr ffr
+			   WHERE  ffr.id  = glf.id_familles_first
+			   GROUP BY ffr.name";
+    $req_ff =  mysql_query($sql_ff);
+	while($data_ff = mysql_fetch_object($req_ff)){
+		$Thematique .= $data_ff->name.', ';
+	}
+	$Thematique = substr($Thematique, 0, -2);
+	
+$title = "Nos guides d’achat et de conseils d’experts  - Techni-Contact";
+$meta_desc = "Suivez les conseils de nos experts pour la sélection de vos équipements professionnels. Des dizaines de guides sont à votre disposition : ".$Thematique;
+//$pageName = "nos_guides";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+
+
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+            <div class="very-big-blue-title" style="margin-bottom: 15px;"><h1>Les guides d'achat Techni-Contact</h1></div>
+			
+				<?php
+					$sql_link_families  = "SELECT DISTINCT(id_famille_parent),ga.id  ,ga.ref_name
+											FROM guides_achat ga , families_fr ffr
+											WHERE ga.id_famille_parent = ffr.id
+											GROUP BY id_famille_parent
+											ORDER BY ffr.name ASC
+											";
+					$req_link_families  =  mysql_query($sql_link_families);
+					echo '<div class="global-guide">';
+					while($data_link_families =  mysql_fetch_object($req_link_families)){
+						echo '<div class="content_guide">';
+						$sql_img  = " SELECT path_img
+									  FROM guides_visuel
+									  WHERE id_famille='".$data_link_families->id_famille_parent."' ";
+						$req_img  =   mysql_query($sql_img);
+						$data_img =   mysql_fetch_object($req_img);
+							
+							echo '<div id="left-img-guide">';
+									if(empty($data_img->path_img)){
+										echo '<div class="img-first-families">';
+												echo '<img src="'.URL.'ressources/images/imgres.jpg" width="150" style="border: 1px solid #ddd;" />';
+										echo '</div>';
+									}else{
+										echo '<div class="img-first-families">';
+												echo '<img src="'.URL.'ressources/images/guides/'.$data_img->path_img.'" width="140" height="175" style="border: 1px solid #ddd;" />';
+										echo '</div>';
+									}
+							echo '</div>'; 
+							echo '<div id="right-img-guide">';
+							$sql_name_f  = "SELECT name FROM families_fr WHERE id= '".$data_link_families->id_famille_parent."' ";
+							$req_name_f  =  mysql_query($sql_name_f);
+							$data_name_f =  mysql_fetch_object($req_name_f);
+ 								echo '<div class="grey-block-title">'.$data_name_f->name.'</div>';
+									 
+									$sql_link  = "SELECT guide_name ,ref_name,id
+												  FROM   guides_achat 
+												  WHERE  id_famille_parent='".$data_link_families->id_famille_parent."' 
+												  ORDER BY guide_name ASC";
+									$req_link  =  mysql_query($sql_link);
+									 echo '<ul class="ul-style">';
+									while($data_link =  mysql_fetch_object($req_link)){
+										$sql_f3  = "SELECT ffr.name 
+													FROM families_fr ffr
+													WHERE id = '".$data_link->id_familles_three."' ";
+										$req_f3  =  mysql_query($sql_f3);
+										$data_f3 = mysql_fetch_object($req_f3);
+										
+										echo '<li> <a href="'.URL.'guides-achat/'.$data_link->id.'-'.$data_link->ref_name.'.html">'.$data_link->guide_name.'</a></li>';
+									}
+									echo '</ul>';
+									
+								
+							echo '</div>';
+					echo '</div>';
+						}
+					echo '</div>';					 
+				?>			
+          </div>
+  </div>
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+
+          
+<?php require(SITE."foot.php"); ?>

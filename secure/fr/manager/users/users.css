@@ -1,0 +1,45 @@
+#ms-form { margin: 10px 0 0 }
+#ms-form input.edit { border: 1px solid #c3c3c3; border-color: #7c7c7c #c3c3c3 #dddddd }
+#ms-form textarea { margin: 0 }
+#ms-form tr td { padding: 2px; vertical-align: top }
+#ms-form tr td.text { height: 22px }
+#ms-form tr td:first-child { width: 200px }
+
+.section { width: 940px; margin: 10px 0; padding: 10px; border: 1px solid #cccccc; background: #f0f8fe }
+.section .title { margin: 0 0 10px 0; padding: 2px; font: bold 14px arial, sans-serif; border: 1px solid #000000; background: #ffffff }
+.section .title .item-id { color: #b00000 }
+.section .fieldset { padding: 4px 8px 8px; border: 2px groove threedface }
+
+#user-detail .fnt-list { border-collapse: collapse; background: #ffffff }
+#user-detail .fnt-list th { font-weight: bold; background: #f0f0f0 }
+#user-detail .fnt-list td, #user-detail .fnt-list th{ padding: 2px; border: 1px solid black }
+#user-detail .fnt-list .rights { text-align: center }
+
+#CSDB { z-index: 4; position: absolute; top: 170px; left: 65px; border: 2px solid #999999; visibility: hidden; }
+#MPSDB { z-index: 4; position: absolute; top: 170px; left: 65px; width: 720px; min-height: 240px; visibility: hidden; border: 2px solid #205683 }
+.family-window { height: auto }
+
+#products-selection-section { display: none }
+#categories-selection-section { display: none }
+
+.item-list-table { font: normal 10px verdana, helvetica, sans-serif; border: 1px solid #000000; border-collapse: collapse; background-color: #ffffff }
+.item-list-table tr.selected { background: #ffd9a7 }
+.item-list-table th { height: 17px; padding: 1px; text-align: center; background: #f0f0f0 }
+.item-list-table td { height: 17px; padding: 1px; text-align: center; border: 1px solid #000000; border-width: 1px 0 }
+.item-list-table .id { width: 100px }
+.item-list-table .catID { width: 100px }
+.item-list-table .name { width: 300px; text-align: left }
+.item-list-table .actions { width: 110px }
+.item-list-table .actions .icon { display: inline; float: left; width: 16px; height: 16px; margin: 0 4px; background-repeat: no-repeat; cursor: pointer }
+.item-list-table .actions .icon-up { background: url(arrow_up.png) }
+.item-list-table .actions .icon-down { background: url(arrow_down.png) }
+.item-list-table .actions .icon-edit { background: url(table_edit.png) }
+.item-list-table .actions .icon-del { background: url(table_delete.png) }
+
+/*#btn-add-category { float: left; width: 150px; height: 20px; margin: 5px 0; background: url(btn-add-cf-up.png) no-repeat; cursor: pointer }
+#btn-add-category.down { background: url(btn-add-cf-down.png) no-repeat }
+#btn-select-products { float: left; width: 150px; height: 20px; margin: 5px 0; background: url(btn-add-cf-up.png) no-repeat; cursor: pointer }
+#btn-select-products.down { background: url(btn-add-cf-down.png) no-repeat }*/
+
+#btn-save { float: right; width: 200px; margin: 5px 0 0 }
+.grey-block { clear:both; border: 1px solid #e4e4e4; background: #fcfcfc url(block-bg-grey-150.gif) repeat-x }

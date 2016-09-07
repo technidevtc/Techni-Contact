@@ -1,0 +1,228 @@
+﻿<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+$db = DBHandle::get_instance();
+
+	$sql_ann  = "SELECT ville,societe,secteur,nom,prenom,email,tel,cp,pays,
+						logo,client_id,question_activite,etat,adresse,site_web
+				 FROM annuaire_client 
+				 WHERE id='".$_GET['annuaireID']."' ";
+	$req_ann  = mysql_query($sql_ann);
+	$data_ann = mysql_fetch_object($req_ann);
+	if($data_ann->etat == 0){
+		header('Location: '.URL.'');
+	}
+
+$title_meta = str_replace(' ','-',$_GET['societeName']);
+$title = $data_ann->societe." utilise Techni-Contact pour ses achats – ".$_GET['clientID']." ";
+$meta_desc = $data_ann->societe." fait confiance à Techni-Contact pour la recherche et l’achat des équipements professionnels nécessaires à son activité – ".$_GET['clientID'].". ";
+$breadcrumb_label = ' Qui sont les utilisateurs de Techni-Contact ?  ';
+require(SITE . "head.php");
+?>
+
+<div class="white-bg padding-top-20">
+		<div class="blocks-left">
+			<div class="blue-title_fiche">
+			<?php
+				$societe = str_replace(" ","-",$data_ann->societe);
+				//$societe = $data_ann->societe;
+			?>
+			<h1> <?= ucfirst($data_ann->societe) ?> utilise Techni-Contact pour ses achats</h1>
+			</div>
+			<br />
+			
+			
+			<div id="desc_logo">
+			<div class="desc_float">
+				<p><?= ucfirst($data_ann->societe) ?> a fait appel à Techni-Contact pour la recherche des matériels et équipements professionnels nécessaires à son activité.</p>
+				<p>Découvrez plus en détail l’activité de <?= ucfirst($data_ann->societe) ?>  basée à <?= $data_ann->ville ?> </p>
+			</div>
+			
+			
+			<div class="logo_right"> 
+				<?php
+				if(!empty($data_ann->logo)){
+					echo '<img src="'.URL.''.$data_ann->logo.'" style="width: 90px;" />';
+				}else{
+					echo '<img id="preview_facade" src="'.URL.'ressources/images/produits/no-pic-thumb_big.gif" style="width: 90px;" />';
+				}
+				?>
+			</div>
+			</div>
+			<div style="overflow: hidden;margin-bottom: 15px;">
+				<div id="coordonnees">
+						<div style="padding: 10px;">
+							<div class="blue-title_fiche ">Ses coordonnées</div>
+							<br />
+							<div class="forms_societe" style="float: left;width: 220px;">
+							<div id="result_forms">
+								<div class="epace_bottom">
+									<label><strong>Société : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->societe ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Secteur : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->secteur ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Nom     : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->nom ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Prénom  : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->prenom ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Adresse  : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->adresse ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Email   : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->email ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Tel     : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->tel ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Code Postal : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->cp ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Ville   : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->ville ?></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Pays    : </strong></label>
+									<span class="margin-form-detail"><?= $data_ann->pays ?></span>
+								</div>
+								
+								<?php
+									if(!empty($data_ann->site_web)){ ?>
+								<div class="epace_bottom">
+									<label><strong>Site web    : </strong></label>
+									<span class="margin-form-detail"><a href="http://<?= $data_ann->site_web ?>" target="_blink"><?= $data_ann->site_web ?></a></span>
+								</div>
+								<?php }	?>
+								
+								
+								
+							</div>
+								<br />
+							</div>
+							
+						</div>
+				</div>
+				
+				<div id="form_activite_produit">
+					<div class="blue-title">Ce qu'elle peut vous proposer</div>
+					<br />
+					<div style="overflow-x: auto; width: 420px; max-height: 280px;"><?= nl2br($data_ann->question_activite) ?></div>
+				</div>
+			
+			</div>
+			<div class="blue-title_fiche">
+					<h2><?= ucfirst($data_ann->societe) ?> nous a fait confiance pour</h2>
+			</div>
+			<?php
+					$sql_ann_quest = " SELECT lead_id,txt_equipement,photo_equipement,id_produit,etat
+									   FROM annuaire_questionnaire
+									   WHERE id_client= '".$data_ann->client_id."'";
+					$req_ann_quest = mysql_query($sql_ann_quest);
+					$num_rows_ann  = mysql_num_rows($req_ann_quest);
+					if($num_rows_ann > 0){
+					$i=1;
+					while($data_ann_quest= mysql_fetch_object($req_ann_quest)){
+					if($data_ann_quest->etat == 1){
+					$sql_product = "SELECT ref_name,id,name,descc,fastdesc
+									FROM products_fr 
+									WHERE id= '".$data_ann_quest->id_produit."' ";
+					$req_product = mysql_query($sql_product);
+					$data_product= mysql_fetch_assoc($req_product);
+					$rows_products = mysql_num_rows($req_product);
+					
+					$sql_famille  = "SELECT idFamily
+									FROM   `products_families` 
+									WHERE  `idProduct` ='".$data_ann_quest->id_produit."'";
+					$req_famille  = mysql_query($sql_famille);
+					$data_famille = mysql_fetch_object($req_famille);
+					
+					$product_img = PRODUCTS_IMAGE_URL."thumb_big/".$data_product["ref_name"]."-".$data_product["id"]."-1.jpg";				
+				?>
+			<div style="overflow: hidden;">
+				<div style="overflow: hidden;margin-bottom: 15px;">
+				
+				
+				<br />
+				<?php
+				if($rows_products >0){ 
+				?>
+				<div id="border_confiance">
+					<div class="logo_confiance">
+						<?php
+						if(!empty($product_img)){
+							echo '<a href="'.URL.'produits/'.$data_famille->idFamily.'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html">
+									<img  src="'.$product_img.'" />
+								  </a><br />';
+						}else {
+							echo '<a href="'.URL.'produits/'.$data_famille->idFamily.'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html"><img id="preview_facade" src="'.URL.'ressources/images/produits/no-pic-thumb_big.gif" /></a><br />';
+						}
+						?>  
+					</div>
+					<div class="cat3-prod-list-infos" style="width: 440px !important;">
+						<h2>
+							<a class="blue-small-title blue-smaller-title" href="<?= URL ?>produits/<?=$data_famille->idFamily ?>-<?= $data_product["id"]?>-<?= $data_product["ref_name"]?>.html"><?= $data_product['name'] ?></a>
+						</h2>
+						<div class="fastdesc"><?= $data_product['fastdesc'] ?></div>
+						
+						
+						<?php
+							if($data_product['descc']){
+								$descc_net = strip_tags($data_product['descc']);
+								$descc_final =  substr($descc_net, 0, 250);
+							
+						?>
+						<div class="desc" >
+						<?= $descc_final.'...' ?>
+						</div>
+						<?php } ?>
+					</div>
+				</div>
+				<?php  } ?>
+				<div style="overflow: hidden;">
+				<?php
+					if(!empty($data_ann_quest->txt_equipement)){
+						echo '<p><strong>Son projet</strong></p>';
+						echo '<p>'.nl2br($data_ann_quest->txt_equipement).'</p>';
+					}
+				?>
+				</div>
+			</div>
+				<div style="margin: auto; width: 300px;">
+					<?php
+						if(!empty($data_ann_quest->photo_equipement)){
+							echo '<img src="'.URL.''.$data_ann_quest->photo_equipement.'" id="example_old'.$i.'" style="width: 430px;" />';
+						}
+					?>
+				</div>
+			</div>
+			<?php 
+				$i++;
+				}
+				}
+				}
+			?>
+			</div>
+			
+				
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

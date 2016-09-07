@@ -1,0 +1,11 @@
+<br />
+Bonjour,<br />
+<br />
+SUPPLIER_NAME vient de rentrer une date d'expédition prévisionnelle pour l'ordre n°<a href="LIEN_ORDRE">ORDRE_NUMBER</a>.<br />
+<br />
+Le date est la suivante : DATE_EXPEDITION<br />
+<br />
+<a href="LIEN_CMD">Voir commande liée à cet ordre</a><br />
+<br />
+Cordialement.
+

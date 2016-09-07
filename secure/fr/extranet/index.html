@@ -1,0 +1,66 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V4 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Zakaria ABIDI
+ Date de création : 13 Août 2014
+ Mise à jour le : --
+ 
+ Fichier : /secure/extranet/index.html
+ Description : Fichier accueil extranet
+
+/=================================================================*/
+
+	require_once('extranet_v3_functions.php');
+
+	$uid	= mysql_escape_string($_GET['uid']);
+	if(!empty($_SESSION['extranet_user_id'])){
+	
+		//User is already connected !
+			if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_SUPPLIER__)==0){
+				//Annonceur
+				header('Location: '.EXTRANET_URL.'index-old-extranet.html');
+				
+			}else {
+				header('Location: '.EXTRANET_URL.'extranet-v3-home.html');
+			}
+		/*
+			if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_ADVERTISER__)==0){
+				//Annonceur
+				header('Location: '.EXTRANET_URL.'advertiser-home.html');
+				
+			}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_SUPPLIER__)==0){
+				//Fournisseur
+				header('Location: '.EXTRANET_URL.'supplier-home.html');
+				
+			}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_ADVERTISER_NOT_CHARGED__)==0){
+				//Annonceur non chargé
+				header('Location: '.EXTRANET_URL.'advertiser-not-charged-home.html');
+				
+			}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_PROSPECT__)==0){
+				//Prospect
+				header('Location: '.EXTRANET_URL.'prospect-home.html');
+			
+			}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_BLOCKED__)==0){
+				//Blocké
+				header('Location: '.EXTRANET_URL.'blocked-home.html');
+				
+			}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_LITIGATION__)==0){
+				//Litige
+				header('Location: '.EXTRANET_URL.'litigation-home.html');
+			}else{
+					header('Location: '.EXTRANET_URL.'login.html');
+			}
+		*/
+		
+	}else if(!empty($uid)){
+		require_once('extranet_v3_check_login.html');
+		//header('Location: '.EXTRANET_URL.'check-login.html?uid='.$uid);
+	}else{
+		header('Location: '.EXTRANET_URL.'login.html');
+	}
+	//header('Location: '.EXTRANET_URL.'home.html');
+?>

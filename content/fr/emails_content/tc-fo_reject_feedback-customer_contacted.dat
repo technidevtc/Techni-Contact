@@ -1,0 +1,18 @@
+<p>L'annonceur PARTNER_NAME (ID: PARTNER_ID) a rejeté le lead n°LEAD_ID</p>
+<p>L'internaute a pourtant signalé qu'il avait reçu une proposition.</p>
+<p>
+  Coordonnées de l'internaute :<br/>
+  CUSTOMER_COMPANY<br/>
+  CUSTOMER_LASTNAME<br/>
+  CUSTOMER_FIRSTNAME<br/>
+  CUSTOMER_EMAIL<br/>
+  CUSTOMER_PHONE
+</p>
+<p>
+  <a href="BO_LEAD_URL">Voir détail du lead</a><br/>
+  <br/>
+  Produit demandé : <a href="FO_PDT_URL">PDT_NAME</a>
+</p>
+<p>
+	Motifs de rejet : REJECT_REASON	
+</p>

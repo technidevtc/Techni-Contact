@@ -1,0 +1,106 @@
+Options +FollowSymlinks
+RewriteEngine On
+
+<Files config.php>
+deny from all
+</Files>
+
+
+RewriteRule	^index-old-extranet.html$					index_old_extranet.html	[L]
+RewriteRule	^logout.html$								disconnect.php	[L]
+
+RewriteRule	^extranet-v3-check-login.html$				extranet_v3_check_login.html	[L]
+
+RewriteRule	^extranet-v3-home.html$						extranet_v3_home.html	[L]
+
+
+########################################################
+##### 				Start Contacts					####
+########################################################
+RewriteRule	^extranet-v3-contacts-all.html$				extranet_v3_contacts_all.html	[L]	
+RewriteRule	^extranet-v3-contacts-archive.php$			extranet_v3_contacts_archive.php	[L]
+RewriteRule	^extranet-v3-contacts-archived.html$		extranet_v3_contacts_archived.html	[L]
+RewriteRule	^extranet-v3-contacts-deleted.html$		    extranet_v3_contacts_deleted.html	[L]
+RewriteRule	^extranet-v3-contacts-detail.html$			extranet_v3_contacts_detail.html	[L]
+RewriteRule	^extranet-v3-contacts-detail-print.html$	extranet_v3_contacts_detail_print.html	[L]
+RewriteRule	^extranet-v3-contacts-extracts.php$			extranet_v3_contacts_extracts.php	[L]
+RewriteRule	^extranet-v3-contacts-forward.php$			extranet_v3_contacts_forward.php	[L]
+RewriteRule	^extranet-v3-contacts-load.php$				extranet_v3_contacts_load.php	[L]
+RewriteRule	^extranet-v3-contacts-not-read.html$		extranet_v3_contacts_not_read.html	[L]
+RewriteRule	^extranet-v3-contacts-processing.html$		extranet_v3_contacts_processing.html	[L]
+
+
+########################################################
+##### 				Start Products					####
+########################################################
+RewriteRule	^extranet-v3-products.html$					extranet_v3_products.html	[L]
+RewriteRule	^extranet-v3-products-load.php$				extranet_v3_products_load.php	[L]
+
+RewriteRule	^extranet-v3-products-request-delete.php$	extranet_v3_products_request_delete.php	[L]
+
+RewriteRule	^extranet-v3-products-add.html$				extranet_v3_products_add.html	[L]
+
+RewriteRule	^extranet-v3-products-edit.php$				extranet_v3_products_edit.html	[L]
+
+RewriteRule	^extranet-v3-products-sent.html$			extranet_v3_products_sent.html	[L]
+
+RewriteRule	^extranet-v3-products-draft.html$			extranet_v3_products_draft.html	[L]
+
+RewriteRule	^extranet-v3-products-draft-add.html$		extranet_v3_products_draft_add.html	[L]
+
+RewriteRule	^extranet-v3-products-draft-edit.html$		extranet_v3_products_draft_edit.html	[L]
+
+
+
+########################################################
+##### 				Start Stats						####
+########################################################
+
+#Global Stats
+RewriteRule	^extranet-v3-stats.html$							extranet_v3_stats_global.html	[L]
+RewriteRule	^extranet-v3-stats-export-global.html$				extranet_v3_stats_export_global.php	[L]
+
+#Products Stats
+RewriteRule	^extranet-v3-stats-products.html$					extranet_v3_stats_products.html	[L]
+RewriteRule	^extranet-v3-stats-export-products.html$			extranet_v3_stats_export_products.php	[L]
+
+#Category Stats
+RewriteRule	^extranet-v3-stats-category.html$					extranet_v3_stats_category.html	[L]
+RewriteRule	^extranet-v3-stats-export-category.html$			extranet_v3_stats_export_category.php	[L]
+
+#Product Detail Stats
+RewriteRule	^extranet-v3-stats-products-detail.html$			extranet_v3_stats_products_detail.html	[L]
+RewriteRule	^extranet-v3-stats-export-products-detail.html$		extranet_v3_stats_export_products_detail.php	[L]
+
+#Category Detail Stats
+RewriteRule	^extranet-v3-stats-category-detail.html$			extranet_v3_stats_category_detail.html	[L]
+RewriteRule	^extranet-v3-stats-export-category-detail.html$		extranet_v3_stats_export_category_detail.php	[L]
+
+
+########################################################
+##### 				Start Information				####
+########################################################
+
+RewriteRule	^extranet-v3-informations.html$						extranet_v3_informations.html	[L]
+
+
+########################################################
+##### 				Start Invoices					####
+########################################################
+
+RewriteRule	^extranet-v3-invoices.html$							extranet_v3_invoices.html	[L]
+
+RewriteRule	^extranet-v3-invoices-load.php$						extranet_v3_invoices_load.php	[L]
+
+
+########################################################
+##### 				Start Support					####
+########################################################
+
+RewriteRule	^extranet-v3-support.html$							extranet_v3_support.html	[L]
+
+########################################################
+##### 				Redirect the old mail			####
+########################################################
+
+#RewriteRule ^(request_detail.html?uid=[a-zA-Z0-9]&id=[0-9]) https://secure.techni-contact.com/%{REQUEST_URI} [R=302,NC]

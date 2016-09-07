@@ -1,0 +1,146 @@
+<?php
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+require(ICLASS . 'ExtranetUser.php');
+require(ADMIN  . 'generator.php');
+
+?>
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title><?php echo LOST_TITLE ?></title>
+<link href="<?php print(EXTRANET_URL) ?>css/extranet.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="haut">
+	<div class="logo-tc"></div>
+	<div class="miseAZero"></div>
+</div>
+
+<div class="barre"><a href="./"><?php echo HEAD_HOMEPAGE ?></a> &raquo; <?php echo LOST_HEAD_TITLE ?></div>
+<div class="miseAZero"></div>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo LOST_BLOC_TITLE ?></div>
+		<center>
+		<form method="post" action="<?php print(EXTRANET_URL) ?>lost.html">
+			<div class="bloc-ident">
+<?php
+
+$error = '';
+
+if(isset($_GET['rid']) && preg_match('/^[[:alnum:]]{30}$/', $_GET['rid']))
+{
+    print('<strong>');
+	
+    $handle = DBHandle::get_instance();
+	
+    // Effacer les sessions expirées
+    $handle->query('delete from tempExtranet where death < \'' . time() . '\'', __FILE__, __LINE__);
+	
+    if(($result = & $handle->query('select t.idAdvertiser, e.login from tempExtranet t, extranetusers e where t.session = \'' . $handle->escape($_GET['rid']) . '\' and t.idAdvertiser = e.id', __FILE__, __LINE__))
+        && $handle->numrows($result, __FILE__, __LINE__) == 1)
+    {
+        // Il y a bien une session
+        $record = & $handle->fetch($result);
+		
+		if($handle->query('delete from tempExtranet where session = \'' . $handle->escape($_GET['rid']) . '\'', __FILE__, __LINE__))
+		{
+			$password = & generatePassword(6);
+			if($handle->query("update extranetusers set pass = '" . $password . "' where id = '" . $record[0] . "'", __FILE__, __LINE__) && $handle->affected(__FILE__, __LINE__) == 1)
+				print LOST_OPERATION_SUCCESS_1 . ' <input type="text" value="' . to_entities($record[1]) . '" size="15"> ' . LOST_OPERATION_SUCCESS_2 . ' <input type="text" value="' . $password . '" size="6">';
+			else
+				print LOST_ERROR;
+        }
+        else print LOST_ERROR;
+    }
+    else print LOST_ERROR_SESSION;
+	
+    print '</strong>';
+	
+}
+else if(isset($_POST['email']))
+{
+    $email = strtolower(trim(substr($_POST['email'], 0, 255)));
+	
+    if($email != '' && strlen($email) >= 6 && preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $email))
+    {
+        $handle = DBHandle::get_instance();
+		
+        // Effacer les sessions expirées
+        $handle->query('delete from tempExtranet where death < \'' . time() . '\'', __FILE__, __LINE__);
+		
+        if(($result = & $handle->query('select id from advertisers where email like \'' . $email . '\'', __FILE__, __LINE__))
+           && $handle->numrows($result, __FILE__, __LINE__) == 1)
+        {
+            $record = & $handle->fetch($result);
+			
+            if($session = & generateSession(30, 'session', 'tempExtranet', $handle))
+            {
+                $death = time() + 3600;    // 1 heure pour valider
+                if(($idTempPass = generateID(1, 65535, 'id', 'tempExtranet', $handle)) &&
+                   $handle->query('insert into tempExtranet (id, idAdvertiser, session, death) values(\'' . $idTempPass . '\', \'' . $record[0] . '\', \'' . $session . '\', \'' . $death . '\')', __FILE__, __LINE__))
+                {
+                    $nobject = NULL; // objet fictif pour créer uner instance de ManagerUser
+                    $user = & new ExtranetUser($nobject);
+                    
+					$ip   = & $user->getIP();
+                    
+					$subject = 'Techni Contact - Mot de passe extranet oublié';
+                    
+					$content  = 'Bonjour,<br><br>Une procédure de récupération du mot de passe associé à votre compte extranet Techni-Contact vient d\'être lancée. Si vous n\'avez pas effectué cette demande vous pouvez ignorer la suite de ce message et le supprimer. Sinon, <a href="' . EXTRANET_URL . 'lost.html?rid=' . $session . '" target="_blank">cliquez sur le lien suivant</a> pour obtenir un nouveau mot de passe.<br><br>';
+                    $content .= 'Adresse IP à l\'origine de la demande : ' . $ip . '<br><br>Note : vous <b>disposez d\'un délai d\'une heure</b> si vous souhaitez confirmer la procédure. Ce délai écoulé, vous devrez effectuer une nouvelle demande.';
+                    $content .= '<br><br>Cordialement,<br>L\'équipe Techni-Contact';
+                    
+					$headers  = 'From: ' . SEND_MAIL_NAME . ' <' . SEND_MAIL . '>' . "\n";
+                    $headers .= 'MIME-Version: 1.0' . "\n";
+                    $headers .= 'Content-type: text/html' . "\n";
+                    
+					if(mail($email, $subject, $content, $headers))
+                    {
+                        print '<strong>' . LOST_EMAIL_SENT . ' ' . to_entities($email) . '</strong>';
+                        unset($error);
+                    }
+                    else $error = LOST_TITLE;
+                }
+                else $error = LOST_TITLE;
+            }
+            else $error = LOST_ERROR_ACCOUNT;
+        }
+        else $error = LOST_ERROR_ACCOUNT;
+    }
+    else $error = LOST_ERROR_EMAIL;
+}
+
+if(!isset($_GET['rid']) && isset($error))
+{
+    $emailString = isset($email) ? ' value="' . to_entities($email) . '"' : '';
+
+?>
+				<strong><?php echo LOST_EMAIL_ASK ?> :</strong>
+				<br/>
+				<br/>
+				<?php if($error != '') print('<b>' . $error . '</b><br/><br/>') ?>
+				<div class="ident-label"><?php echo LOST_EMAIL ?> :</div>
+				<div class="ident-champ"><input name="email" type="text"<?php print($emailString) ?>></div>
+				<div class="miseAZero"></div>
+				<div class="ident-valid"><input type="button" value="Valider" onClick="this.form.submit(); this.disabled = true"></div>
+				<br/><?php echo LOST_NO_EMAIL ?>
+<?php
+}
+?>
+			</div>
+		</form>
+		</center>
+	</div>
+	<br/>
+	<div class="miseAZero"></div>
+	<br/>
+</div>
+</body>
+</html>

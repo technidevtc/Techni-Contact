@@ -1,0 +1,307 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require_once ADMIN.'generator.php';
+
+$db = DBHandle::get_instance();
+
+$session = new UserSession($db);
+// it's an estimate, directly handle things there
+if ($session->estimate) {
+  header("Location: ".COMMANDE_URL."estimate-step3.html");
+  exit();
+}
+
+// not logged in, go to the first step
+if (!$session->logged) {
+  header("Location: ".COMMANDE_URL."order-step1.html");
+  exit();
+}
+
+$cart2 = Doctrine_Query::create()
+  ->select('ct.*, ctl.*, cda.*, cba.*, c.email AS email')
+  ->from('Paniers ct')
+  ->innerJoin('ct.lines ctl')
+  ->innerJoin('ct.delivery_address cda')
+  ->innerJoin('ct.billing_address cba')
+  ->innerJoin('ct.client c')
+  ->where('ct.id = ?', $session->getID())
+  ->andWhere('ct.idClient = ?', $session->userID)
+  ->andWhere('ct.locked = ?', 1)
+  ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+// cart is not locked/does not belong to the current client/has no address set -> the second step will handle it
+// if the client changed, order-step 2 will also handle the addresses, no need to check here
+if (!$cart2) {
+  header("Location: ".COMMANDE_URL."order-step2.html");
+  exit();
+}
+
+// empty cart, nothing to do here
+if (!count($cart2['lines']) || !$cart2['valid']) {
+  header("Location: ".URL."panier.html");
+  exit();
+}
+
+$cda = $cart2['delivery_address'];
+$cba = $cart2['billing_address'];
+
+$cart = new Cart($db, $session->getID());
+$cart->calculateCart();
+
+if ($session->orderID) {
+  $order = Doctrine_Query::create()
+    ->select('o.id, ol.desc')
+    ->from('Order o')
+    ->innerJoin('o.lines ol')
+    ->where('o.id = ?', $session->orderID)
+    ->andWhere('o.client_id = ?', $session->userID)
+    ->andWhere('o.payment_status = ?', Order::PAYMENT_STATUS_WAITING_BANC_CONFIRMATION)
+    ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+  
+  if (!$order['id']) // should not happen
+    unset($session->orderID);
+}
+
+if (isset($order['id'])) {
+  $b2b_o_id = $order['id'];
+  list($b2b_o_desc) = preg_split("`(\r\n|\r|\n)`", $order['lines'][0]['desc'], 2);
+  $b2b_o_desc = substr(Utils::toASCII($b2b_o_desc), 0, 100);
+} else {
+  $b2b_o_id = '';
+  $b2b_o_desc = 'placeholder';
+}
+
+$b2b_params = array(
+  'IDENTIFIER' => BE2BILL_IDENTIFIER,
+  'OPERATIONTYPE' => 'payment',
+  'CLIENTIDENT' => $cart2['idClient'],
+  'DESCRIPTION' => $b2b_o_desc,
+  'ORDERID' => $b2b_o_id,
+  'AMOUNT' => intval($cart->totalTTC*100),
+  'VERSION' => '2.0',
+  'CLIENTEMAIL' => $cart2['email'],
+  'CLIENTREFERRER' => COMMANDE_URL."order-step3.html"
+  //'CLIENTADDRESS' => $order['adresse'].$order['caddress'].$order['cp'].$order['ville'].$order['pays'],
+);
+if (isset($order['id']))
+  $b2b_params['HASH'] = Utils::be2bill_signature(BE2BILL_PASSWORD, $b2b_params);
+
+define('SECURE', true);
+define('ORDER_STEP_3', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>
+<script type="text/javascript">
+  HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE['email']) ? $_COOKIE['email'] : "") ?>";
+  var curOrderID<?php echo $order['id'] ? ' = '.$order['id'] : '' ?>;
+</script>
+<div class="white-bg">
+  <div class="blocks-left" id="body">
+    
+    <div class="step-title">Paiement</div>
+    
+    <div class="order-steps step3">
+      <input type="hidden" name="cartID" value="<?php echo $cart->id ?>"/>
+      <div class="fl">
+        
+        <div class="order-step2 cart-resume grey-block">
+          <div class="blue-title">Récapitulatif de votre commande</div>
+          <div class="cart-table">
+            <table cellspacing="0" cellpadding="0">
+              <thead>
+              <tr>
+                <th>Produit - désignation</th>
+                <th class="qty">Qté</th>
+                <th class="price">Prix total ht</th>
+              </tr>
+              </thead>
+              <tbody>
+             <?php foreach ($cart->items as $item) : ?>
+                <tr>
+                  <td class="al"><a href="<?php echo $item['url'] ?>"><?php echo $item['cart_desc'] ?></a></td>
+                  <td><?php echo $item['quantity'] ?></td>
+                  <td class="price">
+                    <?php echo sprintf("%.02f", $item['sum_base']) ?> €
+                    <?php if ($item["sumEcotax"] > 0) : ?>
+                      <small>éco part : <?php echo $item["sumEcotax"] ?> €</small>
+                    <?php endif ?>
+                  </td>
+                </tr>
+             <?php endforeach ?>
+              </tbody>
+            </table>
+          </div>
+          <table class="cart-totals" cellspacing="0" cellpadding="0">
+            <tbody>
+              <tr class="stotal-ht">
+                <td></td>
+                <td class="label">Sous-total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->stotalHT) ?> €</td>
+              </tr>
+              <tr class="fdp">
+                <td><img src="<?php echo $res_url.'images/picto-delivery.png' ?>" alt="logo" /></td>
+                <td class="label">Frais de port HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->fdpHT) ?> €</td>
+              </tr>
+              <tr class="total-ht">
+                <td></td>
+                <td class="label">Total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalHT) ?> €</td>
+              </tr>
+              <tr class="tva">
+                <td></td>
+                <td class="label">TVA (20%):</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalTVA) ?> €</td>
+              </tr>
+              <tr class="total-ttc">
+                <td></td>
+                <td class="label">Total TTC:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalTTC) ?> €</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="order-step3-bottom-addresses grey-block order-step2 cart-resume">
+          <div class="blue-title">Récapitulatif adresses</div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de livraison</span><br />
+            <ul>
+              <li><?php echo Clients::getTitleText($cda['titre']) ?> <?php echo $cda['prenom'] ?> <?php echo $cda['nom'] ?></li>
+              <li><?php echo $cda['societe'] ?></li>
+              <li><?php echo $cda['adresse'] ?></li>
+              <li><?php echo $cda['complement'] ?> <?php echo $cda['cp'] ?> <?php echo $cda['ville'] ?></li>
+              <li><?php echo $cda['pays'] ?></li>
+            </ul>
+          </div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de facturation</span><br />
+            <ul>
+              <li><?php echo Clients::getTitleText($cba['titre']) ?> <?php echo $cba['prenom'] ?> <?php echo $cba['nom'] ?></li>
+              <li><?php echo $cba['societe'] ?></li>
+              <li><?php echo $cba['adresse'] ?></li>
+              <li><?php echo $cba['complement'] ?> <?php echo $cba['cp'] ?> <?php echo $cba['ville'] ?></li>
+              <li><?php echo $cba['pays'] ?></li>
+            </ul>
+          </div>
+          <div class="zero"></div>
+        </div>
+      </div>
+      
+      <div id="payment-block" class="addresses-block fr">
+        <form name="order" action="<?php echo COMMANDE_URL."order-add.php" ?>" method="post">
+          <div class="grey-block payment-mode">
+            <div class="blue-title">Mode de paiement 100% sécurisé</div>
+            <div class="mean-block">
+              <div class="mean-check">
+                <input type="radio" name="mode_paiement" value="0" checked="checked" />
+              </div>
+              <div class="mean-title">Carte bancaire :</div>
+              <div class="mean-icon">
+                <div class="payment-means mean1"></div>
+                <div class="payment-means mean2"></div>
+                <div class="payment-means mean3"></div>
+              </div>
+              <div class="mean-info desc1"></div>
+              <div class="mean-desc desc1">
+                <div class="search-ask-error-arrow-right top-arrow"></div>
+                Transaction directe sur <b>serveur sécurisé SSL BNP Paribas</b>. Techni-Contact n'héberge et ne reçoit aucunes données bancaires durant la transaction. <img class="vtaib" src="<?php echo $res_url ?>icons/ssl-lock.gif" alt=""/>
+              </div>
+              <div class="zero"></div>
+            </div>
+            <div class="mean-block">
+              <div class="mean-check">
+                <input type="radio" name="mode_paiement" value="1"/>
+              </div>
+              <div class="mean-title">Chèque:</div>
+              <div class="mean-icon">
+                <div class="payment-means mean5"></div>
+              </div>
+              <div class="mean-info desc2"></div>
+              <div class="mean-desc desc2">
+                <div class="search-ask-error-arrow-right top-arrow"></div>
+                Chèque à libeller à l'<b>ordre de MD2I</b> et à nous renvoyer accompagné du bon de commande signé et tamponné.
+              </div>
+              <div class="zero"></div>
+            </div>
+            <div class="mean-block">
+              <div class="mean-check">
+                <input type="radio" name="mode_paiement" value="2"/>
+              </div>
+              <div class="mean-title">Virement bancaire:</div>
+              <div class="mean-icon">
+                <div class="payment-means mean6"></div>
+              </div>
+              <div class="mean-info desc3"></div>
+              <div class="mean-desc desc3">
+                <div class="search-ask-error-arrow-right top-arrow"></div>
+                Virement auprès de BNP BPARIBAS boucle de seine -  Titulaire du compte : Société MDII - Code Banque : 30004 - Code Guichet : 01896 - Numéro de Compte : 00010001645 - Clé RIB : 13
+              </div>
+              <div class="zero"></div>
+            </div>
+            <div class="mean-block">
+              <div class="mean-check">
+                <input type="radio" name="mode_paiement" value="5"/>
+              </div>
+              <div class="mean-title">Mandat administratif:</div>
+              <div class="mean-icon">
+              </div>
+              <div class="mean-info desc4"></div>
+              <div class="mean-desc desc4">
+                <div class="search-ask-error-arrow-right top-arrow"></div>
+                Virement auprès de BNP BPARIBAS boucle de seine -  Titulaire du compte : Société MDII - Code Banque : 30004 - Code Guichet : 01896 - Numéro de Compte : 00010001645 - Clé RIB : 13
+              </div>
+              <div class="zero"></div>
+            </div>
+          </div>
+          <div id="bc-infos-block" class="grey-block bc-infos">
+            <div class="hand-lock"></div>
+            <img src="<?php echo $res_url; ?>images/footer-print-fevad.jpg" alt="" class="fevad" />
+            <strong>Transaction 100% sécurisée par notre partenaire bancaire.</strong><br />
+            <br />
+            <iframe id="be2bill-frame" name="be2bill-frame" src="about:blank"></iframe>
+          </div>
+          <div class="order-cgv">
+            <div class="js-checkbox-label">
+              <input type="checkbox" name="cgv" /> J'accepte les <a class="color-blue" href="<?php URL ?>CGDV VPC.pdf">conditions générales de vente</a>
+            </div>
+            <div class="zero"></div>
+          </div>
+          <div class="order-bottom-submit-btns">
+            <div class="btn-prev-step fl"><span>Retour livraison</span></div>
+            <div class="btn-proceed-payment btn-next-step fr"><span>Valider ma commande</span></div>
+            <div class="zero"></div>
+          </div>
+        </form>
+        <form id="be2bill_form" method="POST" action="<?php echo BE2BILL_URL ?>">
+          <input type="hidden" name="IDENTIFIER" value="<?php echo $b2b_params['IDENTIFIER'] ?>" />
+          <input type="hidden" name="HASH" value="<?php echo $b2b_params['HASH'] ?>" />
+          <input type="hidden" name="OPERATIONTYPE" value="<?php echo $b2b_params['OPERATIONTYPE'] ?>" />
+          <input type="hidden" name="CLIENTIDENT" value="<?php echo $b2b_params['CLIENTIDENT'] ?>" />
+          <input type="hidden" name="DESCRIPTION" value="<?php echo $b2b_params['DESCRIPTION'] ?>" />
+          <input type="hidden" name="ORDERID" value="<?php echo $b2b_params['ORDERID'] ?>" />
+          <input type="hidden" name="AMOUNT" value="<?php echo $b2b_params['AMOUNT'] ?>" />
+          <input type="hidden" name="VERSION" value="<?php echo $b2b_params['VERSION'] ?>" />
+          <input type="hidden" name="CLIENTEMAIL" value="<?php echo $b2b_params['CLIENTEMAIL'] ?>" />
+          <input type="hidden" name="CLIENTREFERRER" value="<?php echo $b2b_params['CLIENTREFERRER'] ?>" />
+        </form>
+      </div>
+      
+      <div class="zero"></div>
+    </div><!-- order-steps step3 -->
+  </div><!-- blocks-left -->
+  <script type="text/javascript">
+    $(".mean-info").click(function(){
+      var desc = $(this).attr("class").split(" ")[1];
+      $(".mean-desc."+desc).toggle();
+    });
+    $(".btn-prev-step").click(function(){
+      document.location.href = HN.TC.Locals.OrderURL+"order-step2.html";
+    });
+  </script>
+
+<?php require SITE.'blocks-right.php' ?>
+
+</div><!-- white bg -->
+
+<?php require SITE.'foot.php' ?>

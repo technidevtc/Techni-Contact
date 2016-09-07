@@ -1,0 +1,59 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$dom = new DomDocument();
+$dom->load(XML_CATEGORIES_ALL);
+$xPath = new DOMXPath($dom);
+
+$cat1List = $xPath->query("//categories/category");
+
+$title = "Plan du site Techni-Contact";
+$meta_desc = "";
+$breadcrumb_label = "Plan du site";
+define("NOINDEX_FOLLOW", true);
+require(SITE . "head.php");
+?>
+<div class="white-bg padding-top-20">
+					<div class="blocks-left">
+						<div id="sitemap">
+							<div class="blue-title">Plan du site</div>
+							<div class="zero"></div>
+						
+						<?php if ($cat1List->length > 0) { ?>
+							<ul class="cat1-list margin-top-11">
+						<?php foreach($cat1List as $cat1) { $cat2List = $xPath->query("./category", $cat1); ?>
+								<li>
+									<a href="<?php echo URL."familles/".$cat1->getAttribute("ref_name").".html"; ?>"><?php echo $cat1->getAttribute("name"); ?></a>
+								
+								<?php if ($cat2List->length > 0) { ?>
+									<ul class="cat2-list">
+								<?php foreach($cat2List as $cat2) { $cat3List = $xPath->query("./category", $cat2) ?>
+										<li>
+											<a href="<?php echo URL."familles/".$cat2->getAttribute("ref_name").".html"; ?>"><?php echo $cat2->getAttribute("name"); ?></a>
+										
+										<?php if ($cat3List->length > 0) { ?>
+											<ul class="cat3-list">
+										<?php foreach($cat3List as $cat3) { ?>
+												<li>
+													<a href="<?php echo URL."familles/".$cat3->getAttribute("ref_name").".html"; ?>"><?php echo $cat3->getAttribute("name"); ?></a>
+												</li>
+										<?php } ?>
+											</ul>
+										<?php } ?>
+										
+										</li>
+								<?php } ?>
+									</ul>
+								<?php } ?>
+								
+								</li>
+						<?php } ?>
+							</ul>
+						<?php } ?>
+						
+						</div>
+					</div>
+					
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

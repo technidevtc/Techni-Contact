@@ -1,0 +1,174 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 18 juillet 2005
+
+ Fichier : /secure/extranet/products.html
+ Description : Index gestion des produits
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = TITLE_PRODUCTS_CARDS;
+
+define('WHERE', WHERE_PRODUCTS_CARD);
+
+require(EXTRANET . 'head.php');
+?>
+<div class="barre"><a href="index.html?<?php echo $sid ?>"><?php echo HEAD_HOMEPAGE ?></a> &raquo; <?php echo HEAD_PRODUCT_LIST ?></div>
+<div class="miseAZero"></div>
+<?php
+require(EXTRANET . 'alertmdp.php');
+
+$data = array();
+
+define('NB', 30);
+
+$page  = (isset($_GET['page']) && preg_match('/^[1-9][0-9]*$/', $_GET['page'])) ? $_GET['page'] : 1;
+$start = ($page - 1) * NB;
+
+$res = & $handle->query("select p.id, p.name, p.fastdesc, s.id as sid, f.name as fname from families_fr f, products_families pf, products_fr p left join sup_requests s on p.id = s.idProduct where p.idAdvertiser = '" . $handle->escape($user->id) . "' and p.active = 1 and pf.idProduct = p.id and pf.idFamily = f.id and p.deleted != 1 group by p.id order by p.name limit " . $start . ", " . NB, __FILE__, __LINE__);
+while($row = & $handle->fetchAssoc($res))
+	$data[] = & $row;
+
+$res = & $handle->query("select count(id) from products_fr where idAdvertiser = '" . $handle->escape($user->id) . "' and active = 1", __FILE__, __LINE__);
+$val   = & $handle->fetch($res);
+$nbpdt = & $val[0];
+
+?>
+<script type="text/javascript">
+function s_confirm(id)
+{
+	if (confirm('<?php echo PRODUCTS_JS_ASK_DELETE_PRODUCT ?>'))
+	{
+		document.location = 'del_product.html?<?php echo $sid ?>&id=' + id;
+	}
+}
+</script>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo PRODUCTS_PRODUCT_LIST_TITLE ?></div>
+		<div class="bloc-texte"><?php echo PRODUCTS_PRODUCT_LIST_DESC ?>
+			<br/>
+			<br/>
+			<a href="add_product.html?<?php echo $sid ?>"><?php echo PRODUCTS_ADD_PRODUCT ?></a>
+			<br />
+			<a href="w_products.html?<?php echo $sid ?>"><?php echo PRODUCTS_WAITING_PRODUCTS ?></a>
+		</div>
+	</div>
+	<br />
+	<div class="miseAZero"></div>
+	<br />
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo COMMON_SEARCH ?></div>
+		<div class="bloc-texte" style="text-align: center">
+			<form action="search.html?<?php echo $sid ?>" method="post">
+				<?php echo COMMON_PRODUCT ?> : <input type="text" name="p" maxlength="255" size="50"> <input type="button" value="<?php echo COMMON_BUTTON_VALIDATE ?>" onClick="this.form.submit(); this.disabled=true">
+			</form>
+		</div>
+	</div>
+	<div class="miseAZero"></div>
+	<br />
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo HEAD_PRODUCT_LIST ?></div>
+		<div class="bloc-texte">
+<?php
+
+if(count($data) > 0)
+{
+
+?>
+			<table width="100%" border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="200"><?php echo COMMON_CATEGORY ?></td>
+					<td><?php echo COMMON_PRODUCT_NAME ?></td>
+					<td width="20">&nbsp;</td>
+				</tr>
+<?php
+
+    for($i = 0; $i < count($data); ++$i)
+    {
+        $extra  = $data[$i]['fastdesc'] ? ' - ' . $data[$i]['fastdesc'] : '';
+        if (empty($data[$i]['sid']))
+		{
+			$pub = '<img src="ressources/images/poubelle.gif" alt="Demander la suppression de ce produit" width="20" height="20" onclick="s_confirm(' . $data[$i]['id'] . ')">';
+			$style = ' style="cursor:pointer; cursor:hand"';
+			$onclick = ' onclick="document.location=\'product_detail.html?' . $sid . '&id=' . $data[$i]['id'] . '\'"';
+		}
+		else
+		{
+			$pub = '&nbsp;';
+			$style = '';
+			$onclick = '';
+		}
+?>
+				<tr class="tr-normal" onmouseover="this.className='tr-hover'" onmouseout="this.className='tr-normal'"<?php echo $style ?>>
+					<td class="type"<?php echo $onclick ?>><?php echo to_entities($data[$i]['fname']) ?></td>
+					<td class="produit"<?php echo $onclick ?>><?php echo to_entities($data[$i]['name'] . $extra) ?></td>
+					<td class="suppr"><?php echo $pub ?></td>
+				</tr>
+<?php
+    }
+?>
+			</table>
+<?php
+}
+else
+{
+?>
+			<div style="text-align: center"><b>Aucun résultat</b></div>
+<?php
+}
+?>
+			<div class="listing">
+<?php
+
+if($nbpdt == 0)
+	$max = 1;
+else
+	$max = ceil($nbpdt / NB);
+
+if ($page != 1 && $page <= $max)
+{
+	print('<a href="products.html?' . $sid . '&page=1">&lt;&lt;</a> ');
+	$prev = $page - 1;
+	print('<a href="products.html?' . $sid . '&page=' . $prev . '">&lt;</a> ... | ');
+} 
+else
+	print('&lt;&lt; &lt; | ');
+
+for($i = 1; $i <= $max; ++$i)
+{
+	if ($i > 1) print(' | ');
+    if($i == $page) print('<span class="listing-current">' . $i . '</span>');
+    else print '<a href="products.html?' . $sid . '&page=' . $i . '">' . $i . '</a>';
+}
+
+if($page < $max)
+{
+	$next = $page + 1;
+	print(' | ... <a href="products.html?' . $sid . '&page=' . $next . '">&gt;</a>');
+	print(' <a href="products.html?' . $sid . '&page=' . $max . '">&gt;&gt;</a>');
+}
+else
+{
+	print(' | &gt; &gt;&gt;');
+}
+    
+?>
+			</div>
+		</div>
+	</div>
+</div>
+
+<?php
+require(EXTRANET . 'tail.php');
+?>

@@ -1,0 +1,55 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de passer commande sur notre site internet <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-commande">Techni-Contact.com</a>. Nous vous en remercions.<br/>
+	Nous vous confirmons son bon enregistrement de votre commande, qui sera traitée dès confirmation de la réception de votre paiement.<br/>
+	<br/>
+	Cette commande peut être consultée dans votre <a href="SITE_ACCOUNT_URL_INFOS?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-commande">espace client</a><br/>
+	<br/>
+	Votre commande a été enregistrée sous le numéro <b>ORDER_ID</b>.<br/>
+	<br/>
+	Vous avez choisi le mode de règlement suivant : <b>ORDER_PAYMENT_TYPE</b><br/>
+	<br/>
+	<b>Vous pouvez télécharger le bon de commande correspondant à votre achat</b> depuis votre <a href="SITE_ACCOUNT_URL_INFOS?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-commande">espace client</a>.<br/>
+	<br/>
+	<b>Si vous avez choisi un règlement par chèque:</b><br/>
+	Merci de l'adresser dans les plus brefs délais à l'adresse suivante, libellé au nom de MD2I, accompagné de votre bon de commande signé et tamponné :<br/>
+	M.D.2i / Service commandes<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	<br/>
+	<b>Si vous avez choisi un règlement par virement bancaire ou par mandat / mandat administratif :</b><br/>
+	Merci de l'envoyer aux coordonnées bancaires suivantes et de nous transmettre son justificatif accompagné du bon de commande signé et tamponné par fax au 01 83 62 36 12 ou par voie postale :<br/>
+	BNP PARIBAS BOUCLE DE SEINE (01896)<br/>
+	Code Banque : 30004<br/>
+	Code Guichet : 01896<br/>
+	Numéro de Compte : 00010001645<br/>
+	Clé RIB : 13<br/>
+	Numéro de compte bancaire international (IBAN): FR76 3000 4018 9600 0100 0164 513<br/>
+	BIC (Bank Identification Code): BNPAFRPPGNV<br/>
+	<b>A l'attention de le Société MDII<br/>
+	Motif du virement à préciser : Commande TC n°ORDER_ID</b><br/>
+	<br/>
+	<i>Voici le récapitulatif de votre commande :</i><br/>
+	<br/>
+	ORDER_COMPLETE_CONTENT<br/>
+	<br/>
+	Pour toute question relative à votre commande, <b>vous pouvez nous contacter au 01 55 60 29 29</b> (appel local) ou par mail depuis votre <a href="SITE_ACCOUNT_URL_INFOS?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-commande">espace client</a>.<br/>
+	<br/>
+	Toute l'équipe <a href="SITE_MAIN_URL">Techni-Contact.com</a> vous remercie pour votre confiance.
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

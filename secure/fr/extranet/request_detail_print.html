@@ -1,0 +1,205 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include("language_local.php");
+
+$title = REQUEST_DETAIL_TITLE;
+
+require(EXTRANET."logs.php");
+require(ICLASS."ExtranetUser.php");
+require(ADMIN   ."statut.php");
+
+$handle = DBHandle::get_instance();
+$user = new ExtranetUser($handle);
+
+$login = $pass = '';
+
+if (isset($_GET['uid']) && preg_match('/^[a-zA-Z0-9]{32}$/', $_GET['uid'])) {
+	$result = & $handle->query("select eu.login, eu.pass from extranetusers eu, advertisers a where eu.webpass = '" . $_GET['uid'] . "' and a.from_web = 1 and a.id = eu.id", __FILE__, __LINE__);
+	if ($handle->numrows($result, __FILE__, __LINE__) == 1) {
+		list($login, $pass) = $handle->fetch($result);
+	}
+}
+
+if(!$user->login($login, $pass) || !$user->active) {
+    header('Location: ' . EXTRANET_URL . 'login.html');
+    exit();
+}
+
+$error = false;
+if (!isset($_GET["id"]) || !preg_match("/^[0-9]{1,8}$/", $_GET["id"]) || $user->parent != '0')
+	$error = true;
+else {
+	$db = DBHandle::get_instance();
+	
+	function make_charge_link($fieldName) {
+		echo "########";
+	}
+	
+	$res = $db->query("
+		SELECT
+			c.id, c.nom, c.prenom, c.fonction, c.societe, c.salaries, c.secteur, c.naf, c.siret, c.adresse, c.cadresse,
+			c.cp, c.ville, c.pays, c.tel, c.fax, c.email, c.url, c.precisions, c.type, c.idAdvertiser,
+			c.customFields, c.invoice_status, c.timestamp, c.reject_timestamp, c.credited_on,
+			pfr.id AS pdt_id, pfr.name AS pdt_name, pfr.fastdesc AS pdt_fastdesc, pfr.ref_name AS pdt_ref_name,
+			ffr.id AS cat_id, ffr.name AS cat_name,
+			a.nom1, a.ic_reject
+		FROM contacts c
+		INNER JOIN advertisers a ON c.idAdvertiser = a.id
+		LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+		LEFT JOIN families_fr ffr ON c.idFamily = ffr.id
+		WHERE c.id = '".$_GET["id"]."'".($user->id == __ID_TECHNI_CONTACT__ ? "" : " AND c.idAdvertiser = '".$db->escape($user->id)."'")."
+		GROUP BY pfr.id", __FILE__, __LINE__);
+
+	if ($db->numrows($res, __FILE__, __LINE__) != 1)
+		$error = true;
+	else {
+		$lead = $db->fetchAssoc($res);
+		$customFields = unserialize($lead["customFields"]);
+		if (empty($customFields)) $customFields = array();
+		
+    $show_reject_options = $lead["ic_reject"] && ($lead["invoice_status"] & __LEAD_REJECTABLE__);
+    $show_personal_infos = $lead["invoice_status"] & __LEAD_VISIBLE__;
+		switch($lead["type"]) {
+			case 1 : $lead_type = COMMON_CONTACT_TYPE_ASK;         break;
+			case 2 : $lead_type = COMMON_CONTACT_TYPE_TEL;         break;
+			case 3 : $lead_type = COMMON_CONTACT_TYPE_ESTIMATE;    break;
+			case 4 : $lead_type = COMMON_CONTACT_TYPE_APPOINTMENT; break;
+		}
+	}
+}
+
+?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title><?php echo TITLE ?> - <?php print($title) ?></title>
+<link href="<?php echo EXTRANET_URL ?>css/extranet.css" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="<?php echo EXTRANET_URL ?>ManageCookies.js"></script>
+</head>
+<body>
+<?php if ($error) { ?>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre">
+			<center><?php echo REQUEST_DETAIL_ERROR_ID ?></center>
+		</div>
+	</div>
+</div>
+<?php } else { ?>
+<div class="centre">
+	<img src="ressources/images/logo.gif" alt="" style="float: left; margin-right: 10px"/>
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo REQUEST_DETAIL_BLOC_TITLE ?> n°<?php echo $lead["id"] ?></div>
+	</div>
+	<div class="miseAZero"></div>
+	<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo REQUEST_DETAIL_CONTACT_INFOS ?></div>
+		<div class="bloc-texte">
+                        <div class="champ-label"><?php echo "Date de la demande" ?> :</div>
+			<div class="champ-form"><?php echo date('d/m/Y H:i:s', $lead["timestamp"]) ?></div>
+                        <div class="miseAZero"></div>
+		<?php if (!empty($lead["pdt_id"])) { ?>
+			<div class="champ-label"><?php echo REQUEST_DETAIL_PRODUCT ?> :</div>
+			<div class="champ-form"><?php echo $lead["pdt_name"] ?><?php if(trim($lead["pdt_fastdesc"])) echo " - ".$lead["pdt_fastdesc"] ?></div>
+		<?php } else { ?>
+			<div class="champ-label"><?php echo "Votre gamme de produits" ?> :</div>
+			<div class="champ-form"><?php echo $lead["cat_name"] ?></div>
+		<?php } ?>
+			<div class="miseAZero"></div>
+		<?php if($user->id == __ID_TECHNI_CONTACT__ && $lead["idAdvertiser"] != __ID_TECHNI_CONTACT__) { ?>
+			<div class="champ-label"><?php echo COMMON_SUPPLIER ?> :</div>
+			<div class="champ-form"><?php echo $lead["nom1"] ?></div>
+			<div class="miseAZero"></div>
+		<?php } ?>
+			<div class="champ-label"><?php echo COMMON_CONTACT_TYPE ?></div>
+			<div class="champ-form"><?php echo $lead_type ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo "Etat de la demande" ?></div>
+			<div class="champ-form"><?php echo $lead_invoice_status_list[$lead["invoice_status"]].getCreditMonth($lead) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo REQUEST_DETAIL_MESSAGE ?> :</div>
+			<div class="champ-form"><?php echo trim($lead["precisions"]) ? $lead["precisions"] : "N/C" ?></div>
+			<div class="miseAZero"></div>
+		</div>
+	</div>
+	<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo REQUEST_DETAIL_CUSTOMER_INFOS ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_LAST_NAME ?> :</div>
+			<div class="champ-form"><?php echo $show_personal_infos ? $lead["nom"] : make_charge_link(INFOS_LAST_NAME) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_FIRST_NAME ?> :</div>
+			<div class="champ-form"><?php echo $show_personal_infos ? ucwords(strtolower($lead["prenom"])) : make_charge_link(INFOS_FIRST_NAME) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_JOB ?> :</div>
+			<div class="champ-form"><?php echo ucwords(strtolower($lead["fonction"])) ?></div>
+			<div class="champ-miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_EMAIL ?> :</div>
+			<div class="champ-form"><?php echo $show_personal_infos ? strtolower($lead["email"]) : make_charge_link(INFOS_EMAIL) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_URL ?> :</div>
+			<div class="champ-form"><?php echo $lead["url"] ? ($show_personal_infos ? $lead["url"] : make_charge_link(INFOS_URL)) : "N/C" ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_TEL1 ?> :</div>
+			<div class="champ-form"><?php echo $show_personal_infos ? $lead["tel"] : make_charge_link(INFOS_TEL1) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_FAX1 ?> :</div>
+			<div class="champ-form"><?php echo $lead["fax"] ? ($show_personal_infos ? $lead["fax"] : make_charge_link(INFOS_FAX1)) : "N/C" ?></div>
+			<div class="miseAZero"></div>
+		</div>
+	</div>
+	<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo REQUEST_DETAIL_COMPANY_INFOS ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo REQUEST_DETAIL_COMPANY_NAME ?> :</div>
+			<div class="champ-form"><?php echo $show_personal_infos ? $lead["societe"] : make_charge_link(REQUEST_DETAIL_COMPANY_NAME) ?></div>
+			<div class="champ-miseAZero"></div><br/>
+			<div class="champ-label"><?php echo INFOS_NUMBER_OF_EMPLOYEES ?> :</div>
+			<div class="champ-form"><?php echo $lead["salaries"] ? $lead["salaries"] : "N/C" ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_ACTIVITY_SECTOR ?> :</div>
+			<div class="champ-form"><?php echo ucwords(strtolower($lead["secteur"])) ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_NAF_CODE ?> :</div>
+			<div class="champ-form"><?php echo $lead["naf"] ? ($show_personal_infos ? $lead["naf"] : make_charge_link(INFOS_NAF_CODE)) : "N/C" ?> </div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_SIREN_NUMBER ?> :</div>
+			<div class="champ-form"><?php echo $lead["siret"] ? ($show_personal_infos ? $lead["siret"] : make_charge_link(INFOS_SIREN_NUMBER)) : "N/C" ?></div>
+			<div class="champ-miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_ADDRESS ?> :</div>
+			<div class="champ-form">
+				<?php echo $show_personal_infos ? ucwords(strtolower($lead["adresse"])) : make_charge_link(INFOS_ADDRESS) ?>
+				<?php if ($show_personal_infos && $lead["cadresse"]) { ?>
+				<br/><?php echo ucwords(strtolower($lead["cadresse"])) ?>
+				<?php } ?>
+			</div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_PC ?> :</div>
+			<div class="champ-form"><?php echo $lead["cp"] ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_CITY ?> :</div>
+			<div class="champ-form"><?php echo $lead["ville"] ?></div>
+			<div class="miseAZero"></div>
+			<div class="champ-label"><?php echo INFOS_COUNTRY ?> :</div>
+			<div class="champ-form"><?php echo $lead["pays"] ?></div>
+			<div class="miseAZero"></div>
+			<?php foreach($customFields as $fieldName => $fieldData) { ?>
+				<div class="champ-label"><?php echo $fieldName ?> :</div>
+				<div class="champ-form"><?php echo to_entities($fieldData) ?></div>
+				<div class="miseAZero"></div>
+			<?php } ?>
+			</div>
+		</div>
+	</div>
+<?php
+} // fin id ok
+?>
+</body>
+</html>

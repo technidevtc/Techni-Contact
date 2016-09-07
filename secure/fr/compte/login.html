@@ -1,0 +1,92 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS . 'CUserSession.php');
+require(ICLASS . 'CCustomerUser.php');
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+
+$redirectionsAllowed = array(
+    'commandes' => 'order-list.html',
+    'devis' => 'estimate-list.html'
+);
+
+$emailLogin = (!empty ($_GET['email']) && preg_match('/^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$/', $_GET['email'])) ? $_GET['email'] : '';
+$loginRedirectGet = (!empty ($_GET['redirect']) && !empty ($redirectionsAllowed[$_GET['redirect']])) ? $_GET['redirect'] : '';
+$idCommand = (!empty ($_GET['idc'])) ? $_GET['idc'] : '';
+$idCommandPost = (!empty ($_POST['idCommand'])) ? $_POST['idCommand'] : '';
+$loginRedirectPost = (!empty ($_POST['redirect']) && !empty ($redirectionsAllowed[$_POST['redirect']])) ? $redirectionsAllowed[$_POST['redirect']] : '';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+	$login = isset($_POST["login"]) ? substr(trim($_POST["login"]), 0, 255) : "";
+	$pass  = isset($_POST["pass"]) ? $_POST["pass"] : "";
+
+        //  OD 2011/08/17 http://www.hook-network.com/storm/tasks/2010/09/22/activation-automatique-du-compte-lorsque-r%C3%A9cup%C3%A9ration-du-password
+        $customerUserID = CustomerUser::getCustomerIdFromEmail($login ,$handle);
+        if ($customerUserID) {
+        $CustomerUser = new CustomerUser($handle, $customerUserID);
+
+          if(strcasecmp($CustomerUser->origin, 'A') == 0){
+            $CustomerUser->actif = 1;
+            $CustomerUser->save();
+          }
+        }
+
+	$customerID = CustomerUser::canLogin($login, $pass, $handle);
+	// Log in
+	if ($customerID) {
+		$session->login($customerID);
+	}
+	else {
+		$errorstring = "Nous n'avons pas pu vous identifier.\\nMerci de rentrer des e-mail et mot de passe valides.\\n";
+	}
+}
+
+if ($session->logged) {
+	$pageAfterLogin = $session->pageAfterLogin;
+	$session->pageAfterLogin = COMPTE_URL."index.html";
+
+	if (empty($pageAfterLogin))
+		$pageAfterLogin = $session->pageAfterLogin;
+	if(!empty($loginRedirectPost))
+          $pageAfterLogin = $loginRedirectPost;
+        $argsAfterLogin = !empty($idCommandPost) ? '?idc='.$idCommandPost : '';
+        $session->userFirstName = $CustomerUser->nom;
+        $session->userName = $CustomerUser->prenom;
+        $session->userEmail = $login;
+	header('Location: ' . $pageAfterLogin.$argsAfterLogin);
+	exit();
+}
+
+define("SECURE", true);
+require(SITE . 'head.php');
+?>
+					<?php if (!empty($errorstring)) { ?><script type="text/javascript">$(function(){ alert("<?php echo $errorstring ?>"); });</script><?php } ?>
+					<div class="account white-bg">
+						<h1 class="medium-blue-title">Accéder à mon espace client</h1>
+						<form method="post" action="<?php echo COMPTE_URL . "login.html" ?>">
+							<div class="box grey-lr-box account-login">
+								<div class="btl"></div><div class="btr"></div>
+								<div class="bbl"></div><div class="bbr"></div>
+								<div class="box-out">
+									<div class="box-in contact-infos">
+										<div class="title blue-title">Veuillez indiquer vos identifiants:</div>
+                                                                                <div class="note"><span class="color-blue">*</span> Champs obligatoires</div>
+										<ul>
+                                                                                  <li><label for="login">Adresse e-mail*:</label><input name="login" type="text" maxlength="" class="edit" value="<?php if(!empty ($emailLogin)) echo $emailLogin ?>"/><div class="zero"></div></li>
+                                                                                  <li><label for="pass">Mot de passe*:</label><input name="pass" type="password" maxlength="" class="edit"/><div class="zero"></div></li>
+										</ul>
+                                                                                <?php if(!empty ($loginRedirectGet)) echo '<input type="hidden" name="redirect" value="'.$loginRedirectGet.'" />' ?>
+                                                                                <?php if(!empty ($idCommand)) echo '<input type="hidden" name="idCommand" value="'.$idCommand.'" />' ?>
+										<div class="links">
+											<a class="color-blue" href="<?php echo COMPTE_URL . "password-recovery.html" ?>">Mot de passe oublié ? Cliquez ici</a>
+										</div>
+										<input type="image" class="btn-account-validate" src="<?php echo $res_url ?>images/empty.gif" alt="Valider"/>
+										<input type="hidden" name="already_customer" value="1"/>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+
+<?php require(SITE . 'foot.php') ?>

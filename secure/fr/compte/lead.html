@@ -1,0 +1,294 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+  header("Location: ".COMPTE_URL."login.html");
+  exit();
+}
+
+try {
+  $leadID = filter_input(INPUT_GET, 'leadID', FILTER_SANITIZE_NUMBER_INT);
+  
+  if (!$leadID)
+    throw new Exception("Identifiant demande invalide");
+  
+  // getting all the lead status which are visible
+  $visibleStatusList = array();
+  $statusConstList = array_keys(Contacts::$statusList);
+  foreach ($statusConstList as $statusConst)
+    if ($statusConst & Contacts::STATUS_IS_VISIBLE)
+      $visibleStatusList[] = $statusConst;
+  
+  // get the single primary lead with all its secondary children leads if they are for a supplier or simply are visible
+  $leadList = Doctrine_Query::create()
+    ->select('l.id,
+              l.idProduct,
+              l.create_time,
+              l.timestamp,
+              l.invoice_status,
+              l.processing_status,
+              l.processing_time ,
+              l.precisions,
+              l.societe,
+              l.parent,
+              l.id_user_commercial,
+              p.id,
+              pfr.ref_name,
+              pfr.name as productName,
+              pfr.fastdesc,
+              a.nom1 AS adv_name,
+              a.adresse1,
+              a.adresse2,
+              a.ville,
+              a.cp,
+              a.pays,
+              a.category as adv_category,
+              a.actif as adv_active,
+              a.contact as adv_contact,
+              a.email as adv_email,
+              a.url as adv_url,
+              a.tel1 as adv_tel1,
+              IFNULL(lc.id,1) AS cat_id,
+              e.status as estimate_status,
+              e.created_user_id,
+              e.web_id,
+              bou.name,
+              bou.email,
+              bou.phone')
+    ->from('Contacts l INDEXBY l.id')
+    ->leftJoin('l.product p')
+    ->leftJoin('p.product_fr pfr')
+    ->innerJoin('l.advertiser a')
+    ->leftJoin('l.category lc')
+    ->leftJoin('l.estimate e')
+    ->leftJoin('l.comm_user bou')
+    ->where('l.id = ? OR l.parent = ?', array($leadID, $leadID))
+    ->andWhere('l.email = ?', $user->login)                  
+    ->orderBy('l.parent ASC')
+    ->fetchArray();
+
+  if (!count($leadList))
+    throw new Exception("Vous ne possédez pas de demande ayant pour identifiant ".$leadID);
+  
+} catch (Exception $e) {
+  header("Location: ".COMPTE_URL."index.html");
+  exit($e);
+}
+
+$validLeadList = array();
+foreach ($leadList as $key => &$lead) {
+  $lead1_id = $lead['parent'] ? $lead['parent'] : $lead['id'];
+  
+  // get the linked conversation
+  $lead['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__, $user->id, $lead['id'], 'array', 'FO'); 
+  
+  if ($lead['category'] != __ADV_CAT_SUPPLIER__) {
+    if (!isset($leadList[$lead1_id]['adv_active_count']))
+      $leadList[$lead1_id]['adv_active_count'] = 0;
+  
+    // count the number of advertiser than can handle their lead for this primary lead
+    if (in_array($lead['invoice_status'], $visibleStatusList) && $lead['adv_active']) {
+      $leadList[$lead1_id]['adv_active_count']++;
+      $validLeadList[] = $leadList[$key];
+    }
+  }
+  
+}
+unset($lead);
+$primaryLead = reset($leadList);
+
+$showFirstCol = false;
+foreach ($validLeadList as $lead)
+  if ($lead['adv_active']) 
+    if(is_file(ADVERTISERS_LOGOS_INC.$lead['advertiser']['id'].'.jpg'))
+            $showFirstCol = true;
+
+$current_account_menuitem = "Mes demandes";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel">
+  <div class="right-account-panel-inlay fl">
+    <div class="account-header">
+      <h1 class="bigger-blue-title"><img src="<?php echo $res_url ?>images/personal-space-logo.png" alt="logo" />Mes demandes</h1>
+    </div>
+    <div class="blue-title">Ma demande n°<?php echo $primaryLead['id'] ?></div>
+    <br />
+    <div class="account-lead">
+      <div class="account-primaryLead-table">
+        <table cellspacing="0" cellpadding="0">
+          <thead>
+          <tr>
+            <th>Produit</th>
+            <th>Descriptif</th>
+            <th>ID fiche</th>
+          </tr>
+          </thead>
+            <tbody>
+              <tr class="line">
+                <td class="image">
+                  <img  class="vmaib" src="<?php echo Utils::get_secure_pdt_pic_url($primaryLead['idProduct']) ?>" alt=""/>
+                </td>
+                <td class="designation">
+                  <div class="vmaib"><?php echo $primaryLead['product']['product_fr']['productName'] ?></div>
+                </td>
+                <td class="num"><?php echo $primaryLead['idProduct'] ?></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <br />
+      <?php if($primaryLead['adv_category'] == __ADV_CAT_SUPPLIER__){ // lead fournisseur maquette-fiche-lead-fournisseur text
+        $precisions = !empty($primaryLead['precisions']) ? $primaryLead['precisions'] : '';
+
+        if ($primaryLead['estimate_status'] > 1) { // considered as send
+        
+        $statusText = 'Votre demande a été traitée par notre expert qui vous a envoyé par email un devis.<br />
+          Vous pouvez consulter sa fiche détaillée ci-dessous.<br />
+          <br />
+          <br />
+          <a href="'.COMPTE_URL.'pdfestimate.html?estimateID='.$primaryLead['estimate']['web_id'].'" class="btn-see-estimate"></a>';//fr/compte/pdfestimate.html?estimateID=c05dc683c5264b991b77b74de7681ccc
+        }  else { // considered as not send
+          $statusText = 'Votre demande est prise en charge par notre expert, qui la traitera dans les meilleurs délais :<br />
+            <br />
+            '.$primaryLead['comm_user']['name'].'<br />
+            '.$primaryLead['comm_user']['phone'].'<br />
+            <a class="color-blue" href="mailto:'.$primaryLead['comm_user']['email'].';" >'.$primaryLead['comm_user']['email'].'</a><br />
+            <br />
+            N\'hésitez pas à le contacter si vous souhaitez modifier/compléter votre besoin.';
+        }
+        
+       } elseif ($primaryLead['adv_active_count'] > 0) { // not supplier, but has valid active adv ?>
+        <div>Nous avons transmis votre demande concernant le produit <a class="color-blue" href="<?php echo URL.'produits/'.$primaryLead['cat_id'].'-'.$primaryLead['idProduct'].'-'.$primaryLead['product']['product_fr']['ref_name'].'.html' ?>"><?php echo $primaryLead['idProduct'] ?></a> au(x) partenaire(s) ci-dessous : </div>
+        <br />
+        <div class="account-lead">
+          <div class="account-lead-table">
+            <table cellspacing="0" cellpadding="0">
+              <thead>
+              <tr>
+                <?php if($showFirstCol): ?>
+                <th>Annonceur</th>
+                <?php endif; ?>
+                <th>Coordonnées</th>
+                <th class="message">Message</th>
+                <th class="contact">Contact</th>
+              </tr>
+              </thead>
+              <tbody>
+              <?php foreach ($validLeadList as $lead) : ?>
+                <?php if ($lead['adv_active']) : ?>
+                <tr class="line">
+                  <?php if($showFirstCol): ?>
+                  <td>
+                    <?php if(is_file(ADVERTISERS_LOGOS_INC.$lead['advertiser']['id'].'.jpg')): ?>
+                    <img  class="vmaib" src="<?php echo ADVERTISERS_LOGOS_URL.$lead['advertiser']['id'].'.jpg' ?>" alt=""/>
+                    <?php endif; ?>
+                  </td>
+                  <?php endif; ?>
+                  <td class="designation">
+                    <div class="text-left">
+                      <strong><?php echo $lead['advertiser']['adv_name'] ?></strong><br />
+                      <?php echo $lead['advertiser']['adv_contact'] ?><br />
+                      <?php echo $lead['advertiser']['adresse1'] ?><br />
+                      <?php echo !empty($lead['advertiser']['adresse2'])?$lead['advertiser']['adresse2'].'<br />':'' ?>
+                      <?php echo $lead['advertiser']['cp'].' '.$lead['advertiser']['ville'] ?><br />
+                      <?php echo $lead['advertiser']['adv_tel1'] ?><br />
+                      <?php echo $lead['advertiser']['adv_email'] ?><br />
+                      <?php echo '<a href="'.$lead['advertiser']['adv_url'].'" target="_blank" class="color-blue">'.$lead['advertiser']['adv_url'].'</a>' ?>
+                    </div>
+                    <a class="operator-contact-btn mobile-infos" href="javascript:HN.TC.accountContactDialog(<?php echo ($lead['processing_status'] == 2 && $lead['adv_category'] == __ADV_CAT_SUPPLIER__)?'3':'4' ?>,<?php echo $lead['id'] ?>);"></a>
+                  </td>
+                  <td class="message">
+                    <?php if (!empty($lead['conv']) || !empty($lead['precisions'])) : 
+                      $countPrecision = !empty($lead['precisions']) ? 1 : 0 ?>
+                    <a class="link-conv color-blue">Voir <?php echo !empty($lead['precisions']) ? count($lead['conv'])+1 : count($lead['conv']) ?> message<?php echo (count($lead['conv'])+$countPrecision) > 1 ? 's': '' ?></a>
+                    <?php else : ?>
+                    Aucun message
+                    <?php endif ?>
+                  </td>
+                  <td class="contact">
+                    <a class="operator-contact-btn" href="javascript:HN.TC.accountContactDialog(<?php echo ($lead['processing_status'] == 2 && $lead['adv_category'] == __ADV_CAT_SUPPLIER__)?'3':'4' ?>,<?php echo $lead['id'] ?>);"></a>
+                     <?php //pp($lead) ?>
+                  </td>
+                </tr>
+                <?php if (!empty($lead['conv']) || !empty($lead['precisions'])) : ?>
+                <tr class="conversation">
+                  <td colspan="4">
+                    <div class="conv-title">Conversation liée à ce devis</div>
+                    <ul>
+                    <?php foreach ($lead['conv'] as $post) : ?>
+                      <li>
+                        <div class="post-title">
+                          <span class="display-infos">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></span>
+                          <span class="mobile-infos"><?php echo $post['sender_name'] ?> le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></span>
+                        </div>
+                      <?php if (!empty($post['attachments'])) : ?>
+                        <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+                        <div class="post-files" >
+                        <?php foreach ($post['attachments'] as $attachment) : ?>
+                          <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+                        <?php endforeach ?>
+                        </div>
+                      <?php endif ?>
+                        <div class="post-text"><?php echo htmlspecialchars($post['text']) ?></div>
+                      </li>
+                    <?php endforeach ?>
+                      <?php if(!empty($lead['precisions'])) : ?>
+                      <li>
+                        <div class="post-title">Message de <?php echo $lead['societe'] ?> envoyé le <?php echo date('d/m/Y à H:m', $lead['create_time']) ?></div>
+                        <div class="post-text"><?php echo htmlspecialchars($lead['precisions']) ?></div>
+                      </li>
+                      <?php endif ?>
+                    </ul>
+                  </td>
+                </tr>
+                <?php endif // conv ?>
+               <?php endif // adv_active ?>
+              <?php endforeach // contact loop ?>
+              </tbody>
+            </table>
+            <div class="zero"></div>
+          </div>
+          <div class="zero"></div>
+        </div>
+        <div class="zero"></div>
+      <?php } else { // not supplier and no active adv ?>
+        <div><img src="<?php echo $res_url ?>images/no-advertiser.jpg" alt="" class="vmaib" />Aucun partenaire ne peut gérer votre demande</div>
+      <?php } ?>
+        
+        <?php if (!empty($precisions)) : ?>
+      <h2 class="blue-title blue-small-title">Votre projet</h2><br />
+      <?php echo $precisions ?><br />
+      <br />
+     <?php endif ?>
+       
+     <?php if (!empty($statusText)) : ?>
+      <h2 class="blue-title blue-small-title">État de la demande</h2><br />
+      <?php echo $statusText ?> 
+     <?php endif ?>
+      
+      
+      </div>
+      
+     
+      <br />
+    </div>
+  </div>
+  
+  <div class="right-account-panel-navig">
+    <a href="<?php echo COMPTE_URL."lead-list.html" ?>" class="account-lead-list-back-link"></a>
+  </div>
+
+</div>
+<script type="text/javascript">
+  $(".account-lead")
+  .find("a.icon-conv, a.link-conv").on("click", function(){ $(this).closest('tr').next('tr.conversation').toggle(); }).end()
+  .find("img.post-clip").on("click", function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+</script>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

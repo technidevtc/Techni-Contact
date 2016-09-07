@@ -1,0 +1,187 @@
+AuthName "Test Page !"
+AuthType Basic
+AuthUserFile "/data/technico/.htpasswd"
+Require valid-user
+
+Options +FollowSymlinks
+RewriteEngine On
+
+<Files config.php>
+deny from all
+</Files>
+
+
+RewriteRule     ^fr/marketing/(.*)$							$1 [L]
+
+RewriteRule	^logout.php$								disconnect.php	[L]
+
+RewriteRule	^check-login.php$							check_login.php	[L]
+
+########################################################
+##### 				Start Home						####
+########################################################
+#Tableau de bord
+RewriteRule	^home-stats-load-tableau-de-bord.php$				home_center_content_tableau_de_bord.php	[L]
+
+#Transaction
+RewriteRule	^home-stats-load-transaction-comptes-clients.php$			home_center_content_transaction_comptes_clients.php	[L]
+
+RewriteRule	^home-stats-load-transaction-leadsa.php$			home_center_content_transaction_leadsa.php	[L]
+
+RewriteRule	^home-stats-load-transaction-leadsf.php$			home_center_content_transaction_leadsf.php	[L]
+
+RewriteRule	^home-stats-load-transaction-commandes.php$			home_center_content_transaction_commandes.php	[L]
+
+#Products
+RewriteRule	^home-stats-load-products-produits-actifs.php$			home_center_content_products_produits_actifs.php	[L]
+
+RewriteRule	^home-stats-load-products-references-actives.php$			home_center_content_products_references_actives.php	[L]
+
+RewriteRule	^home-stats-load-products-famille3.php$			home_center_content_products_products_famille3.php	[L]
+
+
+#Advertisers
+RewriteRule	^home-stats-load-advertisers-annonceurs.php$			home_center_content_advertisers_annonceurs.php	[L]
+
+RewriteRule	^home-stats-load-advertisers-fournisseurs.php$			home_center_content_advertisers_fournisseurs.php	[L]
+
+RewriteRule	^home-stats-load-advertisers-annonceurs-non-factures.php$			home_center_content_advertisers_annonceurs_non_factures.php	[L]
+
+
+RewriteRule	^home-stats-load-advertisers-prospects.php$			home_center_content_advertisers_prospects.php	[L]
+
+RewriteRule	^home-stats-load-advertisers-annonceurs-bloques.php$			home_center_content_advertisers_annonceurs_bloques.php	[L]
+
+RewriteRule	^home-stats-load-advertisers-annonceurs-litige.php$			home_center_content_advertisers_annonceurs_litige.php	[L]
+
+
+########################################################
+##### 				Start Administration			####
+########################################################
+RewriteRule	^administration-users-load.php$				administration_users_load.php	[L]	
+RewriteRule	^administration-users-create.php$			administration_users_create.php	[L]
+RewriteRule	^administration-users-check-login.php$		administration_users_check_login.php	[L]	
+RewriteRule	^administration-users-create-confirm.php$	administration_users_create_confirm.php	[L]
+
+RewriteRule	^administration-users-edit.php$				administration_users_edit.php	[L]
+RewriteRule	^administration-users-edit-confirm.php$		administration_users_edit_confirm.php	[L]
+
+RewriteRule	^administration-users-delete-confirm.php$	administration_users_delete_confirm.php	[L]
+
+
+
+########################################################
+##### 				Segments						####
+########################################################
+redirect 301 /fr/segments.php		/my-segments.php
+
+RewriteRule	^my-segments.php$							segments_show.php	[L]
+RewriteRule	^segments-list-load.php$					segments_search_list_load.php	[L]
+RewriteRule	^segments-name-autocomplete.php$			segments_search_name_autocomplete.php	[L]
+
+#Export
+RewriteRule	^segments-list-export.php$					segments_list_export.php	[L]
+
+#Creation de segment
+RewriteRule	^segments-create.php$						segments_create.php	[L]
+RewriteRule	^segments-create-confirm.php$				segments_create_confirm.php	[L]
+
+#Load tables fileds on segment create
+RewriteRule	^segments-load-table-fields.php$			segments_load_table_fields.php	[L]
+
+
+RewriteRule	^family-st-search.php$						family_st_search.php	[L]
+RewriteRule	^family-nd-search.php$						family_nd_search.php	[L]
+RewriteRule	^family-rd-search.php$						family_rd_search.php	[L]
+
+
+RewriteRule	^segments-edit.php$							segments_edit.php	[L]
+RewriteRule	^segments-edit-confirm.php$					segments_edit_confirm.php	[L]
+
+RewriteRule	^segments-refresh.php$						segments_refresh.php	[L]
+RewriteRule	^segments-delete.php$						segments_delete.php	[L]
+
+
+RewriteRule	^segments-export.php$						segments_export.php	[L]
+RewriteRule	^segments-export-get-list-tables-name.php$	segments_export_get_list_tables_name.php	[L]
+RewriteRule	^segments-export-get-list-segments-name.php$	segments_export_get_list_segments_name.php	[L]
+
+RewriteRule	^segments-export-get-list-fields.php$		segments_export_get_list_fields.php	[L]
+
+RewriteRule	^segments-export-confirm.php$				segments_export_confirm.php	[L]
+
+
+########################################################
+##### 				Messages						####
+########################################################
+RewriteRule	^my-messages.php$							messages_show.php	[L]
+RewriteRule	^messages-list-load.php$					messages_list_load.php	[L]
+RewriteRule	^messages-list-export.php$					messages_list_export.php	[L]
+RewriteRule	^messages-name-autocomplete.php$			messages_search_name_autocomplete.php	[L]
+
+
+RewriteRule	^create-message.php$						messages_create.php	[L]
+RewriteRule	^create-message-confirm.php$				messages_create_confirm.php	[L]
+
+RewriteRule	^messages-get-segment-fields.php$			messages_get_segment_fields.php	[L]
+
+
+
+RewriteRule	^edit-message.php$							messages_edit.php	[L]
+RewriteRule	^edit-message-confirm.php$					messages_edit_confirm.php	[L]
+
+RewriteRule	^delete-message.php$						messages_delete.php	[L]
+
+RewriteRule	^messages-save.php$							messages_save.php	[L]
+
+
+RewriteRule	^messages-preview.php$						messages_preview.php	[L]
+RewriteRule	^messages-test.php$							messages_test.php	[L]
+
+
+
+
+########################################################
+##### 				Campaigns						####
+########################################################
+RewriteRule	^my-campaigns.php$							campaigns_show.php	[L]
+RewriteRule	^campaigns-list-load.php$					campaigns_list_load.php	[L]
+RewriteRule	^campaigns-list-export.php$					campaigns_list_export.php	[L]
+RewriteRule	^campaigns-name-autocomplete.php$			campaigns_search_name_autocomplete.php	[L]
+
+RewriteRule	^create-campaign.php$						campaigns_create.php	[L]
+
+RewriteRule	^edit-campaign.php$							campaigns_edit.php	[L]
+
+RewriteRule	^campaign-save.php$							campaigns_save.php	[L]
+
+RewriteRule	^delete-campaign.php$						campaigns_delete.php	[L]
+
+RewriteRule	^campaign-get-segment-count.php$			campaigns_get_segment_count.php	[L]
+
+########################################################
+##### 				Base Email						####
+########################################################
+RewriteRule	^base-email.php$							base_emails_show.php	[L]
+RewriteRule	^base-email-list-load.php$					base_emails_search_list_load.php	[L]
+RewriteRule	^base-email-name-autocomplete.php$			base_emails_search_name_autocomplete.php	[L]
+
+RewriteRule	^fiche-email-base-email.php$				base_emails_fiche.php	[L]
+RewriteRule	^fiche-basic-infos-email-base-email.php$	base_emails_fiche_basic_informations.php	[L]
+RewriteRule	^operation-list-base-email.php$				base_emails_fiche_detailled_informations.php	[L]
+
+RewriteRule	^base-email-enable-one.php$					base_emails_enable_one.php	[L]
+RewriteRule	^base-email-disable-one.php$				base_emails_disable_one.php	[L]
+RewriteRule	^base-email-motifs-list-load.php$			base_emails_motifs_list_load.php	[L]
+RewriteRule	^base-email-disable-group.php$				base_emails_disable_group.php	[L]
+
+RewriteRule	^base-emails-list-export.php$				base_emails_list_export.php	[L]
+RewriteRule	^base-emails-operations-list-export.php$	base_emails_operations_list_export.php	[L]
+
+########################################################
+##### 				Statistiques					###
+########################################################
+RewriteRule	^stats-globales.php$							stats-globales_show.php	[L]
+RewriteRule	^stats-campagnes.php$							stats_campagnes_show.php	[L]
+RewriteRule	^rapport_campagne.php$							rapport_campagne_show.php	[L]
+

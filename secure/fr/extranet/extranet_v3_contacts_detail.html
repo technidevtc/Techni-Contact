@@ -1,0 +1,353 @@
+<?php 
+	require_once('extranet_v3_functions.php'); 
+	require_once('extranet_v3_autolog.php');
+	require_once('check_session_extranet_v3.php');
+	
+	$contact_id		= mysql_escape_string($_GET['id']);
+		
+	$res_get_contact = $db->query("SELECT
+										c.id,
+										c.create_time,
+										c.nom,
+										c.prenom,
+										c.fonction,
+										c.societe,
+										c.salaries,
+										c.secteur,
+										c.naf,
+										c.siret,
+										c.adresse,
+										c.cadresse,
+										c.cp,
+										c.ville,
+										c.pays,
+										c.tel,
+										c.fax,
+										c.email,
+										c.url,
+										c.precisions,
+										c.type,
+										c.idAdvertiser,
+										c.customFields,
+										c.invoice_status,
+										c.income,
+										c.income_total,
+										c.parent,
+										c.timestamp,
+										c.reject_timestamp,
+										c.credited_on,
+										c.acte_achat,
+										c.archived,
+										c.acte_archive,
+										
+										pfr.id AS pdt_id,
+										pfr.name AS pdt_name,
+										pfr.fastdesc AS pdt_fastdesc,
+										pfr.ref_name AS pdt_ref_name,
+										
+										ffr.id AS cat_id,
+										ffr.name AS cat_name,
+										ffr.ref_name AS reference_name,
+										
+										a.nom1,
+										a.ic_reject,
+										a.is_fields,
+										a.category,
+										a.contacts adv_contacts,
+										
+										clt.id as clt_id
+										
+									FROM contacts c
+										INNER JOIN advertisers a ON c.idAdvertiser = a.id
+										LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+										LEFT JOIN families_fr ffr ON c.idFamily = ffr.id
+										LEFT JOIN clients clt ON clt.login = c.email
+										
+									WHERE
+										c.id = ".$contact_id."
+									", __FILE__, __LINE__);		
+
+									
+	$content_get_contact = $db->fetchAssoc($res_get_contact);
+	
+	if ($content_get_contact["category"] == __ADV_CAT_BLOCKED__ || $content_get_contact["category"] == __ADV_CAT_LITIGATION__){
+		//header("Location: ".EXTRANET_URL."extranet-v3-contacts-all.html");
+		//exit();
+	}
+	
+	$sql_contact_cread  = "SELECT cread FROM contacts WHERE id = $contact_id ";
+	$req_contact_cread  =  mysql_query($sql_contact_cread);
+	$data_contact_cread =  mysql_fetch_object($req_contact_cread);
+	
+	if($data_contact_cread->cread == '0'){
+	$data_now = date("Y-m-d H:i:s");
+	$date_now_final = strtotime($data_now);
+		$db->query("UPDATE contacts SET cread_timestamp = $date_now_final WHERE id = ".$contact_id,__FILE__,__LINE__);
+	}
+	$db->query("UPDATE contacts SET cread = 1 WHERE id = ".$contact_id,__FILE__,__LINE__); 
+	//Show after "Pays"
+	$customFields = unserialize($content_get_contact["customFields"]);
+    if (empty($customFields)){
+		$customFields = array();
+	}
+	  
+	  
+	$show_reject_options = $content_get_contact["ic_reject"] && ($content_get_contact["invoice_status"] & __LEAD_REJECTABLE__);
+    $show_personal_infos = $content_get_contact["invoice_status"] & __LEAD_VISIBLE__;
+	
+	//Flag to send mail after the Buy contact
+	$flag_send_mail_after_buy_contact = false;
+	
+	//Get the last second of the actual month (Year-m-d 23:59:59)
+	$time_limit_of_this_month_start	= strtotime(date('Y-m-01 00:00:00'));
+	$time_limit_of_this_month_end	= strtotime(date('Y-m-t 23:59:59'));
+	$time_actual_condition			= $content_get_contact["create_time"];
+	
+	
+	//Start Traitement Achat Contact
+		if(isset($_POST["charge"]) && $_POST["charge"] == "1" && $content_get_contact["income"] == 0 && !$show_personal_infos){
+		
+		  $content_get_contact["is_fields"] = empty($content_get_contact["is_fields"]) ? array() : unserialize($content_get_contact["is_fields"]);
+		  if (!empty($content_get_contact["is_fields"])) {
+			$is_cur = $content_get_contact["is_fields"][0];
+			switch ($is_cur["type"]) {
+			  case "lead":
+				//$content_get_contact["invoice_status"] = __LEAD_INVOICE_STATUS_CHARGED_PERMANENT__;
+				
+				//Change on 12/90/2014 invoice_status will be factured => 152
+				$content_get_contact["invoice_status"] = 152;
+				
+				$content_get_contact["income"] = (float) $is_cur["fields"]->lead_unit_cost;
+				break;
+			  case "budget":
+				//$content_get_contact["invoice_status"] = __LEAD_INVOICE_STATUS_CHARGED_PERMANENT__;
+				
+				//Change on 12/09/2014 invoice_status will be factured => 152
+				$content_get_contact["invoice_status"] = 152;
+				
+				$content_get_contact["income"] = (float) $is_cur["fields"]->budget_unit_cost;
+				break;
+			  case "forfeit": break; // never happen
+			  default: break;
+			}
+			
+			//Achat time 
+			$contact_acte_achat = time();
+			
+			if ($content_get_contact["income"] != 0) { // income has changed
+			  if ($content_get_contact["parent"] == 0) { // it's a primary lead
+				$content_get_contact["income_total"] += $content_get_contact["income"];
+				$db->query("
+				  UPDATE `contacts` SET
+					`invoice_status` = '".$content_get_contact["invoice_status"]."',
+					`income` = '".$content_get_contact["income"]."',
+					`income_total` = '".$content_get_contact["income_total"]."',
+					`acte_achat` = ".$contact_acte_achat."
+				  WHERE `id` = '".$content_get_contact["id"]."'",__FILE__,__LINE__);
+				  
+			  }else{ // it's a secondary lead, so we get the parent primary lead and change its total income
+			  
+				//In the case of a secondary lead i save the acte_achat only for the secondary
+				
+				$res = $db->query("SELECT `id`, `idProduct`, `income_total` FROM `contacts` WHERE `id` = '".$content_get_contact["parent"]."'",__FILE__,__LINE__);
+				$content_get_contact1 = $db->fetchAssoc($res);
+				$content_get_contact1["income_total"] += $content_get_contact["income"];
+				$db->query("UPDATE `contacts` SET `income_total` = '".$content_get_contact1["income_total"]."' WHERE `id` = '".$content_get_contact["parent"]."'",__FILE__,__LINE__);
+				$db->query("
+				  UPDATE `contacts` SET
+					`invoice_status` = '".$content_get_contact["invoice_status"]."',
+					`income` = '".$content_get_contact["income"]."',
+					`acte_achat` = ".$contact_acte_achat."
+				  WHERE `id` = '".$content_get_contact["id"]."'",__FILE__,__LINE__);
+				  
+			  }
+			  $show_personal_infos = true;
+			  $flag_send_mail_after_buy_contact = true;
+			  
+			  
+				//********************** After the update
+				//We have to initialize the query results because we just updated the row in the DataBase
+				$res_get_contact = $db->query("SELECT
+										c.id,
+										c.create_time,
+										c.nom,
+										c.prenom,
+										c.fonction,
+										c.societe,
+										c.salaries,
+										c.secteur,
+										c.naf,
+										c.siret,
+										c.adresse,
+										c.cadresse,
+										c.cp,
+										c.ville,
+										c.pays,
+										c.tel,
+										c.fax,
+										c.email,
+										c.url,
+										c.precisions,
+										c.type,
+										c.idAdvertiser,
+										c.customFields,
+										c.invoice_status,
+										c.income,
+										c.income_total,
+										c.parent,
+										c.timestamp,
+										c.reject_timestamp,
+										c.credited_on,
+										c.acte_achat,
+										c.archived,
+										c.acte_archive,
+										
+										pfr.id AS pdt_id,
+										pfr.name AS pdt_name,
+										pfr.fastdesc AS pdt_fastdesc,
+										pfr.ref_name AS pdt_ref_name,
+										
+										ffr.id AS cat_id,
+										ffr.name AS cat_name,
+										ffr.ref_name AS reference_name,
+										
+										a.nom1,
+										a.ic_reject,
+										a.is_fields,
+										a.category,
+										a.contacts adv_contacts,
+										
+										clt.id as clt_id
+										
+									FROM contacts c
+										INNER JOIN advertisers a ON c.idAdvertiser = a.id
+										LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+										LEFT JOIN families_fr ffr ON c.idFamily = ffr.id
+										LEFT JOIN clients clt ON clt.login = c.email
+										
+									WHERE
+										c.id = ".$contact_id."
+									", __FILE__, __LINE__);		
+
+									
+				$content_get_contact = $db->fetchAssoc($res_get_contact);
+			  
+				//Initializing the variables after the Buy
+				$show_reject_options = $content_get_contact["ic_reject"] && ($content_get_contact["invoice_status"] & __LEAD_REJECTABLE__);
+				$show_personal_infos = $content_get_contact["invoice_status"] & __LEAD_VISIBLE__;
+			  
+			  
+			  
+			}//end if ($content_get_contact["income"] != 0) {
+		  }//end if (!empty($content_get_contact["is_fields"]))
+		  
+		//}elseif (isset($_POST["reject-option"]) && isset($_POST["reject-reason"]) && $show_reject_options) {
+		
+		}elseif (isset($_POST["reject-option"]) && $show_reject_options){
+		  switch ($_POST["reject-option"]) {
+		  
+			/*
+			case 0: $reject_reason = "Coordonnées inexploitables";
+			  break;
+			case 1: $reject_reason = "Le produit demandé ne correspond pas à ma gamme de produits";
+			  break;
+			*/  
+			
+			case 0:
+				$reject_reason = "Nous n\'arrivons pas à joindre le contact";
+			break;
+			case 1:
+				$reject_reason = "Nous ne faisons pas le produit ou le service demandé";
+			break;
+			case 2:
+				$reject_reason = "Nous n\'intervenons pas dans cette zone géographique";
+			break;
+			case 3:
+				$reject_reason = "Nous ne travaillons qu'avec les professionnels";
+			break;
+			case 4:
+				$reject_reason = "Les quantités minimales demandées sur la fiche ne sont pas atteintes";
+			break;
+			case 5:
+				$reject_reason = "J\'ai déjà fait une offre pour ce projet";
+			break;
+			case 6:
+				$reject_reason = "Autre : ".mysql_escape_string($_POST["reject-reason"]);
+			break;
+			
+			
+			
+			default: $reject_reason = "";
+		  }
+		  
+		  //Desactivation reject reason input
+		  //if (strlen($_POST["reject-reason"]) >= 10 && !empty($reject_reason)) {
+			//$reject_reason .= empty($_POST["reject-reason"]) ? "" : " | ".$_POST["reject-reason"];
+			
+			if (!empty($reject_reason)){
+				if ($content_get_contact['invoice_status'] & __LEAD_CHARGEABLE__)
+				  $updatedInvoiceStatus = __LEAD_INVOICE_STATUS_CHARGEABLE_REJECTED_WAIT__;
+				else
+				  $updatedInvoiceStatus = __LEAD_INVOICE_STATUS_REJECTED_WAIT__;
+
+				$db->query("UPDATE contacts SET invoice_status = ".$updatedInvoiceStatus.", reject_reason = '".$db->escape($reject_reason)."' WHERE id = ".$content_get_contact["id"],__FILE__,__LINE__);
+				$content_get_contact["invoice_status"] = $updatedInvoiceStatus;
+				
+				
+				//Creation of a variable to test after <body> to show the Reject Options
+				$temp_show_reject_options	= 'yes';
+			
+			}else{
+				$error_reject = true;
+			}
+		}//end else if
+	
+	//End Traitement Achat Contact
+	
+	//Conditions to see if we will show the contact informations
+	if(!in_array($content_get_contact['invoice_status'], $array_contacts_invoice_status)){
+		$show_personal_infos = true;
+	}else{
+		$show_personal_infos = false;
+	}
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title><?php echo REQUEST_DETAIL_TITLE; ?></title>
+  <meta name="description" content="Tous les contacts - Techni-contact.com Extranet">
+  
+  <?php require_once('extranet_v3_header_tags.html'); ?>
+  
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js"></script>
+  <script type="text/javascript" src="<?php echo EXTRANET_URL.'ressourcesv3/js/contacts.js'; ?>"></script>
+  
+  
+</head>
+<body ng-app="ZTechnicoApp">
+	<div id="container_global">
+		<div id="global_header">
+			<?php require_once('extranet_v3_header_top.html'); ?>
+		</div>
+		<div id="container_middle_global">
+			<div id="content_left">
+				<?php require_once('extranet_v3_left_menu.html'); ?>
+			</div>
+			<div id="content_middle_global">
+				<div id="content_middle">
+					<?php require_once('extranet_v3_contacts_detail_center.html'); ?>
+				</div>
+				<div id="content_footer">
+					<?php require_once('extranet_v3_footer.html'); ?>
+				</div>
+			</div>
+		</div>
+		
+		<?php
+			require_once('extranet_v3_footer_advertiser_restrictionmsg.php');
+		?>
+		
+	</div>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS.'CUserSession.php');
+require(ICLASS.'CCustomerUser.php');
+require(ICLASS.'CCart.php');
+
+$db = $handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$user = new CustomerUser($handle, $session->userID);
+
+$gotoaccount = false;
+$cartID = isset($_POST['cartID']) ? $_POST['cartID'] : (isset($_GET['cartID']) ? $_GET['cartID'] : 0);
+if (!preg_match('/^[0-9a-v]{26,32}$/', $cartID)) {
+	$gotoaccount = true;
+}
+else {
+	if (!$session->logged){
+		$session->pageAfterLogin = COMPTE_URL.'estimate.html?cartID='.$cartID;
+		header('Location: '.COMPTE_URL.'login.html');
+		exit();
+	}
+	$cart = new Cart($handle, $cartID);
+	if (!$cart->existsInDB || $cart->idClient != $session->userID || $cart->itemCount == 0)
+		$gotoaccount = true;
+}
+
+if ($gotoaccount) {
+	header('Location: '.COMPTE_URL.'index.html');
+	exit();
+}
+
+// mise à jour des quantités
+if($_SERVER['REQUEST_METHOD'] == 'POST') {
+	if (isset($_POST['todo'])) {
+		list($action, $value) = explode('_', $_POST['todo']);
+		
+		switch ($action) {
+			case 'delpdt' :
+				if (!empty($value)) {
+					list($refID) = explode('-', $value);
+					if (preg_match('/^[1-9]{1}[0-9]{0,8}$/', $refID)) {
+						$cart->delProduct($refID);
+					}
+				}
+				break;
+				
+			case 'updqte' :
+				if (isset($_POST['updatestring'])) {
+					$data_ref_lines = explode('<_>', $_POST['updatestring']);
+					foreach ($data_ref_lines as $data_ref_line) {
+						list($refID, $quantity) = explode('-', $data_ref_line);
+						if (preg_match('/^[1-9]{1}[0-9]{0,8}$/', $refID) && preg_match('/^[0-9]+$/', $quantity)) {
+							$cart->updateProductQuantity($refID, $quantity);
+						}
+					}
+				}
+				break;
+			
+			case 'delete' :
+				Cart::delete($handle, $cartID);
+				header('Location: '.COMPTE_URL.'estimate-list.html');
+				exit();
+				break;
+				
+			default : break;
+		}
+	}
+	if (isset($_POST['promotion_code'])) {
+		if ($_POST['promotion_code'] != '') {
+			require_once ICLASS . 'CPromotion.php';
+			if (Promotion::promotionCodeIsValid(time(), $_POST['promotion_code']))
+				$cart->promotionCode = $_POST['promotion_code'];
+			else {
+				$cart->promotionCode = '';
+				$badPromotion = true;
+			}
+		}
+	}
+}
+$cart->calculateCart();
+
+$fdp = 20;
+$fdp_franco = 300;
+$res = $db->query('select config_name, config_value from config where config_name = \'fdp\' or config_name = \'fdp_franco\'', __FILE__, __LINE__ );
+while ($rec = $db->fetch($res))
+  $$rec[0] = $rec[1];
+
+$current_account_menuitem = "Mes devis générés";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+									<script type="text/javascript">
+										HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE['email']) ? $_COOKIE['email'] : "") ?>";
+									</script>
+									<div class="title">Mon devis n°<?php echo $cart->estimate ?></div>
+									<div class="desc">
+										Retrouvez ici le détail de votre devis.<br/> Vous pouvez si vous le souhaitez modifier les quantités désirées ou supprimer des produits.<br/>
+										<br/>
+										Une fois validé, <strong>renvoyez-nous votre devis par fax au 01 83 62 36 12</strong> avec la mention &laquo; bon pour accord &raquo;, signature et votre tampon.
+									</div>
+									<br/>
+									<div class="big">Date et heure: <?php echo date('d/m/Y à H:i.s', $cart->create_time) ?></div>
+									<a href="<?php echo COMPTE_URL."contact-form.html?type=2&id=".$cart->estimate ?>">Nous contacter concernant ce devis</a><br/>
+									<a href="" class="estimate-send">Envoyer à un collègue</a><br/>
+									<a href="<?php echo COMPTE_URL.'estimate-list.html' ?>" class="back-link">
+										<div class="in">Retour à la liste des devis</div>
+										<div class="bl"></div>
+										<div class="br"></div>
+									</a>
+									<form name="panier" action="<?php echo COMPTE_URL ?>estimate.html" method="post">
+										<input type="hidden" name="cartID" value="<?php echo $cart->id ?>" />
+										<input type="hidden" name="todo" value="" />
+										<div class="cart">
+											
+											<div class="discount-code">
+												Vous disposez d'un code promotionnel ?<br/>
+												<input type="text" class="text" name="promotion_code" value="" maxlength="255"/>
+												<input type="image" class="image" src="<?php echo $res_url ?>images/empty.gif" alt="Recalculer le panier"/>
+											</div>
+											<div class="zero"></div>
+											
+											<div class="cart-table">
+												<table cellspacing="0" cellpadding="0">
+													<thead>
+													<tr>
+														<th>Image</th>
+														<th>Réf.</th>
+														<th>Libellé</th>
+														<th>Montant ht unitaire</th>
+														<th>Quantité</th>
+														<th>Montant total ht</th>
+														<th></th>
+													</tr>
+													</thead>
+													<tbody>
+												<?php foreach($cart->items as $item) { ?>
+														<tr>
+															<td rowspan="2"><img src="<?php echo $item['secure_pic_url'] ?>" alt=""/></td>
+															<td><input type="hidden" name="pdt" value="<?php echo $item['idTC'] ?>"/><?php echo htmlentities($item['idTC']) ?></td>
+															<td class="al"><a href="<?php echo $item['url'] ?>"><?php echo $item['cart_desc'] ?></a></td>
+															<td><?php echo sprintf('%.02f', $item['price']) ?> €</td>
+															<td class="quantity"><div><input type="text" name="qty" value="<?php echo $item['quantity'] ?>"/><div class="add"></div><div class="sub"></div></div><a href="">recalculer</a></td>
+															<td><?php echo sprintf('%.02f', $item['sum_base']) ?> €</td>
+															<td><div class="delete"></div></td>
+														</tr>
+														<tr>
+															<td class="al" colspan="2">Commentaires (facultatif) : <input type="text" class="comment" value="<?php echo htmlentities($item['comment']) ?>"/></td>
+															<td class="al" colspan="4">Délai de livraison : <?php echo $item['delai_livraison'] ?></td>
+														</tr>
+													<?php	if (!empty($item['promotion'])) { ?>
+														<tr>
+															<td></td>
+															<td colspan="4">Promotion  de <b><?php echo sprintf('%.02f', $item['promotionpc']) . "%</b> pour <b>" . $item['quantity'] . "</b> x " . $item['name'] ?></td>
+															<td><?php echo sprintf('%.02f', -$item['sum_promotion']) ?> €</td>
+															<td></td>
+														</tr>
+													<?php	} ?>
+													<?php if (!empty($item['discount'])) { ?>
+														<tr>
+															<td></td>
+															<td colspan="4">Remise de <b><?php echo sprintf('%.02f', $item['discountpc']) . "%</b> pour <b>" . $item['quantity'] . "</b> x " . $item['name'] ?></td>
+															<td><?php echo sprintf('%.02f', -$item['sum_discount']) ?> €</td>
+															<td></td>
+														</tr>
+													<?php	} ?>
+												<?php } ?>
+													</tbody>
+												</table>
+											</div>
+											<div class="cart-left">
+												<table class="cart-totals" cellspacing="0" cellpadding="0">
+													<tbody>
+														<tr class="stotal-ht">
+															<td class="label">Sous-total HT:</td>
+															<td class="amount">
+																<strike class="grey hidden">xxx € </strike><?php echo sprintf('%.02f', $cart->stotalHT) ?> €<br/>
+																<em class="hidden">code promotionnel: 5% offerts</em></td>
+														</tr>
+														<tr class="fdp">
+															<td class="label">
+																Frais de port HT:
+															</td>
+															<td class="amount"><?php echo sprintf('%.02f', $cart->fdpHT) ?> €</td>
+														</tr>
+														<tr class="total-ht">
+															<td class="label">Total HT:</td>
+															<td class="amount"><?php echo sprintf('%.02f', $cart->totalHT) ?> €</td>
+														</tr>
+														<tr class="tva">
+															<td class="label">TVA (20%):</td>
+															<td class="amount"><?php echo sprintf('%.02f', $cart->totalTVA) ?> €</td>
+														</tr>
+														<tr class="total-ttc">
+															<td class="label">Total TTC:</td>
+															<td class="amount"><?php echo sprintf('%.02f', $cart->totalTTC) ?> €</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+											<div class="cart-right">
+												<div class="dl-esti inline-block"></div>
+												<div class="esti-to-order inline-block"></div>
+											</div>
+											<div class="zero"></div>
+										</div>
+									</form>
+		
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

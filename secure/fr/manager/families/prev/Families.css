@@ -1,0 +1,133 @@
+/** GENERAL **/
+div { margin: 0; padding: 0; }
+input { font: 12px Arial, Helvetica, sans-serif; background: #FFFFFF; color: #333333; border: 1px solid #CCCCCC; padding: 0; margin: 0; height: 17px;}
+form { margin: 0; padding: 0; }
+select { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333333; border: 1px solid #CCCCCC; }
+.zero { clear: both; }
+.intitule, .intituleRed { width: 130px; font-weight: bold; padding: 2px; float: left;}
+.valeur { padding: 2px; margin: 0; }
+.PerfReqLabel { font-weight: bold; visibility: hidden; float: right; zoom: 1; }
+.InfosError { font-weight: bold; color: #D00000; zoom: 1; }
+.window_title_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; height: 23px; background: url(../images/dot-bg.jpg); }
+.window_title_bar .wtb_close_img { float: right; padding: 4px; margin: 0; }
+.window_title_bar .wtb_move_img { float: left; margin: 2px; }
+.window_title_bar .wtb_text { padding: 3px; cursor: default; }
+.window_subtitle_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; display: block; padding: 4px 0px; background: url(../images/dot-bg.jpg); }
+.window_bg { border: 1px solid #999999; padding: 10px; margin: 10px; }
+.window_bg_small { border: 1px solid #999999; padding: 5px; margin: 5px; }
+.button { font-size: 11px; height: 19px; }
+.checkbox { background: none; border: 0; width: 13px; margin-left: 10px; }
+.DBshad { z-index: 1; position: absolute; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+.DB { z-index: 2; position: absolute; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+.fl { float: left }
+.fr { float: right }
+
+#FamiliesSearchDBShad { top: 35px; left: 55px; width: 304px; height: 86px; }
+#FamiliesSearchDB { top: 30px; left: 50px; width: 300px; height: 82px; }
+#FamiliesResultsDBShad { top: 35px; left: 365px; width: 426px; }
+#FamiliesResultsDB { top: 30px; left: 360px; width: 422px; }
+#FamiliesResults { overflow: auto; width: 400px; }
+#FamiliesResults strong { color: #D00000; }
+#FamiliesResults table td { vertical-align: top; }
+
+/* MENU DES FAMILLES */
+#Families  #menu { width: 780px; text-align: center; padding: 5px; overflow: hidden; }
+#Families  #menu a {
+  display: block;
+  float: left;
+  padding: 5px;
+  font-weight: normal;
+  border:1px solid #CCCCCC;
+  color:#616161;
+  margin: 0;
+}
+#Families  #menu a:hover { background: #FFFFCF;  }
+#Families  #menu a.current { background: #FFFFCF;  }
+#Families  #menu a.current:hover { text-decoration: underline; }
+
+#Families #colg { float: left; width: 190px; text-align: left; padding-bottom: 2px; background-color: #FFFFFF; }
+#Families #colg .titre { text-align: center; display: block; background: #637382; font: bold 12px Arial, Helvetica, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: white; padding: 5px 13px; }
+#Families #colg .sf { padding-top: 3px; }
+#Families #colg .sf a { display: block; color: #3d4b58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; font-weight: bold; padding: 3px 0 5px 20px; background: url(../ressources/flecheUn.gif) no-repeat left bottom; }
+#Families #colg .sf a.currentFolded { background-color: #FFDD82; }
+#Families #colg .sf a.currentUnfolded { background: #FFDD82 url(../ressources/flecheDeux.gif) no-repeat left bottom; }
+#Families #colg .sf a.notCurrentUnfolded { background: url(../ressources/flecheDeux.gif) no-repeat left bottom; }
+
+#Families #colg .sf a:hover { text-decoration: underline; }
+#Families #colg .ssf { background: url(../ressources/flecheTrois.gif) no-repeat left bottom; padding-bottom: 3px; display: none; }
+#Families #colg .ssf a { display: block; color: #3D4B58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; padding: 0 0 0 10px; margin: 2px 0 1px 8px; border-left: solid 2px #889c48; background: #f6f6f6; }
+#Families #colg .ssf a.current { background-color: #C6D6D8; padding: 0 0 0 10px; }
+#Families #colg .ssf a:hover { background-color: #C6D6D8; text-decoration: none; }
+#Families #colg .ssf a.current:hover { background-color: #889C48; color: #FFFFFF; }
+
+#Families #colc { float: left; text-align: left; width: 584px; padding: 0 5px; }
+#Families #colc h1 { font: bold 12px Arial, Helvetica, sans-serif; letter-spacing: 1px; color: #272727; text-decoration: none; padding: 8px 2px; border-bottom: solid 3px #c6d6d8; margin: 0; }
+#Families #colc #fam { width: 564px; padding: 10px; background-color: #F1F7FF; }
+#Families #colc .line { height: 20px; }
+#Families #colc .entitle { float: left; font-weight: bold; padding: 2px 0px 2px 0px; height: 15px; width: 170px; }
+#Families #colc .capture { float: left; width: 290px; }
+#Families #colc textarea.capture { margin: 0; padding: 1px; height: 120px; font: normal 12px courier new, arial, helvetica, sans-serif }
+#Families #colc .captureS { float: left; padding: 2px }
+#Families #colc .button { float: right; width: auto; overflow: visible; height: 19px; padding: 0px 20px; }
+#Families #colc .delete { text-align: center; }
+
+#Families #colc #main { width: 540px; font: 12px Arial, Helvetica, sans-serif; border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; background: #f6f6f6; padding: 10px; }
+#Families #colc #main h2 { margin: 0; padding: 0 0 5px 0; font-size: 12px; color: #889c48; }
+#Families #colc #main a { color: #3D4B58; font: bold 11px Arial, Helvetica, sans-serif; text-decoration: none; }
+#Families #colc #main a:hover { text-decoration: underline; }
+
+
+#Families #colc #liste { font: 11px Arial, Helvetica, sans-serif; color: #637382; }
+#Families #colc #liste .liUn, #Families #colc #liste .liDeux { padding: 4px; height: 84px; border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; }
+#Families #colc #liste .liUn { background: #F6F6F6; }
+#Families #colc #liste .liDeux { background: #FFFFFF; }
+#Families #colc #liste .elt, #Families #colc #liste .eltDeux { width: 275px; margin: 2px; padding-left: 5px; float: left; height: 80px; }
+#Families #colc #liste .elt { background: url(../ressources/pointVerti.gif) repeat-y top right; padding-right: 3px; }
+#Families #colc #liste img { float: right; padding: 5px 5px 0 0 ; }
+#Families #colc #liste img.panier_s { float: none; }
+#Families #colc #liste a { color: #3d4b58; text-decoration: none; display: block; font-weight: bold; padding: 5px; font-size: 12px; margin-left: -5px; margin-right: 5px; background: url(../ressources/flecheQuatre.gif) no-repeat; }
+#Families #colc #liste a:hover { background-color: #c6d6d8; }
+#Families #colc #famille { font: 12px Arial, Helvetica, sans-serif; }
+#Families #colc #famille strong { font-size: 14px; padding: 5px; display: block; }
+#Families #colc #famille .elt, #Families #colc #famille .eltDeux { padding: 4px; border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; }
+#Families #colc #famille .elt { background: #f6f6f6; }
+#Families #colc #famille .elt_float { width: 272px; float: left; display: none; }
+#Families #colc #famille .elt_normt { width: auto; float: none; }
+#Families #colc #famille a { color: #3d4b58; text-decoration: none; display: block; font-weight: bold; padding: 2px 5px 2px 15px; font-size: 12px; background: url(../ressources/flecheQuatre.gif) no-repeat 5px -2px; }
+#Families #colc #famille .elt a:hover { background-color: white; }
+#Families #colc #famille .eltDeux a:hover { background-color: #f6f6f6; }
+
+a.btn-red { display: block; padding: 5px; font: bold 12px arial, sans-serif; color: #ffffff; text-align: center; background: #b00000 repeat-x }
+a.btn-red:hover { text-decoration: underline }
+#btn-update-FO { width: 190px }
+
+.cat3-attributes-block { margin: 10px 0; padding: 0 0 5px; border-top: 3px solid #c6d6d8; background: #f1f7ff }
+.cat3-attributes-block .title { margin: 2px 0; font: bold 12px arial,helvetica,sans-serif; color: #272727; letter-spacing: 1px }
+.cat3-attributes-block .btn { float: right; margin-left: 10px }
+.item-list-table { width: 100%; font: normal 10px verdana, helvetica, sans-serif; border: 1px solid #000000; border-collapse: collapse; background-color: #ffffff }
+.item-list-table th { height: 17px; padding: 1px; text-align: center; background: #f0f0f0; vertical-align: middle }
+.item-list-table td { height: 17px; padding: 1px; text-align: center; border: 1px solid #000000; border-width: 1px 0; vertical-align: middle }
+.item-list-table .tree { width: 20px }
+.item-list-table .attr .name-value { text-align: left }
+.item-list-table .attr-value .name-value { text-align: left; text-indent: 20px }
+.item-list-table .usedCount { width: 110px }
+.item-list-table .actions { width: 120px; text-align: center }
+.item-list-table .actions .icon { display: inline-block; width: 16px; height: 16px; margin: 0 4px; background-repeat: no-repeat; cursor: pointer }
+.item-list-table .actions .icon-up { background: url(arrow_up.png) }
+.item-list-table .actions .icon-down { background: url(arrow_down.png) }
+.item-list-table .actions .shape-group { background: url(shape_group.png) }
+.item-list-table .actions .icon-add { background: url(table_add.png) }
+.item-list-table .actions .icon-del { background: url(table_delete.png) }
+.item-list-table .actions .icon-activate { background: url(b_drop.png) }
+.item-list-table .actions .icon-deactivate { background: url(check-green-16.png) }
+.item-list-table .actions .icon-edit { background: url(b_edit.png) }
+.products-add { background: url(table_add.png); display: inline-block; width: 16px; height: 16px; margin: 0 auto; background-repeat: no-repeat; cursor: pointer }
+.item-list-table tr.scat1 { background: #ffffff }
+.item-list-table tr.selem1 { display: none; background: #f8f8f8 }
+.item-list-table tr.selem1.odd { background: #f8f8f8 }
+.item-list-table tr:hover { background: #cccccc!important }
+.item-list-table div.add { float: left; width: 15px; height: 15px; margin: 0 3px 0 0; background: url(../images/add-sub-more.gif) no-repeat 0 0 }
+.item-list-table div.sub { float: left; width: 15px; height: 15px; margin: 0 3px 0 0; background: url(../images/add-sub-more.gif) no-repeat -15px 0 }
+.item-list-table div.more { float: left; width: 15px; height: 15px; margin: 0 3px 0 0; background: url(../images/add-sub-more.gif) no-repeat -30px 0 }
+
+#cat3-attributes-selection, #cat3-attributes, #create-virtual-cat3-attributes { display: none }

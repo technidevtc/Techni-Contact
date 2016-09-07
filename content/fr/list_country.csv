@@ -1,0 +1,250 @@
+Pays;Code NIC
+Inconnu;XX
+Afghanistan;AF
+Afrique du Sud;ZA
+Albanie;AL
+Algérie;DZ
+Allemagne;DE
+American Samoa;AS
+Andorre;AD
+Angola;AO
+Anguilla;AI
+Antarctique;AQ
+Antigua et Barbuda;AG
+Antilles Neerlandaises;AN
+Arabie Saoudite;SA
+Argentine;AR
+Arménie;AM
+Aruba;AW
+Ascension (île);AC
+Australie;AU
+Autriche;AT
+Azerbaidjan;AZ
+Bahamas;BS
+Bahrein;BH
+Bangladesh;BD
+Barbade;BB
+Belgique;BE
+Bélize;BZ
+Bénin;BJ
+Bermudes;BM
+Bhoutan;BT
+Biélorussie;BY
+Bolivie;BO
+Bosnie Herzégovine;BA
+Botswana;BW
+Bouvet (île);BV
+Brésil;BR
+Brunei;BN
+Bulgarie;BG
+Burkina Faso;BF
+Burundi;BI
+Caïmanes (îles);KY
+Cambodge;KH
+Cameroun;CM
+Canada;CA
+Cap Vert;CV
+Chili;CL
+Chine;CN
+Christmas (île);CX
+Chypre;CY
+Cocos (Keeling) îles;CC
+Colombie;CO
+Comores;KM
+Congo;CG
+Cook (îles);CK
+Corée du nord;KP
+Corée du sud;KR
+Costa Rica;CR
+Côte d'Ivoire;CI
+Croatie;HR
+Cuba;CU
+Danemark;DK
+Djibouti;DJ
+Dominique;DM
+Egypte;EG
+Emirats Arabes Unis;AE
+Equateur;EC
+Erythrée;ER
+Espagne;ES
+Estonie;EE
+&#201tats-Unis;US
+Ethiopie;ET
+Ex U.R.S.S.;SU
+Falkland (Malouines) îles;FK
+Faroe (îles);FO
+Fidji;FJ
+Finlande;FI
+France;FR
+Gabon;GA
+Gambie;GM
+Géorgie;GE
+Géorgie du sud;GS
+Ghana;GH
+Gibraltar;GI
+Grande Bretagne;GB
+Grêce;GR
+Grenade;GD
+Groenland;GL
+Guadeloupe;GP
+Guam;GU
+Guatemala;GT
+Guernsey;GG
+Guinée;GN
+Guinée Equatoriale;GQ
+Guinée-Bissau;GW
+Guyana;GY
+Guyane Française;GF
+Haiti;HT
+Heard et McDonald (îles);HM
+Honduras;HN
+Hong Kong;HK
+Hongrie;HU
+Ile de Man;IM
+Inde;IN
+Indonésie;ID
+Iran;IR
+Iraq;IQ
+Irlande;IE
+Islande;IS
+Israël;IL
+Italie;IT
+Jamaïque;JM
+Japon;JP
+Jersey;JE
+Jordanie;JO
+Kazakhstan;KZ
+Kenya;KE
+Kirghizistan;KG
+Kiribati;KI
+Koweït;KW
+Laos;LA
+Lesotho;LS
+Lettonie;LV
+Liban;LB
+Liberia;LR
+Libye;LY
+Liechtenstein;LI
+Lituanie;LT
+Luxembourg;LU
+Macao;MO
+Macédoine;MK
+Madagascar;MG
+Malaisie;MY
+Malawi;MW
+Maldives;MV
+Mali;ML
+Malte;MT
+Mariannes du nord (îles);MP
+Maroc;MA
+Marshall (îles);MH
+Martinique;MQ
+Maurice (île);MU
+Mauritanie;MR
+Mayotte;YT
+Mexique;MX
+Micronésie;FM
+Moldavie;MD
+Monaco;MC
+Mongolie;MN
+Montserrat;MS
+Mozambique;MZ
+Myanmar;MM
+Namibie;NA
+Nauru;NR
+Népal;NP
+Nicaragua;NI
+Niger;NE
+Nigéria;NG
+Niue;NU
+Norfolk (île);NF
+Norvège;NO
+Nouvelle Calédonie;NC
+Nouvelle Zélande;NZ
+Oman;OM
+Ouganda;UG
+Ouzbékistan;UZ
+Pakistan;PK
+Palau;PW
+Palestine;PS
+Panama;PA
+Papouasie Nvelle Guinée;PG
+Paraguay;PY
+Pays Bas;NL
+Pérou;PE
+Philippines;PH
+Pitcairn (île);PN
+Pologne;PL
+Polynésie Française;PF
+Porto Rico;PR
+Portugal;PT
+Qatar;QA
+Rép Centrafricaine;CF
+Rép Dominicaine;DO
+Rép. dém. du Congo;CD
+Rép. Dém. du Congo (ex Zaïre);ZR
+Réunion (île de la);RE
+Roumanie;RO
+Royaume Uni;UK
+Russie;RU
+Russie;RS
+Rwanda;RW
+Sahara Occidental;EH
+Saint Kitts et Nevis;KN
+Sainte Lucie;LC
+Saint-Marin;SM
+Salomon (îles);SB
+Salvador;SV
+Sao Tome et Principe;ST
+Sénégal;SN
+Serbie Montenegro;CS
+Seychelles;SC
+Sierra Leone;SL
+Singapour;SG
+Slovaquie;SK
+Slovénie;SI
+Somalie;SO
+Soudan;SD
+Sri Lanka;LK
+St Vincent et les Grenadines;VC
+St. Hélène;SH
+St. Pierre et Miquelon;PM
+Suède;SE
+Suisse;CH
+Suriname;SR
+Svalbard/Jan Mayen (îles);SJ
+Swaziland;SZ
+Syrie;SY
+Tadjikistan;TJ
+Taiwan;TW
+Tanzanie;TZ
+Tchad;TD
+Tchéquie;CZ
+Ter. Brit. Océan Indien;IO
+Territoires Fr du sud;TF
+Thailande;TH
+Timor Oriental;TP
+Togo;TG
+Tokelau;TK
+Tonga;TO
+Trinité et Tobago;TT
+Tunisie;TN
+Turkménistan;TM
+Turks et Caïques (îles);TC
+Turquie;TR
+Tuvalu;TV
+Ukraine;UA
+Uruguay;UY
+US Minor Outlying (îles);UM
+Vanuatu;VU
+Vatican;VA
+Venezuela;VE
+Vierges Brit. (îles);VG
+Vierges USA (îles);VI
+Viêt Nam;VN
+Wallis et Futuna (îles);WF
+Western Samoa;WS
+Yemen;YE
+Yugoslavie;YU
+Zambie;ZM
+Zimbabwe;ZW

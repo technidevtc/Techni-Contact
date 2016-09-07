@@ -1,0 +1,53 @@
+<?php
+require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos(dirname(__FILE__), "technico")+1) + 1) . "config.php";
+
+$res_url = SECURE_URL."ressources/";
+$commercial_infos_phone = '01.55.60.29.29';
+
+?>
+<html>
+<head>
+  <title>Techni-Contact : facilite tous vos achats professionnels</title>
+  <link rel="stylesheet" type="text/css" href="<?php echo $res_url; ?>css/styles.css?v=4" />
+</head>
+<body class="bc-bg">
+<div id="outer-frame">
+  <div id="outer-frame-left-grad" class="outer-frame-big-grad"></div>
+  <div id="outer-frame-right-grad" class="outer-frame-big-grad"></div>
+  <div id="wrapper">
+    <div id="header">
+      <div id="header-mid">
+        <div class="header-logo">
+          <img src="<?php echo $res_url; ?>images/header-TC-logo.png" alt="Techni-Contact facilite tous vos achats professionnels : fourniture de matériels et d'équipements professionnels"/>
+        </div>
+        <div class="header-mid-div">
+          <img src="<?php echo $res_url; ?>images/en-1-clic.png" alt="Recherche en 1 clic"/>
+        </div>
+        <div class="header-mid-div">
+          <img src="<?php echo $res_url; ?>images/conseil-d-expert.png" alt="Conseils d'experts"/>
+        </div>
+        <div class="header-mid-div">
+          <img src="<?php echo $res_url; ?>images/devis-personnalises.png" alt="Devis personnalisés"/>
+        </div>
+        <div class="header-mid-div header-mid-div-last">
+          <img src="<?php echo $res_url; ?>images/commandes-securisees.png" alt="Commandes sécurisées"/>
+        </div>
+        <div id="header-mid-coords">
+          <img src="<?php echo $res_url; ?>images/header-blue-cellphone-logo.png" alt="01.55.60.29.29"/>
+          <span class="big-blue-title header-mid-coords-tel"><?php echo $commercial_infos_phone ?></span><br />
+          <span class="header-mid-coords-hours"><span class="atseo opening-hours"></span></span>
+        </div>
+        <div class="zero"></div>
+      </div>
+    </div>
+    <div class="bc-container">
+      <h3>Transaction 100% sécurisée par notre partenaire bancaire.</h3>
+      <br />
+      <div class="grey-block bc-block">
+        %PLACEHOLDER%
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

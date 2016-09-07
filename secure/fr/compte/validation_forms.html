@@ -1,0 +1,283 @@
+﻿<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$user = new CustomerUser($handle, $session->userID);
+
+require("../../../includes/fr/classV3/phpmailer_2014/PHPMailerAutoload.php");
+require("../../../includes/fr/classV3/phpmailer_2014/Email_functions_external_mail_send.php");
+
+$current_account_menuitem = "Mes coordonnées";
+define("SECURE", true);
+require(SITE . 'head.php');
+require(SITE . 'account-head.php');
+
+	function random($universal_key) {
+		$string1 = "";
+		$user_ramdom_key = "1234567890";
+		srand((double)microtime()*time());
+		for($i=0; $i<$universal_key; $i++) {
+		$string1 .= $user_ramdom_key[rand()%strlen($user_ramdom_key)];
+		}
+		return $string1;
+	}
+	
+	function string_to_url($string) {
+     $search = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
+     $replace = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
+     return urlencode(str_replace($search, $replace, strtolower($string)));
+	}
+	
+
+	
+	$activite 		= mysql_real_escape_string($_POST['activite']);
+	$site_web 		= mysql_real_escape_string($_POST['site_web']);
+	$txt_equipement = mysql_real_escape_string($_POST['txt_equipement']);
+	$update_send 	= mysql_real_escape_string($_POST['update_send']);
+	$id_societe  	= $_POST['societe'];
+	$id_quest  		= $_POST['id_quest'];
+	$id_produit  	= $_POST['id_produit'];
+	$client_id      = $_POST['client_id'];
+	$type_action    = $_POST['type_action'];
+	$total_pdt_lead	    = $_POST['total_pdt_lead'];
+
+	$key_1     		= random(10);
+    $key_2   		= random(10);
+	
+	$sql_client  =  "SELECT id,societe,secteur,date_create,lead_id,logo,client_id
+					 FROM   annuaire_client WHERE client_id='".$client_id."' ";
+	$req_client  =  mysql_query($sql_client);
+	$data_client = mysql_fetch_object($req_client);
+	
+	$sql_pdt  = "SELECT ref_name FROM products_fr WHERE id='".$id_produit."' ";
+	$req_pdt  = mysql_query($sql_pdt);
+	$data_pdt = mysql_fetch_object($req_pdt);
+	
+	$url_final = string_to_url($data_client->societe);
+	$url_send = URL.'utilisateurs/'.$data_client->id.'-'.$data_client->client_id.'-'.$url_final.'.html';
+	
+	$target_path1 = "../../../www/fr/";
+	$target_path2  = "ressources/images/annuaire_client/".$client_id."/";
+	if (!is_dir($target_path1.$target_path2)) {
+        mkdir("../../../www/fr/ressources/images/annuaire_client/".$client_id."/",0775, true);
+        chmod("../../../www/fr/ressources/images/annuaire_client/".$client_id."/",0775);
+	}
+	
+	$validextensions = array("jpeg", "jpg", "png");
+    $ext = explode('.', basename($_FILES['adress_picture']['name']));
+    $file_extension = end($ext);                     
+    $name_adress_picture    =    $key_1;
+    $name_adress_picture    =    $name_adress_picture.$key_2;
+    $name_adress_picture    =    $name_adress_picture.'.';
+    $name_adress_picture    =    $name_adress_picture.$ext[count($ext) - 1];
+	
+	if (move_uploaded_file($_FILES['adress_picture']['tmp_name'], $target_path1.$target_path2.$name_adress_picture)){
+	
+		$sql_query  = "SELECT logo FROM annuaire_client WHERE client_id='".$client_id."' ";
+		$req_query  = mysql_query($sql_query);
+		$rows_query = mysql_num_rows($req_query);
+			if($rows_query > 0){
+				$data_query  = mysql_fetch_object($req_query);
+				unlink ($target_path.$data_query->logo);
+			}
+		$photo_facade_path    = $target_path2.$name_adress_picture;
+        $sql_update = "UPDATE `annuaire_client` SET  
+								  `logo` =  '$photo_facade_path',
+								  `question_activite` =  '$activite',
+								  `etat`   =  '1',
+								  `date_update` = NOW()
+					   WHERE  `client_id` ='".$client_id."'";
+		mysql_query($sql_update);
+		
+	}else{
+		
+		$sql_update = "UPDATE `annuaire_client` 
+							   SET   `question_activite` =  '$activite',
+									 `etat`   =  '1',
+									 `date_update` = NOW()
+							   WHERE `client_id` ='".$client_id."'";
+		mysql_query($sql_update);
+		
+	}
+	if($total_pdt_lead > 0){
+	
+		for($i=1;$i<=$total_pdt_lead;$i++){
+			$txt_equipement  = 	mysql_real_escape_string($_POST['txt_equipement'.$i]);
+			$id_quest 		 = 	$_POST['id_quest'.$i];
+			$id_produit_all  = 	$_POST['id_produit'.$i];
+			
+			
+			
+			$key_11    				 =    random(10);
+			$key_22    				 =    random(10);	
+			$name_adress_picture2    =    $key_11;
+			$name_adress_picture2    =    $name_adress_picture2.$key_22;
+			$name_adress_picture2    =    $name_adress_picture2.'.';
+			$name_adress_picture2    =    $name_adress_picture2.$ext[count($ext) - 1];
+			
+			if (move_uploaded_file($_FILES['adress_picture_produit'.$i]['tmp_name'], $target_path1.$target_path2.$name_adress_picture2)){
+				$photo_facade_path2    = $target_path2.$name_adress_picture2;
+				
+				if(!empty($id_quest)){
+					
+					$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+									`txt_equipement` =  '$txt_equipement',
+									`photo_equipement` =  '$photo_facade_path2',
+									`date_update` = NOW( ) 
+								WHERE  `id` ='$id_quest'  ";
+					mysql_query($sql_insert);
+					
+					
+					mysql_query($sql_insert);
+					
+				}else{
+					if(!empty($txt_equipement) || !empty($_FILES['adress_picture_produit'.$i]['tmp_name'])){
+					
+					$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit_all','$lead_id','$txt_equipement', '$photo_facade_path2', NOW() , '0000-00-00 00:00:00','1')";
+					mysql_query($sql_insert);
+					
+					}
+				}
+			
+			}else{
+			
+				if(!empty($id_quest)){
+					$sql_insert = " UPDATE  `annuaire_questionnaire` SET  
+									`txt_equipement` =  '$txt_equipement',
+									`date_update` = NOW( ) 
+							WHERE   `id` ='$id_quest'  ";
+					mysql_query($sql_insert);
+					
+					
+					
+				}else{
+					if(!empty($txt_equipement)){
+				
+					$sql_insert = "INSERT INTO  `annuaire_questionnaire` (
+							`id` ,
+							`id_client` ,
+							`id_produit` ,
+							`lead_id` ,
+							`txt_equipement` ,
+							`photo_equipement` ,
+							`date_create` ,
+							`date_update`,
+							`etat`
+							)VALUES (NULL ,  '$client_id','$id_produit_all','$lead_id', '$txt_equipement', '', NOW() ,  '0000-00-00 00:00:00','1')";
+					mysql_query($sql_insert);
+					//echo $sql_insert ;
+					}
+				}
+			}
+			
+		}
+		
+	}
+?>
+
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" /> Facilitations ! Votre fiche utilisateur a bien été enregistrée  </h1>
+        
+        <div class="account-header-info">
+			<p>Votre fiche utilisateur a bien été enregistrée. </p><br />
+			<p>Veuillez noter que Techni-Contact se réserve un droit de regard sur tout le contenu posté par ses utilisateurs, afin d'en assurer la qualité et son respect des réglementations en vigueur.</p>
+		</div>
+      </div>
+	  
+	
+		      
+  </div>
+  </div>
+ <?php				
+					$sql_send  = "SELECT societe ,lead_id
+								   FROM annuaire_client 
+								   WHERE client_id='".$client_id."'";
+					$req_send  = mysql_query($sql_send);
+					$data_send = mysql_fetch_object($req_send );
+
+					$header_from_name_new	= "Techni-Contact fiche client";
+					$header_from_email	= 'ugc@techni-contact.com';
+
+					$header_send1_name	= '';
+					$header_send1_email	= 'ugc@techni-contact.com';
+					//$header_send1_email	= 'outarocht.zakaria@gmail.com';
+					
+					$header_send2_name	= 'ugc@techni-contact.com';
+					$header_send2_email	= '';
+					
+					$header_reply1_name	= '';
+					$header_reply1_email= '';
+					
+					$header_copy2_name	= '';
+					$header_copy2_email	= '';
+					
+					$header_copy1_email	= 'outarocht.zakaria@gmail.com';
+					$header_copy1_name	= '';
+					$header_copy1_email	= '';
+					
+					
+					//$url = ''.URL.'produits/'.$pdt["cat3_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html';
+					
+					$sql_cliens  = "SELECT nom,prenom FROM clients WHERE id='".$client_id."' ";
+					$req_cliens  = mysql_query($sql_cliens);
+					$data_cliens = mysql_fetch_object($req_cliens);
+					
+					$date_creation = date("d/m/Y");
+					
+					$societe = htmlentities($data_send->societe, ENT_QUOTES) ;
+					
+					//$subject_envoi = $data_cliens->nom.' '.$data_cliens->prenom.' a publié ou modifié sa fiche sur Techni-Contact';
+					$subject_envoi = $societe.' a publié ou modifié sa fiche sur Techni-Contact';
+					$subject = utf8_decode($subject_envoi) ;
+					
+					$message_header = "<html><head>
+						<meta http-equiv=Content-Type content=text/html; charset=iso-8859-1>
+						</head>
+						<body bgcolor=#FFFFFF>";
+					$message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
+					$message_text	.= '<p>';
+						$message_text	.= 'Bonjour';
+						$message_text	.= '<br /><br />';
+						$message_text	.= 'Le '.$date_creation.',  <strong>'.$societe.' </strong> a publi&eacute; ou compl&eacute;t&eacute; sa fiche utilisateur sur techni-contact.com <a href="'.$url.'" >'.$name_ptd.'</a>.';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '<a href="'.$url_send.'">Voir sa fiche sur Techni-Contact </a>';
+						$message_text	.= '<br /><br />';
+						$message_text	.= '<a href="'.ADMIN_URL.'clients/?idClient='.$client_id.'">G&eacute;rer son UGC sur manager  </a>';
+						$message_text	.= '<br /><br />';
+						$message_text	.= 'Le service marketing';
+						$message_text	.= '<br /><br />';
+						
+						$message_text	.= '</p>';
+
+					$message_bottom = "</body></html>";
+					$message_to_send = $message_header . $message_text . $message_bottom;	
+					
+					
+					
+					//if($send_mail == 1){
+					$mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
+					//}
+
+
+?>
+ 
+ 
+    </div>
+	<div>
+		
+	</div>
+	
+    <div class="zero"></div>
+  </div

@@ -1,0 +1,137 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 17 juillet 2005
+
+ Fichier : /secure/extranet/infos.html
+ Description : Edition des coordonnées
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include("language_local.php");
+
+$title = INVOICING_TITLE;
+define("WHERE", WHERE_INVOICING);
+
+require(EXTRANET."head.php");
+?>
+<div class="barre"><a href="index.html"><?php echo HEAD_HOMEPAGE ?></a> &raquo; <?php echo INVOICING_HEAD_TITLE ?></div>
+<div class="miseAZero"></div>
+<?php
+$invoicing_setting_rights = true;
+$error = array();
+$db = DBHandle::get_instance();
+$res = $db->query("SELECT ic_active, ic_fields, ic_extranet FROM advertisers WHERE id = ".$user->id, __FILE__, __LINE__);
+if ($db->numrows($res, __FILE__, __LINE__) == 1) {
+	$adv = $db->fetchAssoc($res);
+	if ($adv["ic_active"] == 1 && $adv["ic_extranet"] == 1) {
+		if (empty($adv["ic_fields"]))
+			$ic_fields = array();
+		else
+			$ic_fields = mb_unserialize($adv["ic_fields"]);
+		
+		if ($_SERVER["REQUEST_METHOD"] == "POST") {
+			if (isset($_POST["ic_cp"])) {
+        $cps = explode('|', trim($_POST["ic_cp"]));
+        $ic_cps = array();
+        foreach ($cps as $cp) {
+          $cp = (int)trim($cp);
+          if ($cp)
+            $ic_cps[] = $cp;
+        }
+        $ic_cp = implode('|', $ic_cps);
+        if (!empty($ic_cp))
+          $ic_fields->ic_cp = $ic_cp;
+        else
+          unset($ic_fields->ic_cp);
+        
+        if (empty($error)) {
+          $db->query("UPDATE advertisers SET ic_fields = '".$db->escape(serialize($ic_fields))."' WHERE id = ".$user->id, __FILE__, __LINE__);
+          $updated = true;
+        }
+      } else {
+				$error[] = INVOICING_UPDATE_ERROR;
+      }
+		}
+	}
+	else
+		$invoicing_setting_rights = false;
+}
+else
+	$error[] = INVOICING_LOAD_ERROR;
+?>
+<?php if(!$invoicing_setting_rights) { ?>
+	<div class="centre">
+		<div class="bloc">
+			<div class="bloc-titre">
+				<center><?php echo INVOICING_NO_RIGHTS ?></center>
+			</div>
+		</div>
+	</div>
+<?php } elseif(isset($updated)) { ?>
+	<div class="centre">
+		<div class="bloc">
+			<div class="bloc-titre">
+				<center><?php echo INVOICING_UPDATE_SUCCESS ?></center>
+			</div>
+		</div>
+	</div>
+<?php } else { ?>
+<script type="text/javascript">
+function trim(s) {
+	return s.replace(/(^\s*)|(\s*$)/g, '');
+}
+</script>
+<form method="post" action="invoicing.html">
+	<div class="centre">
+	<?php if (!empty($error)) { ?>
+		<div class="bloc">
+			<div class="bloc-titre"><?php echo INVOICING_ERROR ?></div>
+			<div class="bloc-texte"><?php echo implode("<br/>",$error) ?></div>
+		</div>
+		<br/>
+		<div class="miseAZero"></div>
+		<br/>
+	<?php } ?>
+		<div class="bloc">
+			<div class="bloc-titre"><?php echo INVOICING_BLOC_TITLE ?></div>
+			<div class="bloc-texte">
+				Cette page vous permet de définir les codes postaux couverts par votre activité.<br/>
+				Ex : si vous n'intervenez que sur l'Ile de France, saisissez 75|91|92|93|94|95|77.....<br/>
+				Les contacts reçus d'entreprises basées en dehors de ces codes postaux ne vous seront pas facturés
+			</div>
+		</div>
+		<br/>
+		<div class="miseAZero"></div>
+		<br/>
+
+		<div class="bloc">
+			<div class="bloc-titre2"></div>
+			<div class="bloc-texte">
+				<div class="champ-label" style="width: 230px"><?php echo INVOICING_PC ?> :</div>
+				<div class="champ-form"><textarea name="ic_cp" style="width: 600px"><?php echo $ic_fields->ic_cp ?></textarea></div>
+				<div class="champ-aide"><?php echo INVOICING_PC_DESC ?></div>
+				<div class="champ-miseAZero"></div>
+				<div class="miseAZero"></div>
+			</div>
+		</div>
+		<br/>
+		<br/>
+		<div class="bloc">
+			<div align="center">
+			<br/>
+			<div class="champ-valid"><input type="button" value="<?php echo INFOS_BUTTON_VALIDATE ?>" onClick="this.form.submit(); this.disabled=true">
+			</div>
+		</div>
+	</div>
+</form>
+<?php }
+require(EXTRANET."tail.php");
+?>

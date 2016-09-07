@@ -1,0 +1,2 @@
+ErrorDocument 403 default
+ErrorDocument 404 /fr/manager/404.php

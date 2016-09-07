@@ -1,0 +1,394 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V3 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : OD pour Hook Network SARL - http://www.hook-network.com
+ Date de création : 11 février 2011
+ 
+ Fichier : /secure/extranet/commande.html
+ Description : Affichage commande extranet
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = COMMAND_TITLE;
+
+define('BEGIN_TIME', mktime(0,0,0,3,1,2011));
+define('WHERE', WHERE_COMMANDS);
+require(EXTRANET.'head.php');
+
+if ($user->parent != __ID_TECHNI_CONTACT__) {
+  header('Location: '.EXTRANET_URL.'requests.html');
+  exit();
+}
+if (!isset($_GET['idCommande']) || !preg_match('/^'.$user->id.'\-[1-9]{1}[0-9]{0,9}$/', $_GET['idCommande'])) {
+  header('Location: '.EXTRANET_URL.'commandes.html');
+  exit();
+}
+
+try {
+
+list($sup_id, $order_id) = explode("-", $_GET['idCommande'], 2);
+$sup_id = filter_var($sup_id, FILTER_VALIDATE_INT);
+$order_id = filter_var($order_id, FILTER_VALIDATE_INT);
+
+if ($sup_id != $user->id)
+  throw new Exception("Numéro de commande invalide.");
+
+if (empty($order_id))
+  throw new Exception("Numéro de commande invalide.");
+
+$q = Doctrine_Query::create()
+    ->select('so.*,
+              o.processing_status,
+              sos.name AS sender_name,
+              ol.*,
+              IF(0,ol.id,olpfr.ref_name) AS pdt_ref_name,
+              IF(0,ol.id,olcat.id) AS cat_id')
+    ->from('SupplierOrder so')
+    ->innerJoin('so.order o')
+    ->leftJoin('so.sender sos')
+    ->innerJoin('o.lines ol')
+    ->leftJoin('ol.product olp')
+    ->leftJoin('olp.product_fr olpfr')
+    ->leftJoin('olp.families olcat')
+    ->where('so.order_id = ?', $order_id)
+    ->andWhere('so.sup_id = ?', $sup_id)
+    ->andWhere('so.mail_time > ?', BEGIN_TIME)
+    ->andWhere('ol.sup_id = so.sup_id');
+$so = $q->fetchOne();
+if (!$so)
+  throw new Exception("La commande n°".$sup_id."-".$order_id." n'existe pas.");
+
+$single_sup = true; //$so['stotal_ht'] == $so['order']['total_a_ht'];
+
+if ($so->processing_status < SupplierOrder::PROCESSING_STATUS_WAITING_ARC) {
+  $so->processing_status = SupplierOrder::PROCESSING_STATUS_WAITING_ARC;
+  $so->save();
+}
+
+require(EXTRANET.'head2.php');
+
+	//Changes 09/09/2014 10h57 
+	//Include the date picker
+	echo('<script type="text/javascript" src="'.EXTRANET_URL.'ressources/js/datepicker/jquery.min.js"></script>');
+	echo('<link rel="stylesheet" href="'.EXTRANET_URL.'ressources/css/datepicker/themes/smoothness/jquery-ui.css" />');
+	echo('<script type="text/javascript" src="'.EXTRANET_URL.'ressources/js/datepicker/ui/jquery-ui.js"></script>');
+?>
+
+<script type="text/javascript">
+	$( document ).ready(function() {
+		$( "#datepicker" ).datepicker();
+	});
+</script>
+
+<div class="barre">
+  <a href="index.html"><?php echo HEAD_HOMEPAGE ?></a>
+  &#x00bb; <a href="commandes.html"><?php echo HEAD_COMMAND_LIST ?></a>
+  &#x00bb; <?php echo COMMAND_HEAD_TITLE." ".$so['rid'] ?>
+</div>
+<div class="miseAZero"></div>
+<?php require(EXTRANET.'alertmdp.php'); ?>
+<div class="centre">
+  <br />
+  <div class="bloc">
+    <div class="bloc-titre"><?php echo REQUEST_DETAIL_BLOC_CMD_TITLE ?> n°<?php echo $so['rid']  ?></div>
+    <div class="bloc-texte">
+      <div class="champ-label">Date :</div>
+      <div class="champ-form"><?php echo date('d/m/Y à H:i:s', $so['mail_time']) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label">Passée par :</div>
+      <div class="champ-form"><?php echo to_entities($so['sender_name']) ?></div>
+      <div class="miseAZero"></div>
+      <?php /*<div class="champ-label">Etat :</div>
+      <div class="champ-form" id="champ-form-status"><?php echo to_entities(SupplierOrder::getProcessingStatusText($so['processing_status'])) ?></div>
+      <div class="miseAZero"></div>*/ ?>
+    </div>
+  </div>
+  <div class="miseAZero"></div>
+  <br/>
+  <div id="conversation" class="conversation"></div>
+ <?php if ($so['cancellation']) : ?>
+  <div style="color: red; text-align: center; font-family: Arial,Helvetica,sans-serif; font-size: 15px">
+    <strong>Commande annulée par Techni-contact pour la raison suivante :</strong><br />
+    <br />
+    <?php echo to_entities($so['cancellation_reason']) ?>
+  </div>
+ <?php elseif (empty($so['arc']) && $so['order']['processing_status'] < Order::GLOBAL_PROCESSING_STATUS_FORECAST_SHIPPING_DATE) : ?>
+  <div style="font: bold 15px arial, helvetica, sans-serif; color: red; text-align: center" class="order_information">
+    Cette commande doit être livrée à l'adresse présente sur le bon de livraison.
+    Merci de nous en accuser réception et nous préciser la date d'expédition prévisionnelle :<br />
+    Par mail : <a href="mailto:achat@techni-contact.com?subject=Remise ARC ordre n°<?php echo $so['rid'] ?>">achat@techni-contact.com</a><br />
+    Par fax : 09 55 79 40 46
+  </div>
+ <?php endif ?>
+  <div class="miseAZero"></div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2"><?php echo REQUEST_DETAIL_CMD_INFOS ?></div>
+    <div class="bloc-texte">
+      <div id="commande">
+        <table class="liste_produits" cellspacing="0" cellpadding="0">
+          <thead>
+            <tr>
+              <th style="width: auto;">Image</th>
+              <th style="width: 80px">Réf. TC</th>
+              <th style="width: 110px">Référence fournisseur</th>
+              <th style="width: 300px">Désignation</th>
+              <th style="width: 60px">Qté.</th>
+              <th style="width: 40px">Unité</th>
+              <th style="width: 80px">Montant unitaire HT</th>
+              <th style="width: 80px">Montant total HT</th>
+            </tr>
+          </thead>
+          <tbody id="ProductsList">
+           <?php foreach($so['order']['lines'] as $line) : ?>
+            <tr class="line">
+              <td rowspan="3" class="center">
+               <?php if (!empty($line['pdt_ref_id'])) : ?>
+                <a href="<?php echo Utils::get_pdt_fo_url($line['pdt_id'], $line['pdt_ref_name'], $line['cat_id']) ?>" target="_blank">
+                  <img src="<?php echo Utils::get_secure_pdt_pic_url($line['pdt_id']) ?>" alt="image produit"/>
+                </a>
+               <?php else : ?>
+                <img src="<?php echo Utils::get_secure_dft_pdt_pic_url() ?>" alt="image produit"/>
+               <?php endif ?>
+              </td>
+              <td rowspan="2" class="center">
+               <?php if (!empty($line['pdt_ref_id'])) : ?>
+                <a href="<?php echo Utils::get_pdt_fo_url($line['pdt_id'], $line['pdt_ref_name'], $line['cat_id']) ?>" target="_blank"><?php echo $line['pdt_ref_id'] ?></a>
+               <?php else : ?>
+                -
+               <?php endif ?>
+              </td>
+              <td rowspan="2" class="center"><?php echo to_entities($line['sup_ref']) ?></td>
+              <td><?php echo to_entities($line['desc']) ?></td>
+              <td class="ref-qte"><?php echo $line['quantity'] ?></td>
+              <td class="right">1</td>
+              <td class="ref-prix"><?php echo sprintf("%0.2f", $line['pau_ht']) ?></td>
+              <td class="ref-prix"><?php echo sprintf("%0.2f", $line['total_a_ht']) ?></td>
+            </tr>
+            <tr>
+              <td colspan="3">Éco participation</td>
+              <td class="ref-prix"><?php echo $line['et_ht'] ?></td>
+              <td class="ref-prix"><?php echo $line['et_total_ht'] ?></td>
+            </tr>
+            <tr>
+              <td colspan="7">Commentaires : <?php echo to_entities($line['sup_comment']) ?></td>
+            </tr>
+           <?php endforeach ?>
+          </tbody>
+        </table>
+        <div class="champ-label">Commentaires :</div>
+        <div class="champ-form"><?php echo to_entities($so['mail_comment']) ?></div>
+        <div class="miseAZero"></div>
+        <br />
+        <div class="bloc-IM">
+          <div class="bloc-IM-titre">Une question/remarque concernant cette commande ?</div>
+          <div class="bloc-IM-content">
+            Envoyez nous un message :<br />
+            <br />
+            <textarea name="contenu_message" cols="75" rows="6"></textarea><br />
+            <div class="bloc-preview"><a href="#" onClick="sendMessage();return false;">Envoyer votre question</a></div>
+          </div>
+        </div>
+        <div id="montant-totaux">
+          <div class="total_H">
+            <div class="total_G">Sous-total HT :</div>
+            <div class="total_D"><?php echo sprintf("%.02f", $so['stotal_ht']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Frais en sus (selon AR) :</div>
+            <div class="total_D" id="ShippingFee"><?php echo sprintf("%0.2f", $so['fdp_ht']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Total HT :</div>
+            <div class="total_D" id="TotalHT"><?php echo sprintf("%0.2f", $so['total_ht']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Montant TVA :</div>
+            <div class="total_D" id="TotalTVA"><?php echo sprintf("%0.2f", $so['total_tva']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Total TTC :</div>
+            <div class="total_D" id="TotalTTC"><?php echo sprintf("%0.2f", $so['total_ttc']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div id="ShippingFeeError"></div>
+          <br />
+          <div class="bloc-preview2 green"><a href="javascript: print_delivery_bill()">Imprimer  Bon de Livraison</a></div>
+          <div class="miseAZero"></div>
+          <br />
+          <div class="forecast-shipping-date">
+         <?php if ($single_sup && !$so['forecast_shipping_text']) : ?>
+          Date d'expédition prévisionnelle : <input type="text" name="date_previsionnelle_expedition" style="width: 65px"  id="datepicker" /><button name="valid_date_prev" id="valid_date_prev">OK</button>
+         <?php endif ?>
+          </div>
+          <div class="bloc-preview"><a href="javascript: print_order()">Imprimer Commande</a></div>
+          <div class="miseAZero"></div>
+        </div>
+        <div class="miseAZero"></div>
+        <style type="text/css">
+          .DB-bg  { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: #000000; -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=40)"; filter: alpha(opacity=40); opacity:.40 }
+          .DB { display: none; position: absolute; padding: 150px 10px 10px 10px; font: small-caps bold 13px tahoma, arial, sans-serif; color: #000000; text-align: center; border: 1px solid #cccccc; background: #f4faff }
+          #CQDB { left: 100px; top: 450px; width: 600px; height: 200px}
+          #commentMail{width: 700px;}
+        </style>
+        <div class="DB-bg"></div>
+        <div id="CQDB" class="DB">
+          Votre message a bien été transmis au service Achat de Techni-Contact. Votre conversation est maintenant archivée sur cette page.<br />
+          <br />
+          <br />
+          <input type="button" value="Ok"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+//<![CDATA[
+function print_order() {
+  open("print-purchase-order.php?idOrder=<?php echo $so['rid'] ?>", "TC_order_print", "toolbar=no, location=no, status=no, menubar=no, scrollbars=yes, height=670, width=1040");
+}
+function print_delivery_bill() {
+  open("print-delivery-order.php?idOrder=<?php echo $so['rid'] ?>", "TC_order_print", "toolbar=no, location=no, status=no, menubar=no, scrollbars=yes, height=670, width=1040");
+}
+
+// show attachment related to a post
+$("#conversation").on("click", ".post-clip", function(){
+  var $this = $(this);
+  $this.next().css({ left: $this.position().left+20 }).toggle(300);
+});
+
+function getConversation(){
+  $("#conversation").empty().append("<div class=\"bloc-titre2\"></div>");
+  $.ajax({
+    url: "AJAX_conversation.php",
+    data: "idUser="+<?php echo $user->id ?>+"&action=get&ordre="+<?php echo $so['id']; ?>,
+    type: "POST",
+    dataType: "json",
+    error: function (XMLHttpRequest, textStatus, errorThrown) {
+      var error;
+      try { error = $.parseJSON(XMLHttpRequest.responseText)['error']; }
+      catch (e) { error = textStatus+" : "+errorThrown }
+      $("#conversation").empty().append("<div class=\"bloc-titre2\">"+error+"</div>");
+    },
+    success: function (data, textStatus) {
+      var divConversation = $("#conversation").empty();
+      
+      if (data.conversations && data.conversations != 'vide') {
+        var html = "<div class=\"conv-title\">Conversation liée à ce devis</div>"+
+                   "<ul>";
+        for (var i=0; i<data.conversations.length; i++) {
+          var post = data.conversations[i];
+          html += "<li>"+
+                    "<div class=\"post-title\">Message de "+post.sender_name+" envoyé le "+HN.TC.get_formated_datetime(post.timestamp, " à ")+"</div>";
+          if (post.attachments.length) {
+            html += "<img class=\"post-clip\" alt=\"Pièces jointes\" src=\""+HN.TC.SECURE_URL+"ressources/icons/attachment-icon.png\">"+
+                    "<div class=\"post-files\">";
+            for (var ai=0; ai<post.attachments.length; ai++) {
+              var f = post.attachments[ai].file;
+              html += "<a href=\""+f.url+"\" class=\"_blank\">"+f.shown_name+"</a><br/>";
+            }
+            html += "</div>";
+          }
+          html +=   "<div class=\"post-text\">"+post.text+"</div>"+
+                  "</li>";
+        };
+        html += "</ul>";
+
+        divConversation.html(html);
+      }
+      else if (data.result) {
+        var textarea = $("textarea[name='contenu_message']");
+        textarea.val("");
+        $("div.DB-bg").show();
+        $("#CQDB").show()
+      }
+    }
+  });
+}
+
+function sendMessage(){
+  var contenuMessage = $("textarea[name='contenu_message']").val();
+  $.ajax({
+    url: "AJAX_conversation.php",
+    data: "idUser="+<?php echo $user->id ?>+"&contenu="+encodeURIComponent(contenuMessage)+"&action=add&ordre="+<?php echo $so['id'] ?>,
+    type: "POST",
+    dataType: "json",
+    error: function (XMLHttpRequest, textStatus, errorThrown) {
+      var error;
+      try { error = $.parseJSON(XMLHttpRequest.responseText)['error']; }
+      catch (e) { error = textStatus+" : "+errorThrown }
+      $("#conversation").empty().append("<div class=\"bloc-titre2\">"+error+"</div>");
+    },
+    success: function (data, textStatus) {
+      getConversation();
+    }
+  });
+}
+
+getConversation();
+
+$("#CQDB input[type='button']:first").click(function(){
+  $("div.DB-bg").hide();
+  $("#CQDB").hide();
+});
+
+<?php if ($single_sup && !$so['forecast_shipping_text']) : ?>
+/*
+	//Commented on 09/09/2014 11h19 because integrating of a new one !
+	$(function(){
+  		$( "#datepicker" ).datepicker({
+    			showWeek: true,
+    			minDate: 0,
+    			maxDate: "+3M"
+  		});
+	});
+*/
+
+$('button#valid_date_prev').click(function(){
+  var forecast_shipping_date = $("input[name='date_previsionnelle_expedition']").val();
+  if (forecast_shipping_date != "") {
+    if (confirm("Le client sera informé par email de la date d'expédition\nde la commande prévue pour le : "+forecast_shipping_date)) {
+      $.ajax({
+        url: "AJAX_date_expedition.php",
+        dataType: "json",
+        data: "idUser="+<?php echo $user->id ?>+"&action=set_date&date="+forecast_shipping_date+"&ordre="+<?php echo $so['order_id'] ?>,
+        type: "POST",
+        error: function (XMLHttpRequest, textStatus, errorThrown) {
+        },
+        success: function (data, textStatus) {
+          getConversation();
+          $(".forecast-shipping-date").html("Date d’expédition fixée");
+          $(".order_information").hide();
+        }
+      });
+    }
+  };
+});
+<?php endif // single sup ?>
+//]]>
+</script>
+<?php
+} catch (Exception $e) {
+  require(EXTRANET.'head2.php');
+?>
+  <div class="centre">
+    <div class="bloc">
+      <div class="bloc-titre">
+        <center><?php echo $e->getMessage() ?></center>
+      </div>
+    </div>
+  </div>
+<?php
+}
+require(EXTRANET.'tail.php');

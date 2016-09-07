@@ -1,0 +1,592 @@
+﻿<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+if (!isset($_GET['supplierID']) || !preg_match('/^[0-9]+$/', $_GET['supplierID'])) {
+    header('Location: ' . URL);
+    exit();
+}
+
+$supplierID = $_GET['supplierID'];
+
+include_once(LANG_LOCAL_INC . "meta-titles-" . DB_LANGUAGE . "_local.php");
+
+$db = DBHandle::get_instance();
+
+// Loading XML
+$dom = new DomDocument();
+$dom->validateOnParse = true;
+$dom->load(XML_CATEGORIES_ALL);
+$xPath = new DOMXPath($dom);
+
+// Globals stats
+$cat0 = $xPath->query("parent::categories",$dom->getElementById(XML_KEY_PREFIX."0"))->item(0);
+$stats_key = explode("|",$xPath->query("child::stats_key",$cat0)->item(0)->nodeValue);
+$stats = explode("|",$xPath->query("child::stats",$cat0)->item(0)->nodeValue);
+for($sk = 0, $slen = count($stats); $sk < $slen; $sk++) $global[$stats_key[$sk]] = $stats[$sk];
+
+// Shipping fee
+$res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ );
+while ($rec = $db->fetch($res)) {
+  $$rec[0] = $rec[1];
+}
+
+$results = array("data" => array(), "count" => 0);
+
+$ressources = $db->query("
+  SELECT
+    p.id, p.price AS pdt_price, p.timestamp, p.shipping_fee,
+    pfr.name, pfr.ref_name, pfr.fastdesc, pfr.delai_livraison AS delivery_time, pfr.descc,
+    pf.idFamily AS catID, idCommercial,
+    ps.hits, ps.orders, ps.leads, (" . mktime(0,0,0) . "- ps.first_hit_time) as age,
+    a.id AS adv_id, a.nom1 AS adv_name, a.category AS adv_cat, a.delai_livraison AS adv_delivery_time,
+    rc.id AS ref_idtc, rc.refSupplier AS ref_refSupplier, rc.price+rc.ecotax AS ref_price,
+                (p.as_estimate + a.as_estimate) as product_as_estimate
+  FROM products p
+  INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1 AND pfr.deleted != 1
+  INNER JOIN products_families pf ON p.id = pf.idProduct
+  INNER JOIN products_stats ps ON p.id = ps.id
+  INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1 AND a.id = ".$supplierID."
+  LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+  GROUP BY p.id", __FILE__, __LINE__);
+
+// Fetching results
+while ($pdt = $db->fetchAssoc($ressources)) {
+  
+  $pdt_infos[$pdt["id"]] = $pdt;
+  $results["data"][] = &$pdt_infos[$pdt["id"]];
+  $results["count"]++; 
+}
+
+if ($results["count"] > 0) {
+   
+  define("NB", 50);
+  define("GLOBAL_AVERAGE_PRICE", 700);
+  define("TYPICAL_DATA_SET_SIZE", 10);
+  
+  // GET's
+  $page   = isset($_GET["page"])   ? (int)(trim($_GET["page"])) : 1;
+  $sort   = isset($_GET["sort"])   ? trim($_GET["sort"]) : "";
+  $filter = isset($_GET["filter"]) ? trim($_GET["filter"]) : "";
+  $range  = isset($_GET["range"])  ? (preg_match("/^[0-9]+-[0-9]+$/", $_GET["range"]) ? $_GET["range"] : "") : "";
+  switch ($filter) {
+    case "all" : break;
+    case "saleable" : break;
+    case "partner" : break;
+    case "price" : if (!empty($range)) list($minPrice, $maxPrice) = explode("-", $range); break;
+    default : $filter = "";
+  }
+  $urlOpt = array();
+  if (!empty($filter)) $urlOpt["filter"] = "filter=".$filter;
+  if (!empty($range)) $urlOpt["filter"] .= "&range=".$range;
+  
+  // Loop for price calculation and filtering
+  $pdtList = array(
+    "data" => array(),
+    "count" => 0,
+    "totalCount" => 0,
+    "saleableCount" => 0,
+    "advCatCount" => array(),
+    "priceSum" => 0,
+    "priceCount" => 0,
+    "priceCountShowed" => 0,
+    "priceMax" => 0,
+    "priceMin" => 0x7fffffff);
+  foreach ($results["data"] as $k => &$pdt) {
+    
+    // Determing price
+    $pdt["saleable"] = $pdt["hasPrice"] = false;
+    $pdt["price"] = $pdt["pdt_price"];
+    if ($pdt["price"] == "ref") {
+      $pdt["price"] = $pdt["ref_price"];
+    }
+    if (empty($pdt["price"])) {
+      $pdt["price"] = "sur devis";
+    }
+    elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+      $pdt["hasPrice"] = true;
+      $pdtList["priceCount"]++;
+      $pdtList["priceSum"] += $pdt["price"];
+      $pdtList["priceMax"] = max($pdt["price"], $pdtList["priceMax"]);
+      $pdtList["priceMin"] = min($pdt["price"], $pdtList["priceMin"]);
+      if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) {
+        $pdt["saleable"] = true;
+        $pdtList["saleableCount"]++;
+      }
+    }
+    else {
+      $pdt["price"] = "sur devis";
+    }
+    
+    // Filtering
+    $show = true;
+    switch ($filter) {
+      case "saleable" : if (!$pdt["saleable"]) $show = false; break;
+      case "partner"  : if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) $show = false; break;
+      case "price" : if (!$pdt["hasPrice"] || $pdt["price"] < $minPrice || $pdt["price"] >= $maxPrice) $show = false; break;
+      default : break;
+    }
+    
+    if (!isset($pdtList["advCatCount"][$pdt["adv_cat"]])) $pdtList["advCatCount"][$pdt["adv_cat"]] = 0;
+    $pdtList["advCatCount"][$pdt["adv_cat"]]++;
+    
+    if ($show) {
+      if (!isset($pdtList["advCatCountShowed"][$pdt["adv_cat"]])) $pdtList["advCatCountShowed"][$pdt["adv_cat"]] = 0;
+      $pdtList["advCatCountShowed"][$pdt["adv_cat"]]++;
+      
+      $pdt["hpd"] = ($pdt["hits"] / $pdt["age"] * 86400);
+      if ($pdt["hits"] > 0) {
+        $pdt["hits2orders"] = $pdt["orders"] / $pdt["hits"] * 100;
+        $pdt["hits2leads"] = $pdt["leads"] / $pdt["hits"] * 100;
+      }
+      else {
+        $pdt["hits2orders"] = $pdt["hits2leads"] = 0;
+      }
+      $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." € HT") : "N/D") : $pdt["shipping_fee"]." € HT";
+      if (empty($pdt["delivery_time"])) $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+      $pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+      $pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+      $pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif";;
+      $pdtList["data"][] = &$pdt;
+      if ($pdt["hasPrice"]) $pdtList["priceCountShowed"]++;
+      $pdtList["count"]++;
+    }
+    $pdtList["totalCount"]++;
+    
+  }
+  unset($pdt);
+  
+  $showPriceSortBlock = $pdtList["priceCountShowed"] > 1;
+  
+// Stats computing
+  $mts["STATS COMPUTING"]["start"] = microtime(true);
+  
+  // Setting some usefull vars
+  $global["hits_avg"] = $global["hits"] / $global["pdt_count"];
+  $global["leads_avg"] = $global["leads"] / $global["pdt_count"];
+  $global["orders_avg"] = $global["orders"] / $global["pdt_count"];
+  $global["hpd_avg"] = ($global["hits"] / $global["age_avg"] * 86400) / $global["pdt_count"];
+
+  // Arbitrary user weight :
+  // ----------------------------------------
+  // Normal weight
+  $hits2leads_w = 0.2;  // weight of products leads
+  $hits2orders_w = 0.8;  // weight of products orders
+  
+  $global_w = 0.8;    // weight of the global(whole db) average hits/orders/...
+  $cat1_w = 2.0;    // same for cat 1
+  $cat2_w = 0.8;    // for cat 2
+  $cat3_w = 0.4;    // for cat 3
+  
+  // Frequency weight if 2 times more
+  $hits_freq_w2 = 1.1;        // 2 times more hits than average = 10% more weight
+  $hitsPerDay_freq_w2 = 1.2;    // same for hits per day (ex: 20%)
+  
+  // Frequency for a category is it's relative part in the whole db
+  $cat1_freq_w2 = 1.1;  // weight of a cat1 frequency relative to the average ; ex: if 2 times the average frequency, 10% more weight (1.1)
+  $cat2_freq_w2 = 1.1;  // same for cat 2
+  $cat3_freq_w2 = 1.1;  // for cat 3
+  
+  // Precalculating som vars
+  // ----------------------------------------
+  $hits_freq_w2p = log($hits_freq_w2, 2);
+  $hitsPerDay_freq_w2p = log($hitsPerDay_freq_w2,2);
+  $cat1_freq_w2p = log($cat1_freq_w2,2);
+  $cat2_freq_w2p = log($cat2_freq_w2,2);
+  $cat3_freq_w2p = log($cat3_freq_w2,2);
+  $cat1_freq_c = pow(1/(1/(int)$global["cat1_count"]),$cat1_freq_w2p); // Coef to normalize to 1 if the frequency of the current cat 1 is the same as the average
+  $cat2_freq_c = pow(1/(1/(int)$global["cat2_count"]),$cat2_freq_w2p); // same for cat 2
+  $cat3_freq_c = pow(1/(1/(int)$global["cat3_count"]),$cat3_freq_w2p); // for cat 3
+
+  
+  $max_score2 = $a = 0;
+  foreach ($pdtList["data"] as &$pdt) {
+            if(is_object($dom->getElementById(XML_KEY_PREFIX.$pdt["catID"])))
+    $catTree = $xPath->query("ancestor-or-self::category", $dom->getElementById(XML_KEY_PREFIX.$pdt["catID"]));
+            else
+              continue;
+    $ccat1 = $catTree->item(0);
+    $ccat2 = $catTree->item(1);
+    $ccat3 = $catTree->item(2);
+    $cat3List[$ccat3->getAttribute("id")] = $ccat3;
+    if($a<4)
+      $listDescProd[] = $pdt['name'];
+    
+    $stats = explode("|",$xPath->query("child::stats",$ccat1)->item(0)->nodeValue);
+    for($sk = 0, $slen = count($stats); $sk < $slen; $sk++) $scat1[$stats_key[$sk]] = $stats[$sk];
+    $stats = explode("|",$xPath->query("child::stats",$ccat2)->item(0)->nodeValue);
+    for($sk = 0, $slen = count($stats); $sk < $slen; $sk++) $scat2[$stats_key[$sk]] = $stats[$sk];
+    $stats = explode("|",$xPath->query("child::stats",$ccat3)->item(0)->nodeValue);
+    for($sk = 0, $slen = count($stats); $sk < $slen; $sk++) $scat3[$stats_key[$sk]] = $stats[$sk];
+    
+    $scat1["hits_avg"] = $scat1["hits"] / $scat1["pdt_count"];
+    $scat1["leads_avg"] = $scat1["leads"] / $scat1["pdt_count"];
+    $scat1["orders_avg"] = $scat1["orders"] / $scat1["pdt_count"];
+    $scat1["hpd_avg"] = ($scat1["hits"] / $scat1["age_avg"] * 86400) / $scat1["pdt_count"];
+    
+    $scat2["hits_avg"] = $scat2["hits"] / $scat2["pdt_count"];
+    $scat2["leads_avg"] = $scat2["leads"] / $scat2["pdt_count"];
+    $scat2["orders_avg"] = $scat2["orders"] / $scat2["pdt_count"];
+    $scat2["hpd_avg"] = ($scat2["hits"] / $scat2["age_avg"] * 86400) / $scat2["pdt_count"];
+    
+    $scat3["hits_avg"] = $scat3["hits"] / $scat3["pdt_count"];
+    $scat3["leads_avg"] = $scat3["leads"] / $scat3["pdt_count"];
+    $scat3["orders_avg"] = $scat3["orders"] / $scat3["pdt_count"];
+    $scat3["hpd_avg"] = ($scat3["hits"] / $scat3["age_avg"] * 86400) / $scat3["pdt_count"];
+    
+    // Computation :
+    // ----------------------------------------
+    // We calculate an "average" hits/orders/... per product using a lot of weighted coefficient computed from
+    // the whole db (global), and the relative size of the current cat1, cat2 and cat3
+    // k0 k1 k2 k3 = arbitrary coef * computed relative size coef
+    // for hits :
+    $h_k0 = $global_w;
+    $h_k1 = $cat1_w * $cat1_freq_c * pow($scat1["hits"]/$global["hits"], $cat1_freq_w2p);
+    $h_k2 = $cat2_w * $cat2_freq_c * pow($scat2["hits"]/$global["hits"], $cat2_freq_w2p);
+    $h_k3 = $cat3_w * $cat3_freq_c * pow($scat3["hits"]/$global["hits"], $cat3_freq_w2p);
+    $final_hits_w_avg = ($h_k0*$global["hits_avg"] + $h_k1*$scat1["hits_avg"] + $h_k2*$scat2["hits_avg"] + $h_k3*$scat3["hits_avg"]) / ($h_k0+$h_k1+$h_k2+$h_k3); // Final Weighted average hits per product
+    
+    // for leads :
+    $l_k0 = $global_w;
+    $l_k1 = $cat1_w * $cat1_freq_c * pow($scat1["leads"]/$global["leads"], $cat1_freq_w2p);
+    $l_k2 = $cat2_w * $cat2_freq_c * pow($scat2["leads"]/$global["leads"], $cat2_freq_w2p);
+    $l_k3 = $cat3_w * $cat3_freq_c * pow($scat3["leads"]/$global["leads"], $cat3_freq_w2p);
+    $final_leads_w_avg = ($l_k0*$global["leads_avg"] + $l_k1*$scat1["leads_avg"] + $l_k2*$scat2["leads_avg"] + $l_k3*$scat3["leads_avg"]) / ($l_k0+$l_k1+$l_k2+$l_k3); // Final Weighted average leads per product
+    
+    // for orders :
+    $o_k0 = $global_w;
+    $o_k1 = $cat1_w * $cat1_freq_c * pow($scat1["orders"]/$global["orders"], $cat1_freq_w2p);
+    $o_k2 = $cat2_w * $cat2_freq_c * pow($scat2["orders"]/$global["orders"], $cat2_freq_w2p);
+    $o_k3 = $cat3_w * $cat3_freq_c * pow($scat3["orders"]/$global["orders"], $cat3_freq_w2p);
+    $final_orders_w_avg = ($o_k0*$global["orders_avg"] + $o_k1*$scat1["orders_avg"] + $o_k2*$scat2["orders_avg"] + $o_k3*$scat3["orders_avg"]) / ($o_k0+$o_k1+$o_k2+$o_k3); // Final Weighted average orders per product
+    
+    // for hits per day :
+    $final_hpd_w_avg = ($h_k0*$global["hpd_avg"] + $h_k1*$scat1["hpd_avg"] + $h_k2*$scat2["hpd_avg"] + $h_k3*$scat3["hpd_avg"]) / ($h_k0+$h_k1+$h_k2+$h_k3); // Final Weighted average hitsPerDay per product
+    
+    // for hits to leads and hits to orders
+    $final_hits2leads_w_freq = $final_hits_w_avg / $final_leads_w_avg;
+    $final_hits2orders_w_freq = $final_hits_w_avg / $final_orders_w_avg;
+    
+    $pdt["score2"] = ($pdt["hits2leads"] * $final_hits2leads_w_freq * $hits2leads_w + $pdt["hits2orders"] * $final_hits2orders_w_freq * $hits2orders_w)
+      * pow($pdt["hits"]/$final_hits_w_avg, $hits_freq_w2p)
+      * pow($pdt["hpd"]/$final_hpd_w_avg, $hitsPerDay_freq_w2p);
+    $max_score2 = max($max_score2, $pdt["score2"]);
+    $a++;
+  }
+
+  $mts["STATS COMPUTING"]["end"] = microtime(true);
+  
+// Page calculations
+  if ($page < 1) $page = 1;
+  $maxpage = floor((($pdtList["count"]-1) - ($pdtList["count"]-1)%NB) / NB) + 1;
+  if ($page > $maxpage) $page = $maxpage;
+  if ($page > 1) $urlOpt["page"] = $page;
+  
+  
+// Items to show
+  $startItemIndex = ($page-1) * NB;
+  $endItemIndex = min($page * NB, $pdtList["count"]) - 1;
+  $DisplayedItemCount = $endItemIndex - $startItemIndex + 1;
+  
+// Bayesian average of every products
+  $bayesianAvg = (GLOBAL_AVERAGE_PRICE * TYPICAL_DATA_SET_SIZE + $pdtList["priceSum"]) / ($pdtList["priceCount"] + TYPICAL_DATA_SET_SIZE);
+    
+	if(isset($_GET['page'])){
+		$params_url = substr($_GET['page'], 0, 1);
+		if($_GET['page'] > $maxpage){
+			header("Location: ".URL."fournisseur/".$supplierID.".html");  
+		}
+		if($params_url == 0){
+			header("Location: ".URL."fournisseur/".$supplierID.".html");  
+		}
+	}
+	
+	
+// Sorting
+
+  switch ($sort) {
+    case "updated"    : Utils::sortDbInPlace($pdtList["data"], "timestamp", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+    case "view"       : Utils::sortDbInPlace($pdtList["data"], "hits", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+    case "lead"       : Utils::sortDbInPlace($pdtList["data"], "leads", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+    case "price-asc"  : Utils::sortDbInPlace($pdtList["data"], "price", SORT_ASC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+    case "price-desc" : Utils::sortDbInPlace($pdtList["data"], "price", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+    case "relevant"   :
+    default :
+      $sort = "";
+      Utils::sortDbInPlace($pdtList["data"], "score2", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING);
+      break;
+  }
+  if (!empty($sort)) $urlOpt["sort"] = "sort=".$sort;
+  
+  if (!empty($urlOpt["page"])) $urlOpt["page"] = $urlOpt["page"];
+  if (!empty($urlOpt["sort"])) $urlOpt["sort"] = "&".$urlOpt["sort"];
+  if (!empty($urlOpt["filter"])) $urlOpt["filter"] = "&".$urlOpt["filter"];
+}
+if (!empty($urlOpt["filter"])) {
+  $filters = explode('&', $urlOpt["filter"]);
+  foreach ($filters as $k => $filter) {
+    $lastFilter = explode('=', $filter);
+    if ($lastFilter[0] == 'range')
+      $currentRange = $lastFilter[1];
+  }
+}
+
+if ($pdtList["advCatCountShowed"][__ADV_CAT_SUPPLIER__] == 0) {
+  define("NO_SUPPLIER_PRODUCT", true);
+  if ($pdtList["advCatCountShowed"][__ADV_CAT_ADVERTISER__] < $pdtList["count"])
+    define("NOR_ADVERTISER_PRODUCT", true);
+}
+
+$i=0;
+ $products_tab = array();
+ for ($k = $startItemIndex; $k <= $endItemIndex; $k++){
+	if($i == 1){
+		$first_products = $pdt["name"];
+	}
+	
+	$pdt = &$pdtList["data"][$k];
+	$products_name .= $pdt["name"].', ';
+	$products_tab[] .= $pdt["name"];
+ $i++;
+ }
+	for($j=0;$j<5;$j++){
+		$five_products_meta .=  $products_tab[$j].', ';
+	}
+	for($k=0;$k<10;$k++){
+		$ten_products_desc .=  $products_tab[$k].', ';
+	}
+	 
+	
+	
+	$desc_meta  	 = substr($products_name, 0, -2);
+	$desc_meta_five  = substr($five_products_meta, 0, -2);
+	$desc_ten        = substr($ten_products_desc, 0, -2);
+//determining commercial id for help message and phone
+$pdt_referent_commercial_id = $pdt['idCommercial'];
+
+$meta_desc = " Tous les produits de nos fournisseurs : ".$desc_meta_five;
+//$meta_desc = "Tous les produits de nos fournsiseurs : ".$desc_meta_five;
+$pageName = '';
+$title = 'Fournisseur de '.$first_products.' - '.$supplierID.' - Techni-Contact ';
+require(SITE . "head.php");
+?>
+<div id="body" class="white-bg">
+<div class="categories" id="left-col">
+<?php if ($results["count"] > 0) { ?>
+  <div class="left-panel">
+
+    <div id="pdt-filtering" class="filtering">
+    <div class="pdt-filtering-title current-criterias">Critères pour le produit</div>
+      <ul class="current-criterias">
+        <li><a href="#filter-all" class="filtering-reload-page">Supprimer tous les critères</a></li>
+      </ul>
+        <?php if ($pdtList["priceCount"] > 5) {
+                $priceBayesMean = round($bayesianAvg, -2);
+                $priceMin = floor($pdtList["priceMin"]);
+                if ($priceMin % 100 != 0)
+                        $priceMin = $priceMin - $priceMin % 100;
+                $priceMax = ceil($pdtList["priceMax"]);
+                if ($priceMax % 100 != 0)
+                        $priceMax = $priceMax - $priceMax % 100 + 100;
+
+                $priceRange1 = ($priceBayesMean + $priceMin) / 2;
+                $priceRange2 = ($priceBayesMean + $priceMax) / 2; ?>
+                <div class="pdt-filtering-title">Prix</div>
+                <ul>
+                   <li><input class="filter" <?php if($currentRange == '0-1600')echo 'checked="checked"'; ?> type="checkbox" id="filter_price-<?php echo $priceMin."-".$priceRange1; ?>" name="filter_price-<?php echo $priceMin."-".$priceRange1; ?>" /><label for="filter_price-<?php echo $priceMin."-".$priceRange1; ?>">De <?php echo $priceMin; ?>€ à <?php echo $priceRange1; ?>€</label></li>
+                  <li><input class="filter" <?php if($currentRange == '1600-3200')echo 'checked="checked"'; ?> type="checkbox" id="filter_price-<?php echo $priceRange1."-".$priceBayesMean; ?>" name="filter_price-<?php echo $priceRange1."-".$priceBayesMean; ?>" /><label for="filter_price-<?php echo $priceRange1."-".$priceBayesMean; ?>">De <?php echo $priceRange1; ?>€ à <?php echo $priceBayesMean; ?>€</label></li>
+                  <li><input class="filter" <?php if($currentRange == '3200-11000')echo 'checked="checked"'; ?> type="checkbox" id="filter_price-<?php echo $priceBayesMean."-".$priceRange2; ?>" name="filter_price-<?php echo $priceBayesMean."-".$priceRange2; ?>" /><label for="filter_price-<?php echo $priceBayesMean."-".$priceRange2; ?>">De <?php echo $priceBayesMean; ?>€ à <?php echo $priceRange2; ?>€</label></li>
+                  <li><input class="filter" <?php if($currentRange == '11000-18800')echo 'checked="checked"'; ?> type="checkbox" id="filter_price-<?php echo $priceRange2."-".$priceMax; ?>" name="filter_price-<?php echo $priceRange2."-".$priceMax; ?>" /><label for="filter_price-<?php echo $priceRange2."-".$priceMax; ?>">De <?php echo $priceRange2; ?>€ à <?php echo $priceMax; ?>€</label></li>
+                
+                </ul>
+        <?php } ?>
+      <?php if(!empty($cat3List)) : ?>
+      <div id="cat3-cat-filtering" class="filtering">
+      <div class="pdt-filtering-title">Liste des familles produits du fournisseur</div>
+      <ul class="cat3-cat-filtering">
+     <?php foreach($cat3List as $cat) :?>
+        <li>
+          <a href="<?php echo URL."familles/".$cat->getAttribute("ref_name").".html"; ?>"><?php echo $cat->getAttribute("name"); ?></a>
+        </li>
+     <?php endforeach // cat3list ?>
+      </ul>
+      
+    </div>
+    <?php endif; ?>
+                
+    </div>
+  </div>
+  <div class="right-panel">
+    <div id="ajax-pdt-list" class="pdt-list">
+	<h1 id="title_cat3"> Produits du fournisseur n°<?= $supplierID ?> </h1>
+	<div class="desc">
+		Retrouvez ici l'ensemble des produits de notre fournisseur de <?= $desc_ten ?>
+    </div>
+      <div id="cat3-pagination-block">
+        <div class="cat3-pdt-count"><?php echo $pdtList["count"];?> produit<?php echo $pdtList["count"] != 1 ? 's': '';?></div>
+      <?php if ($showPriceSortBlock) { ?>
+        <div class="filter-sort">
+          Trier par :
+          <select>
+            <option name=""></option>
+            <option name="sort-price-asc" <?php echo ($sort=="price-asc"?'selected="selected"':"") ?>>Prix - / +</option>
+            <option name="sort-price-desc"<?php echo ($sort=="price-desc"?'selected="selected"':"") ?>>Prix + / -</option>
+          </select>
+        </div>
+      <?php } ?>
+        
+        <div class="page-list">
+          <img src="<?php echo URL; ?>ressources/images/pagination-bg-left.png" alt="" class="fl" />
+          <div class="page-links">
+          <?php for ($k=1; $k<=$maxpage; $k++) {
+			  if ($k == $page) { ?>
+		    <span class="cat3-current-page cat3-pagination-page"><?php echo $k ?></span>
+            <?php } else { 
+				if($k == 1){ ?>
+				<a class="pagination-link" href="<?php echo URL."fournisseur/".$supplierID.".html" ?>">
+				<?php echo $k ?>
+				</a>
+			<?php	}else {  ?>
+			<a class="pagination-link" href="<?php echo URL."fournisseur/".$supplierID.".html?page=".$k.$urlOpt["filter"].$urlOpt["sort"]; ?>">
+			<?php echo $k ?>
+			</a>
+           <?php } ?>
+           <?php } ?>
+          <?php }  ?>
+          </div>
+          <img src="<?php echo URL; ?>ressources/images/pagination-bg-right.png" alt="" class="pagination-bg-right" />
+        </div>
+      </div>
+      <div class="zero"></div>
+
+    <?php for ($k = $startItemIndex; $k <= $endItemIndex; $k++) { $pdt = &$pdtList["data"][$k]; ?>
+                    <?php
+                   // set if product is set as default estimate
+                    $pdt_set_as_estimate = false;
+                    if($pdt['price'] >= __THRESHOLD_PRICE_FOR_ESTIMATE__) $pdt_set_as_estimate = true;
+                    if($pdt['product_as_estimate']) $pdt_set_as_estimate = true;
+                    ?>
+      
+          <div class="grey-block">
+        <div class="fl cat3-prod-list-pic">
+          <div class="fr cat3-prod-list-infos">
+            <h2><a class="blue-small-title blue-smaller-title" href="<?php echo $pdt["url"]; ?>"><?php echo $pdt["name"] ?></a></h2>
+            <div class="fastdesc"><?php echo $pdt['fastdesc'] ?></div>
+            <div class="desc">
+              <?php echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,150))."..." ?>
+            </div>
+            <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ ) { ?>
+            <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" />Livraison: <?php echo $pdt["delivery_time"]; ?></p>
+              <?php /*if(!$pdt_set_as_estimate) { ?>
+              <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" /><span class="atseo shipping-fee-small"></span> <strong><?php echo $pdt["shipping_fee"]; ?></strong></p>
+              <?php }*/?>
+           <?php } 
+                //  var_dump($pdt['nb_refs'], $pdt['adv_cat'])?>
+              
+            <?php if(!empty ($pdt['average_note'])) {
+              echo '<span class="cat3-checked-line"><img src="'.URL.'ressources/images/picto-avis.png" alt="picto-avis" /> Avis client ';
+              showStarRater($pdt['average_note']);
+              echo ' <a class="color-blue ShowProductFeedback" href="'.$pdt["id"].'">Lire les avis</a></span>';
+            } ?>
+          </div>
+          <div class="picture fl">
+            <div class="cat3-picture-border">
+              <a href="<?php echo $pdt["url"]; ?>"><img src="<?php echo $pdt["pic_url"]; ?>" alt="" class="vmaib"/></a><div class="vsma"></div>
+              <div class="cat3-product-show"></div>
+            </div>
+          <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ ) { ?>
+            <span class="atseo expert-advice"></span>
+          <?php } else{ ?>
+            <span class="atseo multiple-estimates"></span>
+          <?php } ?>
+          </div>
+        </div>
+        <div class="fr cat3-prod-list-relations">
+          <div class="cat3-price">
+            <?php echo ($pdt["hasPrice"] ? ($pdt_set_as_estimate ? 'Sur devis' : 'à partir de : <span>'.sprintf("%.02f",$pdt["price"])."€ HT</span>") : 'à partir de : <span>'.$pdt["price"].'</span>'); ?>
+          </div>
+          <div class="cat3-action">
+            <a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { echo $pdt['nb_refs'] > 1 ? 'btn-cart-add-big-pink': 'btn-cart-add-small-single'; } else { ?>btn-esti-ask-orange<?php } ?>" data-adv-type="<?php echo $pdt["adv_cat"]; ?>" ></a>
+            <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ && ($pdt["saleable"] && !$pdt_set_as_estimate)) : ?>
+              <a href="<?php echo $pdt["cart_add_url"]; ?>"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="ask-estimate-link"><div class="puce puce-4"></div><span class="atseo ask-estimate-small"></span></a>
+            <?php endif ?>
+            <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+              <?php $productList = new ProductsSavedList();
+              if ($productList->isProductInSavedList($pdt['id'])) : ?>
+                <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+              <?php else : ?>
+                <a href="saveProductList:add-<?php echo $pdt['id']; ?>" class="btn-users-product-list"><div class="puce puce-5"></div>Sauvegarder ce produit</a>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <div class="zero"></div>
+    </div>
+      
+      <!--
+      <table class="pdt-db" cellspacing="0" cellpadding="0">
+        <tbody>
+        <tr>
+          <td class="picture">
+            <img src="<?php echo $pdt["pic_url"]; ?>" alt="" class="vmaib"/>
+          </td>
+          <td class="infos">
+            <a href="<?php echo $pdt["url"]; ?>"><strong><?php echo $pdt["name"]; ?></strong></a><br/>
+            <?php echo $pdt["fastdesc"]; ?><br/>
+            <span class="see-link u">voir la fiche produit</span>
+          </td>
+          <td class="delivery">
+        <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+            Livraison: <?php echo $pdt["delivery_time"]; ?><br/>
+            <?php if(!$pdt_set_as_estimate) { ?>
+                                                Port: <strong><?php echo $pdt["shipping_fee"]; ?></strong>
+                                                <?php }?>
+        <?php } else { ?>
+            <img src="<?php echo $res_url; ?>images/partner-pdt.png"/><br/>
+            <span class="what-is-it u">Qu'est-ce que c'est ?</span>
+        <?php }?>
+          </td>
+          <td class="price">
+            <?php echo ($pdt["hasPrice"] ? ($pdt_set_as_estimate ? 'sur devis' : sprintf("%.02f",$pdt["price"])."€ HT") : $pdt["price"]); ?>
+          </td>
+          <td class="action">
+            <a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { ?>btn-cart-add-green-3d<? } else { ?>btn-esti-ask-red-3d<?php } ?>" rel="nofollow"></a>
+          </td>
+        </tr>
+        </tbody>
+      </table>-->
+    <?php } ?>
+      <div class="zero"></div>
+<div id="cat3-show-product-infos-dialog" title=""></div>
+      <div class="zero"></div>
+    </div>
+  </div>
+<?php } ?>
+
+</div>
+
+
+<?php require(SITE . "blocks-right.php"); ?>
+  <div class="clear"></div>
+  <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+</div><!-- .white-bg -->
+<?php require(SITE."foot.php"); ?>
+
+<script type="text/javascript">
+
+  $("#pdt-filtering li input[type=checkbox],").live("click", function(e){
+    if ($(this).attr('checked') == 'checked') {
+      var range = $(this).attr('id').split('-');
+      location.href = '<?php echo URL."fournisseur/".$supplierID.".html?page=".$urlOpt["page"]."&filter=price&range=" ?>'+range[1]+'-'+range[2]+'<?php echo $urlOpt["sort"] ?>';
+    } else {
+      location.href = '<?php echo URL."fournisseur/".$supplierID.".html" ?>';
+    }
+ })
+
+  $(".filter-sort select").live("change", function(){
+    if($(this).find(' option:selected').attr('name') == 'sort-price-asc')
+      location.href = '<?php echo URL."fournisseur/".$supplierID.".html?page=".$urlOpt["page"]."&sort=price-asc".$urlOpt["filter"]; ?>';
+    else if($(this).find(' option:selected').attr('name') == 'sort-price-desc')
+      location.href = '<?php echo URL."fournisseur/".$supplierID.".html?page=".$urlOpt["page"]."&sort=price-desc".$urlOpt["filter"]; ?>';
+  });
+</script>

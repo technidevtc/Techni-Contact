@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: http://www.techni-contact.com/sitemapindex.xml.gz

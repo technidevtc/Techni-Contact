@@ -1,0 +1,387 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS . 'CUserSession.php');
+require(ICLASS . 'CCustomerUser.php');
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$user = new CustomerUser($handle, $session->userID);
+
+if (!$session->logged){
+	header("Location: " . COMPTE_URL . "login.html");
+	exit();
+}
+/*
+ * last order 
+*/
+$last_order = Doctrine_Query::create()
+  ->select('o.id, o.web_id, o.created, o.validated, o.total_ht, o.total_ttc, o.processing_status, i.web_id AS invoice_web_id')
+  ->from('Order o')
+  ->leftJoin('o.invoice i')
+  ->where('o.client_id = ?', $session->userID)
+  ->orderBy('o.created DESC')
+  ->limit('0,1')
+  ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+/*
+ * last lead
+ */
+$last_contact = Doctrine_Query::create()
+  ->select('c.id, c.income_total, cpfr.name, cpfr.fastdesc, cp.id, c.income_total, c.parent')
+  ->from('Contacts c')
+  ->leftJoin('c.product cp')
+  ->leftJoin('cp.product_fr cpfr')
+  ->leftJoin('c.advertiser ca')
+  ->where('c.email = ?', $user->login)
+  //->andWhere('ca.category != ? OR ca.category != ?', array(__ADV_CAT_BLOCKED__,__ADV_CAT_LITIGATION__))
+  //->andWhere('(c.invoice_status != ? AND c.invoice_status != ? AND c.invoice_status != ? AND c.invoice_status != ? AND c.invoice_status != ? AND c.invoice_status != ?)  OR (c.invoice_status = 0 AND c.processing_status = 2 AND processing_time != 0)', array(__LEAD_INVOICE_STATUS_NOT_CHARGED__, __LEAD_INVOICE_STATUS_REJECTED__, __LEAD_INVOICE_STATUS_REJECTED_WAIT__, __LEAD_INVOICE_STATUS_CHARGEABLE_REJECTED_WAIT__, __LEAD_INVOICE_STATUS_CREDITED__, __LEAD_INVOICE_STATUS_DISCHARGED__))
+  ->orderBy('c.create_time DESC, c.parent ASC')
+  ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+if($last_contact['parent'] != 0 && empty($last_contact['product'])) { //lead secondaire lié par famille valide, mais parent incorrect, on va chercher ses informations
+      $parent = Doctrine_Query::create()
+        ->select('c.id, c.income_total, cpfr.name, cpfr.fastdesc, cp.id, c.income_total')
+        ->from('Contacts c')
+        ->leftJoin('c.product cp')
+        ->leftJoin('cp.product_fr cpfr')
+        ->leftJoin('c.advertiser ca')
+        ->leftJoin('cp.families pf')
+        ->where('c.email = ?', $user->login)
+        ->andWhere('c.id = ?', $last_contact['parent'])
+        ->fetchOne(array(), DOCTRINE::HYDRATE_ARRAY);
+      $last_contact['product'] = $parent['product'];
+  }
+/*
+ * last message
+ */
+$last_message = Doctrine_Query::create()
+        ->select()
+        ->from('Messenger m')
+        ->where('(m.id_sender = ?  AND m.type_sender = ? ) OR ( m.id_recipient = ? AND m.type_sender = ? )', array($session->userID, __MSGR_USR_TYPE_INT__, $session->userID, __MSGR_USR_TYPE_INT__))
+        ->andWhere('( m.context = ? OR m.context = ? OR m.context = ? OR m.context = ? OR m.context = ? OR  m.context = ? )', array(__MSGR_CTXT_CUSTOMER_TC_LEAD__,__MSGR_CTXT_CUSTOMER_TC_CMD__,__MSGR_CTXT_CUSTOMER_TC_DEVIS_PDF__,__MSGR_CTXT_CUSTOMER_TC_ESTIMATE__,__MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__,__MSGR_CTXT_CUSTOMER_TC_INVOICE__))
+        ->orderBy('timestamp DESC')
+        ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+switch($last_message['context']){
+  case __MSGR_CTXT_CUSTOMER_TC_LEAD__ :
+    $contextName = 'à la demande';
+    $contexType = 4;
+    break;
+  case __MSGR_CTXT_CUSTOMER_TC_CMD__ :
+    $contextName = 'à la commande';
+    $contexType = 1;
+    break;
+  case __MSGR_CTXT_CUSTOMER_TC_DEVIS_PDF__ :
+    $contextName = 'au devis';
+    $contexType = 2;
+    break;
+  case __MSGR_CTXT_CUSTOMER_TC_ESTIMATE__ :
+    $contextName = 'au devis';
+    $contexType = 3;
+    break;
+  case __MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__ :
+    $contextName = 'à la demande';
+    $contexType = 4;
+    break;
+  case __MSGR_CTXT_CUSTOMER_TC_INVOICE__ :
+    $contextName = 'à la commande';
+    $contexType = 1;
+    break;
+  default:
+    $contextName = '';
+    $contexType = '';
+    break;
+}
+
+// last pdfestimate/estimate
+$devisPdf = Cart::getEstimates($session->userID);
+
+$estimate = Doctrine_Query::create()
+        ->select('id as estimate, web_id as id, created as create_time, total_ht as totalHT, total_ttc at totalTTC, status, 
+          bou.name as origine, nom, prenom, adresse, ville')
+        ->from('Estimate e')
+        ->leftJoin('e.created_user bou')
+        ->where('e.client_id = ?', $session->userID)
+        ->andWhere('status > 1')
+        ->orderBy('e.created DESC')
+        ->fetchOne(array(), DOCTRINE::HYDRATE_ARRAY);
+$lastDevisPdf = $devisPdf[0]['create_time'] > $estimate['create_time']? $devisPdf[0]: $estimate;
+
+$current_account_menuitem = "Mes coordonnées";
+define("SECURE", true);
+require(SITE . 'head.php');
+require(SITE . 'account-head.php');
+
+switch($last_message['type_sender']){
+  case __MSGR_USR_TYPE_ADV__:
+    $sender_name = Doctrine_Query::create()->select('nom1 as sender_name')->from('Advertisers')->where('id = ?', $last_message['id_sender'])->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+    break;
+  case __MSGR_USR_TYPE_INT__:
+    $sender_name['sender_name'] = $customerInfos['nom'] . " " . $customerInfos['prenom'];//Doctrine_Query::create()->select('CONCAT_WS(" ",nom, prenom) as sender_name')->from('Clients')->where('id = ?', $last_message['id_sender'])->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+    break;
+  case __MSGR_USR_TYPE_BOU__:
+    $sender_name = Doctrine_Query::create()->select('name as sender_name')->from('BoUsers')->where('id = ?', $last_message['id_sender'])->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+    break;
+}
+/*
+ * last product
+ */
+$lastSavedProduct = Doctrine_Query::create()
+        ->select()
+        ->from('ProductsSavedList psl')
+        ->innerJoin('psl.products_fr pslpfr')
+        ->innerJoin('psl.products_families pslpf')
+        ->where('psl.client_id = ? ', $session->userID)
+        ->orderBy('psl.create_time DESC')
+        ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+?>
+  <div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mon espace personnel</h1>
+        <div class="blue-title">Bienvenue <?php echo $customerInfos['titre'] ." " . ucfirst($customerInfos['prenom']) . " " . ucfirst($customerInfos['nom']); ?> dans votre espace personnel</div>
+        <div class="account-header-info">Depuis le tableau de bord 'Mon compte', vous pouvez avoir un aperçu de vos récentes activités et mettre à jour les informations de votre compte. Sélectionnez un lien ci-dessous pour voir ou modifier les informations</div>
+      </div>
+      <div class="account-body">
+        <div class="blue-title">Mes dernières actions</div>
+
+        <div class="account-block-info grey-block">
+          <div class="fl">
+            <div class="account-pic fl">
+              <img src="<?php echo $res_url; ?>images/account-last-request.png" alt="Ma dernière demande" />
+            </div>
+            <div class="account-info fr">
+              <div class="blue-small-title">Ma dernière demande</div>
+              <div class="account-info-text">
+              <?php if($last_contact){?>
+                <strong><?php echo $last_contact['product']['product_fr']['name']; ?></strong><br />
+                <?php echo $last_contact['product']['product_fr']['fastdesc']; ?><br />
+                <?php /*<span class="blue-small-title"><?php echo !empty($last_contact['income_total']) ? $last_contact['income_total'].' €' : '';  ?></span> */ ?>
+              <?php }else{ ?>
+              Vous n'avez aucune demande en cours…
+              <?php } ?>
+              </div>
+              <div class="account-info-price"></div>
+            </div>
+            <div class="zero"></div>
+          </div>
+          <div class="account-link fr">
+            <?php if($last_contact){?>
+            <div class="btn-account-lasts vmaib"><a href="<?php echo COMPTE_URL; ?>lead.html?leadID=<?php echo $last_contact['id']; ?>">Voir ma dernière demande</a></div><div class="vsma"></div>
+            <?php } ?>
+          </div>
+          <div class="zero"></div>
+          <div class="bottom-right-arrow"></div>
+        </div>
+
+        <div class="account-block-info grey-block">
+          <div class="fl">
+            <div class="account-pic fl">
+              <img src="<?php echo $res_url; ?>images/account-last-order.png" alt="Ma dernière commande" />
+            </div>
+            <div class="account-info fr">
+              <div class="blue-small-title">Ma dernière commande</div>
+              <div class="account-info-text">
+              <?php if($last_order){?>
+              Date : <?php echo date('d/m/Y à H:i', $last_order['created']); ?><br />
+              Montant HT : <?php echo sprintf('%.02f', $last_order['total_ht']); ?> €<br />
+              Montant TTC : <?php echo sprintf('%.02f', $last_order['total_ttc']) ?> €<br />
+              État : <?php echo to_entities(Order::getGlobalProcessingStatusText($last_order['processing_status'])." ".$last_order[Order::getProcessingStatusTextFieldName($last_order['processing_status'])]); ?>
+              <?php }else{ ?>
+              Vous n'avez aucune commande en cours…
+              <?php } ?>
+              </div>
+            </div>
+            <div class="zero"></div>
+          </div>
+          <div class="account-link fr">
+            <?php if(!empty($last_order['id'])){?>
+            <div class="btn-account-lasts vmaib"><a href="<?php echo COMPTE_URL; ?>order.html?orderID=<?php echo $last_order['id']; ?>">Voir ma dernière commande</a></div><div class="vsma"></div>
+            <?php } ?>
+          </div>
+          <div class="zero"></div>
+          <div class="bottom-right-arrow"></div>
+        </div>
+
+        <div class="account-block-info grey-block">
+          <div class="account-last-message fl">
+          <div class="blue-small-title">Mon dernier message</div>
+          <?php if($last_message){?>
+            Sujet : Message correspondant <?php echo $contextName; ?>  n° <?php echo $last_message['reference_to']; ?><br />
+            Date : <?php echo date('d/m/Y',$last_message['timestamp']); ?><br />
+            Expéditeur : <?php echo $sender_name['sender_name']; ?><br />
+            Message : <?php echo $last_message['text']; ?>
+            <?php }else{ ?>
+              Vous n'avez aucun message…
+              <?php } ?>
+          </div>
+          <div class="account-link fr">
+            <?php if($last_message){?>
+            <div class="btn-account-lasts vmaib">
+              <a href="#account-contact-dialog_<?php echo $contexType; ?>,<?php echo $last_message['reference_to']; ?>">
+                <?php echo $last_message['id_sender'] == $session->userID ?'Renvoyer un':'Répondre au' ;?> message
+              </a>
+            </div>
+            <div class="vsma"></div>
+            <?php } ?>
+          </div>
+          <div class="zero"></div>
+          <div class="bottom-right-arrow"></div>
+        </div>
+
+        <div class="account-block-info grey-block">
+          <div class="fl">
+            <div class="account-pic fl">
+              <img src="<?php echo $res_url; ?>images/account-last-pdf.png" alt="Mon dernier pdf" />
+            </div>
+            <div class="account-info fr">
+              <div class="blue-small-title">Mon dernier devis</div>
+              <div class="account-info-text">
+              <?php if($lastDevisPdf){?>
+                Date : <?php echo date('d/m/Y', $lastDevisPdf['create_time']);?><br />
+                Montant HT : <?php echo $lastDevisPdf['totalHT'];?> €<br />
+                Montant TTC : <?php echo $lastDevisPdf['totalTTC'];?> €<br />
+              <?php }else{ ?>
+              Vous n'avez aucun devis en cours…
+              <?php } ?>
+              </div>
+              <div class="account-info-price"></div>
+            </div>
+            <div class="zero"></div>
+          </div>
+          <div class="account-link fr">
+            <?php if($lastDevisPdf){?>
+            <div class="btn-account-lasts vmaib"><a href="<?php echo COMPTE_URL; ?>pdfestimate.html?estimateID=<?php echo $lastDevisPdf['id'];?>">Voir le dernier PDF</a></div><div class="vsma"></div>
+            <?php } ?>
+          </div>
+          <div class="zero"></div>
+          <div class="bottom-right-arrow"></div>
+        </div>
+
+        <div class="account-block-info grey-block">
+          <div class="fl">
+            <div class="account-pic fl">
+              <?php if($lastSavedProduct):?>
+              <img src="<?php echo Utils::get_secure_pdt_pic_url($lastSavedProduct['product_id']); ?>" alt="Mon dernier produit sauvegardé" />
+              <?php endif; ?>
+            </div>
+            <div class="account-info fr">
+              <div class="blue-small-title">Mon dernier produit sauvegardé</div>
+              <div class="account-info-text">
+              <?php if($lastSavedProduct){ 
+                echo '<strong>'.$lastSavedProduct['products_fr'][0]['name'].'</strong><br />';
+                echo $lastSavedProduct['products_fr'][0]['fastdesc'].'<br />';
+                }else{ ?>
+              Vous n'avez pas de produits sauvegardés…
+              <?php } ?>
+              </div>
+              <div class="account-info-price"></div>
+            </div>
+            <div class="zero"></div>
+          </div>
+          <div class="account-link fr">
+            <?php if($lastSavedProduct){?>
+            <div class="btn-account-lasts vmaib"><a href="<?php echo URL.'produits/'.$lastSavedProduct['products_families']['idFamily'].'-'.$lastSavedProduct['product_id'].'-'.$lastSavedProduct['products_fr'][0]['ref_name'].'.html'; ?>">Voir le produit</a></div><div class="vsma"></div>
+            <?php } ?>
+          </div>
+          <div class="zero"></div>
+          <div class="bottom-right-arrow"></div>
+        </div>
+      </div>
+    </div>
+    <div class="right-account-panel-right-inlay fr">
+      <div class="right-account-panel-navig">
+    <div class="account-upper-right-links">
+        <?php /*<a href=""><div class="puce puce-1"></div>Imprimer<div class="zero"></div>
+        <a href="" class="color-blue">Besoin d'aide ?</a> */ ?>
+      </div>
+  </div>
+    </div>
+    <div class="zero"></div>
+  </div>
+  <div class="zero"></div>
+  <!--
+      <div class="resume">
+              <h1>Votre compte utilisateur</h1>
+              <strong>Bienvenue <?php echo $customerInfos['titre'] ." " . $customerInfos['prenom'] . " " . $customerInfos['nom']; ?></strong><br/>
+              Votre num�ro client Techni-Contact est le <strong><?php echo $customerInfos['id']; ?></strong> <em>(client depuis le <?php echo date("d/m/Y", $customerInfos['timestamp']); ?>)</em>
+      </div>
+      <div class="need-infos">
+              <div class="title">Besoin d'aide ?</div>
+              <div class="desc">
+                      Contactez nous au <strong>01.55.60.29.29</strong> de 9H � 18H<br/>
+                      ou utilisez notre  <a href="<?php echo COMPTE_URL."contact-form.html"; ?>">formulaire de contact</a>
+              </div>
+      </div>
+      <div class="zero"></div>
+
+      <div class="box account-box">
+              <div class="btl"></div><div class="btr"></div>
+              <div class="bbl"></div><div class="bbr"></div>
+              <div class="box-out">
+                      <div class="box-in">
+                              <div class="legend">
+                                      <?php echo $account_menu; ?>
+                              </div>
+      <div class="title">Informations Personnelles</div>
+      <div class="contact-infos infos-resume">
+              <ul>
+                      <li><label>Compte:</label><div class="text"><?php echo $customerInfos['titre'] . ' ' . $customerInfos['prenom'] . ' ' . $customerInfos['nom'] ?></div><div class="zero"></div></li>
+                      <li>
+                              <label>E-mail:</label>
+                              <div class="text email"><?php echo $customerInfos["login"] ?></div>
+                              <div class="actions"><a href="">Modifier</a><?php // / <a href="">Modifier mes alertes e-mail</a> ?></div>
+                              <input type="text" name="email" class="edit" style="display: none" value="<?php echo $customerInfos["login"] ?>"/>
+                              <div class="help" style="display: none">Rentrez votre nouvelle adresse email</div>
+                              <div class="zero"></div>
+                      </li>
+                      <li>
+                              <label>Mot de passe:</label>
+                              <div class="text">******</div>
+                              <div class="actions"><a href="">Modifier</a><?php // / <a href="">Modifier mes alertes e-mail</a> ?></div>
+                              <input type="password" name="pass" class="edit" style="display: none" value=""/>
+                              <div class="help" style="display: none">Rentrez votre nouveau mot de passe</div>
+                              <div class="zero"></div>
+                      </li>
+              </ul>
+              <div class="actions hidden"><b><a href="">Sauvegarder les modifications</a></b> | <a href="">Annuler les modifications</a></div>
+              <div class="zero"></div>
+      </div>
+
+      <div class="title">Gestion de mes coordonn�es</div>
+      <div class="actions"><a href="<?php echo COMPTE_URL . "infos-modify.html" ?>">Modifier</a></div>
+      <div class="infos-complete">
+              <div class="contact-infos billing-infos">
+                      <strong><i>Coordonn�es de Facturation</i></strong>
+                      <ul>
+                              <li><label>Titre:</label><div class="text"><?php echo $customerInfos['titre'] ?></div><div class="zero"></div></li>
+                              <li><label>Nom:</label><div class="text"><?php echo $customerInfos['nom'] ?></div><div class="zero"></div></li>
+                              <li><label>Pr�nom:</label><div class="text"><?php echo $customerInfos['prenom'] ?></div><div class="zero"></div></li>
+                              <li><label>Soci�t�:</label><div class="text"><?php echo $customerInfos['societe'] ?></div><div class="zero"></div></li>
+                              <li><label>Adresse:</label><div class="text"><?php echo $customerInfos['adresse'] ?></div><div class="zero"></div></li>
+                              <li><label>Code postal*:</label><div class="text"><?php echo $customerInfos['cp'] ?></div><div class="zero"></div></li>
+                              <li><label>Ville*:</label><div class="text"><?php echo $customerInfos['ville'] ?></div><div class="zero"></div></li>
+                              <li><label>Pays:</label><div class="text"><?php echo $customerInfos['pays'] ?></div><div class="zero"></div></li>
+                              <li><label>Num�ro de t�l�phone:</label><div class="text"><?php echo $customerInfos['tel1'] ?></div><div class="zero"></div></li>
+                              <li><label>Fax:</label><div class="text"><?php echo $customerInfos['fax1'] ?></div><div class="zero"></div></li>
+                      </ul>
+              </div>
+              <div class="vbar"></div>
+              <div class="contact-infos delivery-infos">
+                      <strong><i>Coordonn�es de Livraison</i></strong>
+                      <ul>
+                              <li><label>Titre:</label><div class="text"><?php echo $customerInfos['titre'] ?></div><div class="zero"></div></li>
+                              <li><label>Nom:</label><div class="text"><?php echo $customerInfos['nom_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Pr�nom:</label><div class="text"><?php echo $customerInfos['prenom_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Soci�t�:</label><div class="text"><?php echo $customerInfos['societe_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Adresse:</label><div class="text"><?php echo $customerInfos['adresse_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Code postal*:</label><div class="text"><?php echo $customerInfos['cp_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Ville*:</label><div class="text"><?php echo $customerInfos['ville_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Pays:</label><div class="text"><?php echo $customerInfos['pays_l'] ?></div><div class="zero"></div></li>
+                              <li><label>Num�ro de t�l�phone:</label><div class="text"><?php echo $customerInfos['tel2'] ?></div><div class="zero"></div></li>
+                              <li><label>Fax:</label><div class="text"><?php echo $customerInfos['fax2'] ?></div><div class="zero"></div></li>
+                              <li><label>Instruction de livraison:</label><div class="text"><?php echo $customerInfos['infos_sup_l'] ?></div><div class="zero"></div></li>
+                      </ul>
+              </div>
+              <div class="zero"></div>
+      </div>
+</div>-->
+<?php require(SITE . 'account-foot.php') ?>
+<?php require(SITE . 'foot.php') ?>

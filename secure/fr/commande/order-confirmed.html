@@ -1,0 +1,436 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+
+if (!$session->logged) {
+  $session->pageAfterLogin = COMMANDE_URL."order-confirmed.html";
+  header("Location: ".COMPTE_URL."login.html");
+  exit();
+}
+
+$orderID = isset($_GET["orderID"]) && preg_match("/^\d+$/", $_GET["orderID"]) ? $_GET["orderID"] : 0;
+if (empty($orderID)) {
+  header("Location: ".URL);
+  exit();
+}
+$o = Doctrine_Query::create()
+    ->select('o.*,
+              ol.*,
+              IF(0,ol.id,olpfr.name) AS pdt_name,
+              IF(0,ol.id,olpfr.ref_name) AS pdt_ref_name,
+              IF(0,ol.id,olpfr.fastdesc) AS pdt_fastdesc,
+              IF(0,ol.id,olpf.id) AS pdt_cat_id')
+    ->from('Order o')
+    ->innerJoin('o.lines ol')
+    ->innerJoin('ol.product olp')
+    ->innerJoin('olp.product_fr olpfr')
+    ->leftJoin('olp.families olpf')
+    ->where('o.id = ?', $orderID)
+    ->andWhere('o.client_id = ?', $session->userID)
+    ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+if (empty($o['id'])) {
+  header("Location: ".URL);
+  exit();
+}
+
+if ($o['payment_status'] == Order::PAYMENT_STATUS_WAITING_BANC_CONFIRMATION) {
+  header("Location: ".COMMANDE_URL."order-step3.html");
+  exit();
+}
+
+// order is paid by BC (b2b), empty the cart and explicitely unset orderID
+if ($o['payment_mean'] <= Order::PAYMENT_MEAN_BC_AMEX) {
+  $cart = new Cart($db, $session->getID());
+  $cart->clearProducts();
+  $cart->save();
+  unset($session->orderID);
+}
+
+$criteo = array('pdt_ids' => array(), 'pdt_prices' => array(), 'pdt_quantities' => array());
+foreach ($o['lines'] as $line) {
+  $criteo['pdt_ids'][] = $line['pdt_id'];
+  $criteo['pdt_prices'][] = $line['pu_ht'];
+  $criteo['pdt_quantities'][] = $line['quantity'];
+}
+
+define('__PAGE_ORDER_CONFIRMED__', true);
+define('SECURE', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>
+<div class="white-bg">
+  <div class="blocks-left">
+    
+    <div class="step-title">Paiement</div>
+    
+    <div class="order-steps order-resume">
+      <div class="fl">
+        <div class="order-step2 cart-resume grey-block">
+          <div class="blue-title">Confirmation de votre commande</div>
+          <div class="cart-table">
+            <table cellspacing="0" cellpadding="0">
+              <thead>
+              <tr>
+                <th>Produit - désignation</th>
+                <th class="qty">Qté</th>
+                <th class="price">Prix total ht</th>
+              </tr>
+              </thead>
+              <tbody>
+              <?php
+              foreach ($o['lines'] as $line) { ?>
+                  <tr>
+                    <td class="color-blue" class="al"><a href="<?php echo Utils::get_pdt_fo_url($line['pdt_id'], $line['pdt_ref_name'], $line['pdt_cat_id']) ?>"><?php echo $line['pdt_ref_id'].' - '.$line['desc'] ?></a></td>
+                    <td><?php echo $line['quantity'] ?></td>
+                    <td class="price">
+                      <?php echo sprintf("%.02f", $line['total_ht']+$line["et_total_ht"]) ?> €
+                      <?php if ($line["et_total_ht"] > 0) : ?>
+                        <small>éco part : <?php echo $line["et_total_ht"] ?> €</small>
+                      <?php endif ?>
+                    </td>
+                  </tr>
+                 <?php } ?>
+              </tbody>
+            </table>
+          </div>
+          <table class="cart-totals" cellspacing="0" cellpadding="0">
+            <tbody>
+              <tr class="stotal-ht">
+                <td></td>
+                <td class="label">Sous-total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['total_ht']-$o['fdp_ht']) ?> €</td>
+              </tr>
+              <tr class="fdp">
+                <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                <td class="label">Frais de port HT:
+                <?php //if(!empty($cart->delivery_time)) echo 'Livraison sous '.$cart->delivery_time.'<br />'; // delivery time by product, not by cart ?>
+                </td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['fdp_ht']) ?> €</td>
+              </tr>
+              <tr class="total-ht">
+                <td></td>
+                <td class="label">Total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['total_ht']) ?> €</td>
+              </tr>
+              <tr class="tva">
+                <td></td>
+                <td class="label">TVA (20%):</td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['total_ttc']-$o['total_ht']) ?> €</td>
+              </tr>
+             <?php if ($o['insurance']) { ?>
+              <tr class="insurance">
+                <td></td>
+                <td class="label">ClicProtect</td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['insurance']) ; ?> €</td>
+              </tr>
+             <?php } ?>
+              <tr class="total-ttc">
+                <td></td>
+                <td class="label">Total TTC:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $o['total_ttc']); ?> €</td>
+              </tr>
+            </tbody>
+          </table>
+        </div><!-- cart-resume -->
+        
+        <div class="order-step3-bottom-addresses grey-block order-step2 cart-resume">
+          <div class="blue-title">Récapitulatif adresses</div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de livraison</span><br />
+            <?php echo $o['prenom2'] ?> <?php echo $o['nom2'] ?><br/>
+            <?php echo $o['societe2'] != "" ? $o['societe2'] . "<br/>" : "" ?>
+            <?php echo $o['adresse2'] ?><br/>
+            <?php echo $o['cadresse2'] ?> <?php echo $o['cp2'] ?> <?php echo $o['ville2'] ?><br/>
+            <?php echo $o['pays2'] ?><br/>
+            <?php /*Tél: <?php echo $o['tel2'] ?><br/>
+            Fax: <?php echo $o['fax2'] ?><br/> */?>
+           <?php if (!empty($o['delivery_infos'])) { ?>
+            <i>Infos supplémentaires:</i><br/>
+            <?php echo $o['delivery_infos'] ?>
+           <?php } ?>
+          </div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de facturation</span><br />
+            <?php echo $o['prenom'] ?> <?php echo $o['nom'] ?><br/>
+            <?php echo $o['societe'] != "" ? $o['societe'] . "<br/>" : "" ?>
+            <?php echo $o['adresse'] ?><br/>
+            <?php echo $o['cadresse'] ?> <?php echo $o['cp2'] ?> <?php echo $o['ville'] ?><br/>
+            <?php echo $o['pays'] ?><br/>
+            <?php /*Tél: <?php echo $o['tel'] ?><br/>
+            Fax: <?php echo $o['fax'] ?><br/> */?>
+          </div>
+          <div class="zero"></div>
+        </div>
+      </div><!-- fl -->
+      
+      <div class="addresses-block fr">
+        <div class="grey-block payment-mode">
+          <h1 class="blue-title">Que va-t-il se passer maintenant ?</h1>
+          <br />
+          <div class="have-account">
+           <?php switch ($o['payment_status']) {
+            case Order::PAYMENT_STATUS_WAITING_BANC_CONFIRMATION: break;
+            case Order::PAYMENT_STATUS_WAITING_CHECK: $show_tags = true ?>
+                    Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+                    <br/>
+                    Vous avez choisi le mode de règlement par chèque.<br/>
+                    <br/>
+                    Afin que nous puissions traiter votre commande, merci de nous envoyer votre chèque à l'ordre de MD2I, accompagné de votre <a class="color-blue" href="<?php echo PDF_URL."order.php?web_id=".$o['web_id']; ?>">bon de commande</a> signé et tamponné à l'adresse suivante :<br/>
+                    <br/>
+                    M.D.2i / Service commandes<br/>
+                    253 rue Gallieni <br/>
+                    F-92774 BOULOGNE BILLANCOURT cedex<br/>
+                    <br/>
+                    Le <a class="color-blue" href="<?php echo PDF_URL."order.php?web_id=".$o['web_id']; ?>">bon de commande</a> est disponible au format PDF, si nous rencontrez des difficultés à lire le document, veuillez installer gratuitement <a class="color-blue" href="http://get.adobe.com/fr/reader/">Adobe Acrobat Reader</a>
+           <?php break;
+            case Order::PAYMENT_STATUS_WAITING_TRANSFER: $show_tags = true ; ?>
+                    Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+                    <br/>
+                    Vous avez choisi le mode de règlement par virement.<br/>
+                    <br/>
+                    Afin que nous puissions traiter votre commande, merci de nous transmettre le justificatif de votre virement, accompagné de votre <a class="color-blue" href="<?php echo PDF_URL."order.php?web_id=".$o['web_id']; ?>">bon de commande</a> signé et tamponné :<br/>
+                    <br/>
+                    Par fax : 01 83 62 36 12<br/>
+                    <br/>
+                    Par courrier :<br/>
+                    <br/>
+                    M.D.2i / Service commandes<br/>
+                    253 rue Gallieni<br/>
+                    F-92774 BOULOGNE BILLANCOURT cedex<br/>
+                    <br/>
+                    Les coordonnées bancaires de Techni-Contact sont les suivantes :<br/>
+                    <br/>
+                    BNP PARIBAS BOUCLE DE SEINE (01896)<br/>
+                     <br/>
+                    Code Banque : 30004<br/>
+                    Code Guichet : 01896<br/>
+                    Numéro de Compte : 00010001645<br/>
+                    Clé RIB : 13<br/>
+                    <br/>
+                    Numéro de compte bancaire international (IBAN): FR76 3000 4018 9600 0100 0164 513<br/>
+                    <br/>
+                    BIC (Bank Identification Code): BNPAFRPPGNV<br/>
+                    <br/>
+                    A l'attention de la Société MDII<br/>
+                    <br/>
+                    Motif du virement : Commande TC n°<?php echo $o['id']; ?><br/>
+                    <br/>
+                    Le <a class="color-blue" href="<?php echo PDF_URL."order.php?web_id=".$o['web_id']; ?>">bon de commande</a> est disponible au format PDF, si nous rencontrez des difficultés à lire le document, veuillez installer gratuitement <a href="http://get.adobe.com/fr/reader/">Adobe Acrobat Reader</a>
+           <?php break;
+            case Order::PAYMENT_STATUS_DEFERRED_TO_VALIDATE: break;
+            case Order::PAYMENT_STATUS_CASH_ON_DELIVERY_TO_VALIDATE: break;
+            case Order::PAYMENT_STATUS_MONEY_ORDER_TO_VALIDATE: $show_tags = true; ?>
+                    <!--Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+                    <br/>-->
+                    Vous avez choisi le mode de règlement par mandat administratif.<br/>
+                    <br /> 
+                    Afin de valider votre commande, merci de nous transmettre votre bon de commande signé et tamponné ou de nous transmettre tout élément justifiant de votre éligibilité.<br/>
+                    <br/>
+                    <a class="color-blue" href="<?php echo PDF_URL."order.php?web_id=".$o['web_id']; ?>">Télécharger le bon de commande</a><br/>
+                    <br/>
+                    Dès réception de ces éléments, votre commande sera traitée.<br/>
+                    <br/>
+                    Nos coordonnées bancaires sont les suivantes:<br/>
+                    <br/>
+                    BNP PARIBAS BOUCLE DE SEINE (01896)<br/>
+                    Code Banque : 30004<br/>
+                    Code Guichet : 01896<br/>
+                    Numéro de Compte : 00010001645<br/>
+                    Clé RIB : 13<br/>
+                    Numéro de compte bancaire international (IBAN): FR76 3000 4018 9600 0100 0164513<br/>
+                    BIC (Bank Identification Code): BNPAFRPPGNV<br/>
+                    <br/>
+                    A l'attention de la Société MDII<br/>
+                    <br/>
+                    Motif du virement à préciser : Commande<br/>
+                    TC <?php echo $o['id']; ?><br/>
+           <?php break;
+            case Order::PAYMENT_STATUS_PAID: ?>
+            <?php if ($o['payment_mean'] < Order::PAYMENT_MEAN_CHEQUE) { $show_tags = true; ?>
+              Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+              <br/>
+              Vous avez choisi le mode de règlement par carte bancaire, pour un traitement plus rapide de votre commande.<br/>
+              <br/>
+              Votre commande a bien été enregistrée et va commencer à être traitée.<br/>
+              <br/>
+              Votre commande est accessible dans votre <a class="color-blue" href="<?php echo COMPTE_URL."infos.html"; ?>">espace client</a>. Pour toute question relative à celle-ci, merci d'utiliser le formulaire de contact client disponible dans votre espace.
+            <?php } else { // payment > PAYMENT_MEAN_CHEQUE ?>
+              Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+              <br/>
+              Votre commande a bien été enregistrée et va commencer à être traitée.<br/>
+              <br/>
+              Votre commande est accessible dans votre <a class="color-blue" href="<?php echo COMPTE_URL."infos.html"; ?>">espace client</a>. Pour toute question relative à celle-ci, merci d'utiliser le formulaire de contact client disponible dans votre espace.
+            <?php }
+                break;
+            default : ?>
+              Merci d'avoir choisi Techni-Contact pour la fourniture de vos biens et services professionnels.<br/>
+              <br/>
+              Votre commande a bien été enregistrée et va commencer à être traitée.<br/>
+              <br/>
+              Votre commande est accessible dans votre <a class="color-blue" href="<?php echo COMPTE_URL."infos.html"; ?>">espace client</a>. Pour toute question relative à celle-ci, merci d'utiliser le formulaire de contact client disponible dans votre espace.
+           <?php } //switch ?>
+            </div>
+        </div>
+      </div><!-- fr -->
+      <div class="zero"></div>
+    </div><!-- order-resume -->
+  </div><!-- blocks-left -->
+<?php
+if ($show_tags && SHOW_TAGS) { ?>
+<img src="http://affiliation.touslesprix.com/affilie.php?idb=738&numcom=<?php echo $o['id'] ?>&montant=<?php echo ($o['total_ht']-$o['fdp_ht']) ?>" border="0" />
+<script type="text/javascript">
+var mc_ht = <?php echo $o['total_ht']-$o['fdp_ht'] ?>;
+var no_com = <?php echo $o['id'] ?>;
+var no_cl = "";
+var id_m = "ZWdkmGlq";
+var com = "";
+</script>
+<div id="innerScript"></div>
+<script type="text/javascript" src="http://annonceur.miwim.fr/account/tracker.js"></script>
+<?php
+  
+  /* Twenga SA */
+  $organization = "1287012";
+  $checksumCode = "702235887";
+  $orderValue = $o['total_ht']-$o['fdp_ht'];
+  $currency = "EUR";
+  $event = "123899";
+  $isSale = true;
+  $isSecure = true;
+  $orderNumber = $o['id'];
+  $tduid = "";
+  if (!empty($_SESSION["TRADEDOUBLER"]))
+  $tduid = $_SESSION["TRADEDOUBLER"];
+  $reportInfo = "";
+  $reportInfo = urlencode($reportInfo);
+  
+  /***** IMPORTANT: *****/
+  /***** In most cases, you should not edit anything below this line. *****/
+  /***** Please consult with TradeDoubler before modifying the code. *****/
+  
+  if (!empty($_COOKIE["TRADEDOUBLER"]))
+  $tduid = $_COOKIE["TRADEDOUBLER"];
+  if ($isSale) {
+    $domain = "tbs.tradedoubler.com";
+    $checkNumberName = "orderNumber";
+  }
+  else {
+    $domain = "tbl.tradedoubler.com";
+    $checkNumberName = "leadNumber";
+    $orderValue = "1";
+  }
+  $checksum = "v04" . md5($checksumCode . $orderNumber . $orderValue);
+  if ($isSecure)
+    $scheme = "https";
+  else
+    $scheme = "http";
+  $trackBackUrl = $scheme . "://" . $domain . "/report"
+  . "?organization=" . $organization
+  . "&amp;event=" . $event
+  . "&amp;" . $checkNumberName . "=" . $orderNumber
+  . "&amp;checksum=" . $checksum
+  . "&amp;tduid=" . $tduid
+  . "&amp;reportInfo=" . $reportInfo;
+  if ($isSale) {
+    $trackBackUrl
+    .= "&amp;orderValue=" . $orderValue
+    . "&amp;currency=" . $currency;
+  }
+  echo "<img src=\"" . $trackBackUrl . "\" alt=\"\" style=\"border: none\" />\n";
+?>
+<!-- Google Analytics -->
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-4217476-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+pageTracker._addTrans(
+  "<?php echo $o['id'] ?>",
+  "",
+  "<?php echo ($o['total_ht']-$o['fdp_ht']) ?>",
+  "<?php echo ($o['total_ttc']-$o['total_ht']) ?>",
+  "<?php echo $o['fdp_ht'] ?>",
+  "<?php echo $o['ville'] ?>",
+  "<?php echo $o['cp'] ?>",
+  "<?php echo $o['pays'] ?>"
+);
+<?php foreach($o['lines'] as $line) { ?>
+pageTracker._addItem(
+  "<?php echo $o['id'] ?>",
+  "<?php echo $line['pdt_ref_id'] ?>",
+  "<?php echo $line['pdt_name'] ?>",
+  "<?php echo $line['pdt_fastdesc'] ?>",
+  "<?php echo $line['pu_ht'] ?>",
+  "<?php echo $line['quantity'] ?>"
+);
+<?php } ?>
+pageTracker._trackTrans();
+</script>
+
+<script src="http://nxtck.com/act.php?zid=16253;id=<?php echo $o['id'] ?>;mt=<?php echo ($o['total_ht']-$o['fdp_ht']) ?>"></script>
+
+<?php
+  /*$fh = fopen(LOGS."tag-effiliation.log","ab");
+  fwrite($fh, date("d/m/Y H:i:s") . "  TAG : id=660002096&montant=" . $order->stotalHT . "&monnaie=eu&ref=" . $o['id'] . "\n");
+  fclose($fh);*/
+
+  $fh = fopen(LOGS."tag-criteo.log","ab");
+  fwrite($fh, date("d/m/Y H:i:s") . "  TAG : " . $ctoParams . "\n");
+  fclose($fh);
+
+} // end SHOW_TAGS
+?>
+
+<!-- Google Code for Commande Conversion Page -->
+<script type="text/javascript">
+/* <![CDATA[ */
+var google_conversion_id = 1003507373;
+var google_conversion_language = "fr";
+var google_conversion_format = "3";
+var google_conversion_color = "ffffff";
+var google_conversion_label = "gicyCIuHiQIQrZ3B3gM";
+var google_conversion_value = 0;
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://www.googleadservices.com/pagead/conversion.js">
+</script>
+<noscript>
+<div style="display:inline;">
+<img height="1" width="1" style="border-style:none;" alt="" src="https://www.googleadservices.com/pagead/conversion/1003507373/?label=gicyCIuHiQIQrZ3B3gM&amp;guid=ON&amp;script=0"/>
+</div>
+</noscript>
+
+<!-- Google Code for Visite site ALTRAD Remarketing List 
+<script type="text/javascript">
+/* <![CDATA[ */
+var google_conversion_id = 1003507373;
+var google_conversion_language = "en";
+var google_conversion_format = "3";
+var google_conversion_color = "ffffff";
+var google_conversion_label = "QbkLCNPV_wMQrZ3B3gM";
+var google_conversion_value = 0;
+/* ]]> */
+</script>
+
+<script type="text/javascript" src="http://www.googleadservices.com/pagead/conversion.js"></script>
+-->
+
+<noscript>
+<div style="display:inline;">
+<img height="1" width="1" style="border-style:none;" alt="" src="http://www.googleadservices.com/pagead/conversion/1003507373/?value=0&amp;label=QbkLCNPV_wMQrZ3B3gM&amp;guid=ON&amp;script=0"/>
+</div>
+</noscript>
+<!-- Google Code for Visite site ALTRAD Remarketing List -->
+
+
+<?php require SITE.'blocks-right.php' ?>
+
+</div><!-- white-bg -->
+
+<?php require SITE.'foot.php' ?>

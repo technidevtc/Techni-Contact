@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="fr" lang="fr">
+<head>
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+body { margin: 0; padding: 0; background: #ffffff }
+.wrapper-out { width: 900px; height: 400px; margin: 0 auto; padding: 50px; background: #f8f8f8 }
+.wrapper { width: 700px; height: 200px; margin: 0 auto; padding: 50px; background: #f8f8f8 }
+#search-text { float: left; display: block; width: 200px; height: 18px; margin: 0; padding: 0 }
+
+#search-text-AC-box {  }
+.auto-completion-box { position: absolute; min-width: 100px; background: #ffffff; border-collapse: collapse; border: 1px solid #000000 }
+.auto-completion-box tr { height: 17px; cursor: default }
+.auto-completion-box tr.over { background-color: #3366cc }
+.auto-completion-box td.prop { padding: 0 0 0 3px; overflow: hidden; font: normal 12px/17px arial, sans-serif; color: #000000 }
+.auto-completion-box td.results { padding: 0 3px; overflow: hidden; font: normal 10px/17px arial, sans-serif; color: #008000; text-align: right }
+.auto-completion-box tr.over td.prop { color: #ffffff }
+.auto-completion-box tr.over td.results { color: #ffffff }
+
+#log { position: fixed; bottom: 0px; left: 0px; width: 500px; height: 200px; overflow: auto; font: normal 9px arial, sans-serif; background-color: #ffffe0 }
+</style>
+<script type="text/javascript">
+function tostr(o) {
+	var s = "";
+	for (var i in o) s+= i + "=" + o[i] + "<br/>\n";
+	log(s);
+}
+
+function log(s) {
+	var date = new Date();
+	var log = document.getElementById("log");
+	log.innerHTML += date.getTime() + " : " + s + "<br/>\n";
+	log.scrollTop = log.scrollHeight;
+}
+
+var HN = window.HN = {};
+HN.UI = {};
+HN.Cvars = {};
+HN.Cvars.res_url = "http://test.techni-contact.com/";
+var searchAC;
+
+HN.UI.AutoCompletion = function (searchBoxID) {
+	var _this = this;
+	this.defaultValue = "Recherche";
+	this.queryURL = HN.Cvars.res_url+"ressources/scripts/AJAX_search.php";
+	this.searchBox = document.getElementById(searchBoxID);
+	this.results = [];
+	this.overResult = -1;
+	this.visible = false;
+	this.requestTimeout = null;
+	this.lastWords = "";
+	
+	this.searchBox.value = this.defaultValue;
+	//this.searchBox.onblur = function () { _this.hideProps(); };
+	this.searchBox.onfocus = function () {
+		if (this.value != "" && this.value == _this.defaultValue)
+			_this.defaultValue = this.value = "";
+	};
+	this.searchBox.onblur = function () {
+		_this.hideProps();
+	};
+	this.searchBox.onkeyup = function (e) {
+		//if (!e) e = window.event;
+		if (_this.lastWords != this.value && this.value.length > 1) {
+			_this.lastWords = this.value;
+			clearTimeout(_this.requestTimeout);
+			_this.requestTimeout = setTimeout( function () {
+					$.ajax({
+						data: "search="+encodeURIComponent(_this.lastWords),
+						dataType: "json",
+						error: function (XMLHttpRequest, textStatus, errorThrown) {
+							//log("ERROR for request loading "+ajax_ps+" videos from ind="+ajax_ind);
+						},
+						success: function (data, textStatus) {
+							_this.clearProps();
+							for (var i = 0; i < data.length; i++) {
+								_this.addProp(data[i][0], data[i][1]);
+							}
+							_this.showProps();
+						},
+						type: "GET",
+						url: _this.queryURL
+					})
+				}, 300);
+		}
+	};
+	this.searchBox.onkeydown = function (e) {
+			if (e.keyCode == 38) {
+				if (_this.visible) {
+					if (_this.overResult == -1)
+						_this.overResult = 0;
+					else
+						_this.results[_this.overResult--].parentNode.onmouseout();
+					
+					if (_this.overResult < 0) _this.overResult = _this.results.length-1;
+					_this.results[_this.overResult].parentNode.onmouseover();
+					_this.lastWords = _this.searchBox.value = _this.results[_this.overResult].innerHTML;
+				}
+				else {
+					if (_this.results.length > 0) _this.showProps();
+				}
+			}
+			else if (e.keyCode == 40) {
+				if (_this.visible) {
+					if (_this.overResult == -1)
+						_this.overResult = 0;
+					else
+						_this.results[_this.overResult++].parentNode.onmouseout();
+					
+					if (_this.overResult >= _this.results.length) _this.overResult = 0;
+					_this.results[_this.overResult].parentNode.onmouseover();
+					_this.lastWords = _this.searchBox.value = _this.results[_this.overResult].innerHTML;
+				}
+				else {
+					if (_this.results.length > 0) _this.showProps();
+				}
+			}
+	};
+	
+	this.hideProps = function () { this.visible = false; this.propsBox.style.visibility = "hidden"; };
+	this.showProps = function () { this.visible = true; this.propsBox.style.visibility = "visible"; };
+	this.addProp = function (prop, results) {
+		var tr = document.createElement("tr");
+				tr.onclick = function () {
+					_this.searchBox.value = prop;
+					_this.hideProps();
+				};
+				tr.onmousedown = function () { return false; };
+				tr.onmouseover = function () {
+					this.className = "over";
+					for (var i = 0; i < _this.results.length; i++)
+						if (this == _this.results[i].parentNode) _this.overResult = i;
+				};
+				tr.onmouseout = function () { this.className = ""; };
+		var td_prop = document.createElement("td");
+				td_prop.className = "prop";
+				td_prop.innerHTML = prop;
+		var td_results = document.createElement("td");
+				td_results.className = "results";
+				td_results.innerHTML = results == "" ? "" : results + " r�sultats";
+		tr.appendChild(td_prop);
+		tr.appendChild(td_results);
+		this.results.push(td_prop);
+		this.propsContainer.appendChild(tr);
+	};
+	this.clearProps = function () {
+		this.results = [];
+		this.overResult = -1;
+		$(this.propsContainer).empty();
+	};
+	
+	function findDOMpos (o) {
+		var left = o.offsetLeft, top = o.offsetTop;
+		while(o.offsetParent) {
+			o = o.offsetParent;
+			left += o.offsetLeft;
+			top += o.offsetTop;
+		}
+		return {x: left, y: top};
+	};
+	
+	this.propsBox = document.createElement("table");
+	this.propsBox.className = "auto-completion-box";
+	this.propsBox.style.minWidth = (this.searchBox.offsetWidth-2) + "px";
+	var pos = findDOMpos(this.searchBox);
+	this.propsBox.style.top = (pos.y + this.searchBox.offsetHeight + 1) + "px";
+	this.propsBox.style.left = (pos.x + 1) + "px";
+	this.propsBox.id = this.searchBox.id != "" ? this.searchBox.id+"-AC-box" : "";
+	
+	this.propsContainer = document.createElement("tbody");
+	this.propsBox.appendChild(this.propsContainer);
+	
+	document.body.appendChild(this.propsBox);
+};
+
+window.onload = function () {
+	searchAC = new HN.UI.AutoCompletion("search-text");
+}
+</script>
+</head>
+<body>
+<div class="wrapper-out">
+<div class="wrapper">
+<form action="rechercher.html" method="post" class="search">
+	<input type="text" name="search" id="search-text" value=""/>
+	<input type="submit" name="Submit" value="OK"/>
+</form>
+</div>
+<div id="log"></div>
+</div>
+</body>
+</html>

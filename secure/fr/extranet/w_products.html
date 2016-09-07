@@ -1,0 +1,205 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 20 juillet 2005
+
+ Fichier : /secure/extranet/w_add_products.html
+ Description : Produit en attente de validation
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = W_PRODUCT_TITLE;
+
+define('WHERE', WHERE_PRODUCTS_CARD);
+
+require(EXTRANET . 'head.php');
+?>
+<div class="barre"><a href="index.html?<?php echo $sid ?>"><?php echo HEAD_HOMEPAGE ?></a> &raquo; <a href="products.html?<?php echo $sid ?>"><?php echo HEAD_PRODUCT_LIST ?></a> &raquo; <?php echo W_PRODUCT_HEAD_TITLE ?></div>
+<div class="miseAZero"></div>
+<?php
+require(EXTRANET . 'alertmdp.php');
+
+$products_c = array();
+if ($res = & $handle->query("select id, name, fastdesc, timestamp from products_add_adv where idAdvertiser = '" . $handle->escape($user->id) . "' and type = 'c' and reject = 0 order by timestamp desc", __FILE__, __LINE__))
+{
+	while($row  = & $handle->fetchAssoc($res))
+		$products_c[] = & $row;
+}
+
+$products_m = array();
+if ($res = & $handle->query("select id, name, fastdesc, timestamp from products_add_adv where idAdvertiser = '" . $handle->escape($user->id) . "' and type = 'm' and reject = 0 order by timestamp desc", __FILE__, __LINE__))
+{
+	while($row  = & $handle->fetchAssoc($res))
+		$products_m[] = & $row;
+}
+
+// Effacer rejets trop vieux (>48h)
+$line = date('U') - 2 * 86400;
+$handle->query('delete from rejects where timestamp < ' . $line, __FILE__, __LINE__);
+$handle->query('delete from products_add_adv where reject = 1 and timestamp < ' . $line, __FILE__, __LINE__);
+
+$rej = array();
+if ($res = & $handle->query("select p.name, p.fastdesc, r.timestamp, r.motif, p.type from products_add_adv p, rejects r where p.idAdvertiser = '" . $handle->escape($user->id) . "' and p.reject = 1 and p.id = r.id order by r.timestamp desc", __FILE__, __LINE__))
+{
+	while($row = & $handle->fetch($res))
+		$rej[] = & $row;
+}
+
+
+?>
+<script type="text/javascript">
+function s_confirm(id)
+{
+	if (confirm('<?php echo PRODUCTS_JS_ASK_DELETE_PRODUCT ?>'))
+	{
+		document.location = 'del_w_product.html?<?php echo $sid ?>&id' + id;
+	}
+}
+</script>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo W_PRODUCT_CREATE_BLOC_TITLE ?></div>
+		<div class="bloc-texte">
+<?php
+if(!empty($products_c))
+{
+?>
+			<table width="100%" border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="200"><?php echo COMMON_DATE ?></td>
+					<td><?php echo COMMON_PRODUCT_NAME ?></td>
+					<td width="20">&nbsp;</td>
+				</tr>
+<?php
+	foreach($products_c as $p)
+	{
+		$extra  = $p['fastdesc'] ? ' - ' . $p['fastdesc'] : '';
+		$onclick = ' onclick="document.location=\'w_product_detail.html?' . $sid . '&id=' . $p['id'] . '\'"';
+?>
+				<tr class="tr-normal" onmouseover="this.classname='tr-hover'" onmouseout="this.classname='tr-normal'" style="cursor: pointer; cursor: hand">
+					<td class="type"<?php echo $onclick ?>><?php echo date('d/m/Y', $p['timestamp']) ?></td>
+					<td class="produit"<?php echo $onclick ?>><?php echo to_entities($p['name'] . $extra) ?></td>
+					<td class="suppr"><img src="ressources/images/poubelle.gif" alt="Demander la suppression de ce produit" width="20" height="20" onclick="s_confirm(<?php echo $p['id'] ?>)"></td>
+				</tr>
+<?php
+	}
+?>
+			</table>
+<?php
+}
+else
+{
+?>
+			<div style="text-align: center"><b><?php echo COMMON_NO_RESULT ?></b></div>
+<?php
+}
+?>
+		</div>
+	</div>
+</div>
+<br/>
+<div class="miseAZero"></div>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo W_PRODUCT_EDIT_BLOC_TITLE ?></div>
+		<div class="bloc-texte">
+<?php
+if(!empty($products_m))
+{
+?>
+			<table width="100%"  border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="200"><?php echo COMMON_DATE ?></td>
+					<td><?php echo COMMON_PRODUCT_NAME ?></td>
+					<td width="20">&nbsp;</td>
+				</tr>
+<?php
+	foreach($products_m as $p)
+	{
+		$extra  = $p['fastdesc'] ? ' - ' . $p['fastdesc'] : '';
+		$onclick = ' onclick="document.location=\'w_product_detail.html?' . $sid . '&id=' . $p['id'] . '\'"';
+?>
+				<tr class="tr-normal" onmouseover="this.classname='tr-hover'" onmouseout="this.classname='tr-normal'" style="cursor: pointer; cursor: hand">
+					<td class="type"<?php echo $onclick ?>><?php echo date('d/m/Y', $p['timestamp']) ?></td>
+					<td class="produit"<?php echo $onclick ?>><?php echo to_entities($p['name'] . $extra) ?></td>
+					<td class="suppr"><img src="ressources/images/poubelle.gif" alt="Demander la suppression de ce produit" width="20" height="20" onclick="s_confirm(<?php echo $p['id'] ?>)"></td>
+				</tr>
+<?php
+	}
+?>
+			</table>
+<?php
+}
+else
+{
+?>
+			<div style="text-align: center"><b><?php echo COMMON_NO_RESULT ?></b></div>
+<?php
+}
+?>
+		</div>
+	</div>
+</div>
+<br />
+<div class="miseAZero"></div>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo W_PRODUCT_REJECTED_BLOC_TITLE ?></div>
+		<div class="bloc-texte">
+<?php
+if(count($rej) > 0)
+{
+?>
+			<table width="100%"  border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="150"><?php echo COMMON_DATE ?></td>
+					<td width="100"><?php echo COMMON_TYPE ?></td>
+					<td width="350"><?php echo COMMON_MOTIVE ?></td>
+					<td><?php echo COMMON_PRODUCT ?></td>
+				</tr>
+<?php
+	for($i = 0; $i < count($rej); ++$i)
+	{
+		$extra  = $rej[$i][1] ? ' - ' . $rej[$i][1] : '';
+		switch($rej[$i][4])
+		{
+			case 'c' : $type = W_PRODUCT_CREATING;	break;
+			case 'm' : $type = W_PRODUCT_EDITING;	break;
+		}
+?>
+				<tr class="tr-normal" onmouseover="this.classname='tr-hover'" onmouseout="this.classname='tr-normal'">
+					<td class="type"><?php echo date('d/m/Y', $rej[$i][2]) ?></td>
+					<td class="type"><?php echo $type ?></td>
+					<td class="type"><?php echo $rej[$i][3] ?></td>
+					<td class="produit"><?php echo to_entities($rej[$i][0] . $extra) ?></td>
+				</tr>
+<?php
+	}
+
+?>
+			</table>
+<?php
+}
+else
+{
+?>
+			<div style="text-align: center"><b><?php echo COMMON_NO_RESULT ?></b></div>
+<?php
+}
+?>
+		</div>
+	</div>
+</div>
+
+<?php
+require(EXTRANET . 'tail.php');
+?>

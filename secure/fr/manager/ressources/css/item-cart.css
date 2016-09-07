@@ -1,0 +1,182 @@
+.vspacer { vertical-align: middle; width: 1px!important; height: 100%!important }
+.inline-block { float: none; display: -moz-inline-stack; display: inline-block }
+.vmaib { float: none; display: -moz-inline-stack; display: inline-block; vertical-align: middle } /* Vertically Middle Aligned Inline Block */
+
+.db img.loading-gif { display: none; position: absolute; left: 13px; bottom: 13px }
+
+.cart { position: relative; width: 100%; min-width: 1010px; max-width: 1140px; color: #333333; background: #ffffff }
+.cart strong { font-weight: bold }
+.cart .layer { position: absolute; z-index: 10; border: 2px solid #cccccc; background: #ffffff }
+.cart input, .cart textarea { font: normal 11px arial, helvetica, sans-serif; }
+.cart input[type='checkbox'] { vertical-align: bottom }
+.cart ul.pdt-previews { display: none; left: 427px; top: 188px }
+.cart ul.pdt-previews li { height: 42px; margin: 3px; padding: 2px; border: 1px solid #DBDAD9; background: #ffffff url(../images/block-bg-gray-40.gif) repeat-x; cursor: default }
+.cart ul.pdt-previews li:hover { background-image: url(../images/block-bg-orange-40.gif) }
+.cart ul.pdt-previews li.standalone {  }
+.cart ul.pdt-previews li .picture { float: left; width: 56px; height: 42px; text-align: center; background: #ffffff }
+.cart ul.pdt-previews li .picture img { max-width: 100%; max-height: 100% }
+.cart ul.pdt-previews li .infos { float: left; width: 230px; height: 42px; padding: 0 8px; font: normal 11px arial, helvetica, sans-serif; white-space: nowrap; overflow: hidden }
+.cart ul.pdt-previews li .infos a { color: #36339a; text-decoration: underline }
+.cart ul.pdt-previews li .infos a:hover { text-decoration: none }
+.cart ul.pdt-previews li.standalone .infos { float: left; width: 266px; padding: 0 4px }
+.cart ul.pdt-previews li.standalone .infos .lx2 { height: 28px; white-space: normal; overflow: hidden }
+.cart ul.pdt-previews li.standalone .tool { float: left; width: 20px; height: 42px; text-align: center }
+
+.cart .pdt-detail { display: none; float: left; left: 759px; top: 188px; width: 600px }
+.cart .pdt-detail { white-space: nowrap }
+.cart .pdt-detail img.view-fo { margin: 0 5px 0 0; vertical-align: middle }
+.cart .pdt-detail .picture { float: left; width: 150px; height: 110px; text-align: center; background: #ffffff }
+.cart .pdt-detail .infos { float: left; width: 345px; height: 112px; margin: 0 10px; font: normal 11px arial, helvetica, sans-serif; overflow: hidden }
+.cart .pdt-detail .infos strong { font-size: 12px; margin: 0; padding: 0 }
+.cart .pdt-detail .infos a { color: #36339a; text-decoration: underline }
+.cart .pdt-detail .infos a:hover { text-decoration: none }
+.cart .pdt-detail .refs { width: 100%; max-height: 238px; margin: 5px 0 0; font-size: 11px; overflow: auto }
+.cart .pdt-detail .refs table { width: 100%; border-collapse: collapse }
+.cart .pdt-detail .refs th { padding: 2px; font-weight: bold; color: #ffffff; text-align: center; background: #b00000 }
+.cart .pdt-detail .refs td { padding: 3px; text-align: center; border-left: 1px solid #E8E8E8 }
+.cart .pdt-detail .refs td:first-child { border: 0 }
+.cart .pdt-detail .refs td.idtc { width: 65px; text-align: center }
+.cart .pdt-detail .refs td.sup-ref { width: 65px; text-align: center }
+.cart .pdt-detail .refs td.desc { min-width: 150px; white-space: normal }
+.cart .pdt-detail .refs td.price { width: 60px; font-weight: bold; text-align: right }
+.cart .pdt-detail .refs td.qty { width: 48px; padding: 1px 3px; text-align: left; vertical-align: top }
+.cart .pdt-detail .refs td.qty input { font-weight: bold; color: #f40309; width: 23px; height: 14px; padding: 2px 2px 1px; margin: 0; text-align: right; border: #d5d5d6 1px solid }
+.cart .pdt-detail .refs td.qty img { width: 14px; height: 10px; border: 0; cursor: pointer; float: right; clear: both }
+.cart .pdt-detail .refs td.tool { width: 30px; text-align: center; border-left: 0px; vertical-align: middle }
+.cart .pdt-detail .refs tbody tr:nth-child(even) { background: #f0f0f0 }
+.cart .pdt-detail .refs tbody tr:hover { background: #e0ffe0 }
+
+.cart-infos { width: 100%; margin: 0 0 10px }
+.cart-infos > tbody > tr > td { padding: 0 0 0 10px; line-height: 20px; white-space: nowrap; border-left: 1px dotted #cccccc }
+.cart-infos > tbody > tr > td:first-child { padding: 0; border-left: 0 }
+.cart-infos input { padding: 1px 1px 0; margin: 0; font-size: 12px; border: 1px solid #cccccc; background: #ffffff }
+.cart-infos select { padding: 0; margin: 0; font-size: 12px; border: 1px solid #cccccc; background: #ffffff }
+.cart-infos input[readonly], .cart-infos select[disabled] { background: #f8f8f8 }
+.cart-infos span { display: inline-block; padding: 0 2px }
+.cart-infos label { display: inline-block; font-weight: bold }
+.cart-infos button { font-size: 11px }
+.cart-infos ul.doc-list { margin: 5px 0 0; font-style: italic; font-size: 11px }
+.cart-infos ul.doc-list li { line-height: normal }
+.cart-infos ul.doc-list li * { margin-left: 2px; vertical-align: text-bottom }
+.cart-infos ul.doc-list li span { overflow: hidden }
+.cart-infos .col-1 label { width: 125px }
+.cart-infos .col-1 input[type='text'],
+ .cart-infos .col-1 span { width: 220px }
+.cart-infos .col-1 input.status-text { display: none; width: 418px }
+ .cart-infos .col-1 select { width: 224px }
+.cart-infos .col-2 label { width: 45px }
+.cart-infos .col-2 input[type='text'],
+ .cart-infos .col-2 span { width: 170px }
+.cart-infos .col-2 select { width: 184px }
+.cart-infos .col-3 label { width: 155px }
+.cart-infos .col-3 input[type='text'],
+ .cart-infos .col-3 span { width: 110px }
+.cart-infos .col-3 select { width: 114px }
+.cart-infos .auto-complete-box td.ac-col-1 { padding-right: 5px }
+.cart-infos .auto-complete-box td.ac-col-2 { font-weight: bold; color: #164183 }
+.cart-infos .auto-complete-box tr.hover td.ac-col-2 { color: #ffffff }
+.cart-infos .auto-complete-box td.ac-col-3 { padding-right: 3px; font-style: italic; font-size: 10px; color: #008000 }
+.cart-infos .auto-complete-box tr.hover td.ac-col-3 { color: #ffffff }
+.cart-infos input[type='checkbox'] { vertical-align: text-top }
+
+.cart-items { width: 100%; margin: 10px 0; font: 11px arial,helvetica,sans-serif; color: #000000; border: 1px solid #cccccc; border-collapse: collapse; background: #ffffff }
+.cart-items button { font-size: 11px }
+.cart-items th { font-weight: bold; color: #FFFFFF; text-align: center; background: #5d6068 }
+.cart-items td { padding: 2px 4px; border: 1px solid #cccccc; border-width: 1px 0 0 1px; vertical-align: top }
+.cart-items tfoot td { border: 0 }
+.cart-items tfoot tr:first-child td { border-top: 2px solid #cccccc }
+.cart-items td.image { width: 112px; text-align: center }
+.cart-items td.sup-ref { width: 65px; text-align: center }
+.cart-items td.idtc { width: 65px; text-align: center }
+.cart-items td.sup-name { width: 100px; text-align: center }
+.cart-items td.desc { width: auto; white-space: pre-wrap }
+.cart-items td.price { width: 60px; font-weight: bold; text-align: right }
+.cart-items td.qty { width: 48px; padding: 1px 5px; text-align: left; vertical-align: top }
+.cart-items td.qty input { font-weight: bold; color: #f40309; width: 23px; height: 14px; padding: 2px 2px; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+.cart-items td.qty img { width: 14px; height: 10px; border: 0; cursor: pointer; float: right; clear: both; }
+.cart-items td.disc { width: 60px; text-align: right }
+.cart-items td.vat { width: 50px; text-align: right }
+.cart-items td.tool { width: 30px; text-align: center; border-left: 0px; vertical-align: middle }
+.cart-items td div.min-qty { font-weight: bold; color: #008000; text-align: right; height: 14px; padding: 1px 2px; margin: 0; float: right; background-color: #FFFFFF; border: #d5d5d6 1px solid; }
+.cart-items td.comment { white-space: pre-wrap }
+.cart-items .icon-delete { display: inline-block; width: 16px; height: 16px; background: url(../icons/basket_delete.png); cursor: pointer }
+.cart-items .autocomplete-ref-search { width: 210px; font-size: 13px }
+.cart-items .line { height: 70px }
+.cart-items .line-2 td:last-child { border-right: 1px solid transparent }
+.cart-items .ac-line label { display: inline-block; width: 200px; font-weight: bold }
+.cart-items .pc-line label { display: inline-block; font-weight: bold }
+.cart-items .pc-line { line-height: 19px }
+.cart-items .pc-line input { width: 180px; padding: 1px 1px 0; margin: 0; font-size: 12px; border: 1px solid #cccccc; background: #f8f8f8; vertical-align: middle }
+.cart-items .pc-line input[type='checkbox'] { width: auto }
+.cart-items .pc-line textarea { width: 300px; height: 70px; margin: 0; padding: 2px; vertical-align: middle; resize: none }
+.cart-items .pc-line .col-1 { float: left; width: 320px; height: 98px }
+.cart-items .pc-line .col-1 label { width: 120px }
+.cart-items .pc-line .col-2 { float: left; width: 390px }
+.cart-items .pc-line .col-2 label { width: 60px }
+.cart-items .pc-line .col-3 { float: left; height: 98px }
+.cart-items .pc-line .col-1 .auto-complete-box td { padding: 0 0 0 3px; overflow: hidden; font: normal 12px/17px arial, sans-serif; color: #000000 }
+.cart-items .pc-line .col-1 .auto-complete-box tr.hover td { color: #ffffff }
+.cart-items .pc-line .col-1 .auto-complete-box td.ac-col-1 { padding-right: 5px; border: 0 }
+.cart-items .pc-line .col-1 .auto-complete-box td.ac-col-2 { padding-right: 3px; font-weight: bold; color: #164183; border: 0 }
+
+.cart-items td.sup-ref input,
+ .cart-items td.sup-name input,
+ .cart-items td.price input,
+ .cart-items td.disc input,
+ .cart-items td.vat input { width: 100%; height: 14px; margin: 0; padding: 0; border: 0; background: #f8f8f8 }
+.cart-items td.price input,
+ .cart-items td.disc input,
+ .cart-items td.vat input { text-align: right }
+.cart-items td.desc textarea { width: 100%; height: 75px; margin: 0; padding: 0; border: 0; background: #f8f8f8; resize: none }
+.cart-items td.comment textarea { width: 100%; height: 28px; margin: 0; padding: 0; border: 0; background: #f8f8f8; resize: none }
+.cart-items td.comment span { display: inline-block; width: 85%; vertical-align: top }
+.cart-items td.delivery-time input { width: 70%; height: 14px; margin: 0; padding: 0; border: 0; background: #f8f8f8 }
+
+.cart-vat { float: left; width: 274px; font: bold 11px arial,helvetica,sans-serif; color: #000000; text-align: right; border: 1px solid #cccccc; border-collapse: collapse; background: #ffffff }
+.cart-vat th { font-weight: bold; color: #ffffff; text-align: center; background: #5d6068; vertical-align: middle }
+.cart-vat td { padding: 1px 4px; text-align: right; border-right: 1px solid #cccccc; vertical-align: top }
+.cart-vat td.label { width: 50px; font-weight: normal; text-align: left; border-right: 0 }
+.cart-vat td.base { width: 100px }
+.cart-vat td.rate { width: 60px; font-weight: normal }
+.cart-vat td.total { width: 140px }
+.cart-vat tfoot td { border-top: 1px solid #cccccc; }
+.cart-vat tfoot tr td.base { border-right: 0 }
+.cart-vat tfoot tr td.base small { float: left; font-weight: normal }
+
+.cart-totals { float: right; width: 250px; font: bold 11px arial, helvetica, sans-serif; color: #000000; border: 1px solid #cccccc; border-collapse: collapse; background: #ffffff }
+.cart-totals tr td { height: 16px; padding: 2px; border: 1px solid #cccccc; vertical-align: middle  }
+.cart-totals tr td:first-child { font-weight: bold; color: #ffffff; text-align: right; background: #5d6068 }
+.cart-totals tr td:nth-child(2) { width: 90px; padding: 2px 10px; font-size: 13px; text-align: right }
+.cart-totals tr td input { width: 100%; margin: 0; padding: 0; font-size: 13px; text-align: right; border: 0; background: #f8f8f8 }
+
+.cart-global-comment { float: left; margin: 0 10px; font: normal 11px Arial, Helvetica, sans-serif; color: #000000; border: 1px solid #cccccc; border-collapse: collapse; background: #ffffff }
+.cart-global-comment th { padding: 1px 10px; font-weight: bold; color: #ffffff; background: #5d6068 }
+.cart-global-comment th .actions { float: right }
+.cart-global-comment th .actions .cancel, .cart-global-comment th .actions .accept { display: none }
+.cart-global-comment td { width: 430px; padding: 3px 10px; vertical-align: top }
+.cart-global-comment td div { height: 56px; white-space: pre-wrap; overflow: auto }
+.cart-global-comment td span textarea { width: 100%; height: 100%; margin: 0; padding: 0; border: 0; background: #f8f8f8; vertical-align: baseline; resize: none }
+
+.cart-address { font: normal 11px Arial, Helvetica, sans-serif; color: #000000; border: 1px solid #cccccc; border-collapse: collapse; background: #ffffff }
+.cart-address th { padding: 1px 10px; font-weight: bold; color: #ffffff; background: #5d6068 }
+.cart-address th .actions { float: right }
+.cart-address th .actions .cancel, .cart-address th .actions .accept { display: none }
+.cart-address td { width: 200px; padding: 3px 10px; border-left: 1px dotted #cccccc; vertical-align: top }
+.cart-address td:first-child { border-left: 0 }
+.cart-address td div { height: 16px; white-space: nowrap }
+.cart-address td:last-child div { height: auto; white-space: pre-wrap }
+.cart-address td span input, .cart-address td span textarea, .cart-address td span select { width: 100%; margin: 0; padding: 0; border: 0; background: #f8f8f8; vertical-align: baseline; resize: none }
+.cart-address td span textarea { height: 112px }
+.cart-address td .titre, .cart-address td .lastname, .cart-address td .firstname { font-weight: bold }
+.cart-address td .titre select { width: 50px }
+.cart-address td .lastname input { width: 72px }
+.cart-address td .firstname input { width: 72px }
+.cart-address td .company { }
+.cart-address td .road { }
+.cart-address td .pc input { width: 50px }
+.cart-address td .city input { width: 147px }
+.cart-address td .country { }
+.cart-address td .tva_intra input { width: 180px }
+.cart-address td .phone input { width: 180px }
+
+.cart .validation { float: right }

@@ -1,0 +1,38 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <b><a href="MAINPRODUCT_URL">MAINPRODUCT_NAME</a></b>.<br/>
+        Je vous en remercie.<br/>
+	<br/>
+        Je suis BOUSER_NAME et je suis désormais en charge de votre devis.<br/>
+        <br/>
+        Je vous enverrai une proposition personnalisée dans les plus brefs délais<br/>
+        S'il manque des éléments ou pour affiner vos besoins, je me permettrai de prendre contact avec vous.<br/>
+        <br/>
+        Je reste à votre disposition aux coordonnées suivantes; n'hésitez pas à me solliciter :<br/>
+        BOUSER_NAME<br/>
+        BOUSER_PHONE<br/>
+        BOUSER_EMAIL<br/>
+        <br/>
+        Votre demande a été archivée dans votre compte client gratuit, rubrique "Mes demandes".<br/>
+        <br/>
+        Merci encore pour votre confiance.<br/>
+        <br/>
+        BOUSER_NAME<br/>
+        BOUSER_PHONE<br/>
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

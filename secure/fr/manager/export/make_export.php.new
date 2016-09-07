@@ -1,0 +1,158 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V4 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 13 février 2006
+
+ Fichier : /secure/manager/families/FamiliesSearch.php
+ Description : Fichier interface de recherche des familles AJAX
+
+/=================================================================*/
+
+require('../config.php');
+
+require(ICLASS . 'DBConnection.php');
+require(ICLASS . 'ManagerUser.php');
+
+$handle = & new DBConnection(__FILE__, __LINE__);
+$user   = & new ManagerUser($handle);
+
+if(!$user->login())
+{
+	header('Location: ' . ADMIN_URL . 'login.html');
+	exit();
+}
+
+require('_ClassExport.php');
+
+if (isset($_GET['id']))
+{
+	settype($_GET['id'], "integer");
+	$exp = & new Export($handle, $_GET['id']);
+	if ($exp->exist)
+	{
+		if ($exp->LoadAllProducts())
+		{
+			$export_content = "";
+			$flow_type = isset($_GET['flow_type']) ? $_GET['flow_type'] : "xml";
+			switch($flow_type)
+			{
+				case "xml" : $export_content = write_export_xml($exp); break;
+				case "xls" : $export_content = write_export_xls($exp); break;
+				case "csv" : $export_content = write_export_csv($exp); break,
+				default : $flow_type = "xml"; $export_content = write_export_xml($exp);
+			}
+			
+			header("Content-disposition: attachment; filename=export_" . $_GET['id'] . "." . $flow_type);
+			header("Content-Type: application/force-download");
+			header("Content-Transfer-Encoding: text/plain\n"); // Surtout ne pas enlever le \n
+			header("Content-Length: " . strlen($os));
+			header("Pragma: no-cache, public");
+			header("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0, public, maxage=3600");
+			//header("Cache-Control: maxage=3600"); //Adjust maxage appropriately
+			//header("Pragma: public");
+			header("Expires: 0");
+			
+			print $export_content;
+		}
+		else
+		{
+			header('Location: export.php?error=loadproducts');
+			exit();
+		}
+	}
+	else
+	{
+		header('Location: export.php');
+		exit();
+	}
+}
+else
+{
+	header('Location: export.php');
+	exit();
+}
+
+function & write_export_xml(& $exp)
+{
+	$os = "<" . '?xml version="1.0" encoding="ISO-8859-1"?' . ">\n";
+	foreach ($exp->partner_tags as $tag_name => $tag_spec)
+	{
+		foreach ($tag_spec["tag_content"] as $tag_content_elem)
+		{
+			if ($tag_content_elem["type"] == "tag" && isset($exp->partner_tags[$tag_content_elem["value"]]))
+			{
+				$exp->partner_tags[$tag_name]["children"][] = $exp->partner_tags[$tag_content_elem["value"]];
+				$exp->partner_tags[$tag_content_elem["value"]]["parent"] = $tag_name;
+			}
+		}
+	}
+	
+	foreach ($exp->partner_tags as $tag_name => $tag_spec)
+	{
+		if (!isset($tag_spec["parent"]))
+		{
+			$os .= "<" . $tag_name . ">\n";
+			foreach ($tag_spec[])
+		}
+	}
+	
+	
+	$os .=
+	
+/*
+$tags = array
+(
+	"catalogue" => array
+	(
+		"tag_occurence" => "once",
+		"tag_attributes" => array
+		(
+			"lang" => array("type" => "var", "value" => "__LANG__"),
+			"date" => array("type" => "func", "value" => "func"),
+			"GMT" => array("type" => "func", "value" => "func")
+		),
+		"tag_content" => array
+		(
+			array("type" => "tag", "value" => "product")
+		)
+	),
+	"product" => array
+	(
+		"tag_occurence" => "product",
+		"tag_attributes" => array
+		(
+			"place" => array("type" => "var", "value" => "__NUM_PRODUCT__")
+		),
+		"tag_content" => array
+		(
+			array("type" => "fields", "value" => "compulsory_field"),
+			array("type" => "fields", "value" => "facultative_field")
+		)
+	),
+)
+*/			
+			
+	$os .= "<produits>\n";
+	foreach($exp->products as $pdt)
+	{
+		// TODO intégrer dans les réglages du partenaire un arbre type (nom des tag)
+		$os .= " <produit>\n";
+		foreach($exp->c_keys as $key)
+			$os .= "  <" . $key . ">" . $pdt[$key] . "</" . $key . ">\n";
+		foreach($exp->f_keys as $key)
+			$os .= "  <" . $key . ">" . $pdt[$key] . "</" . $key . ">\n";
+		$os .= " </produit>\n";
+	}
+	$os .= "</produits>\n";
+	
+	$exp->generate_time = time();
+	$exp->Save();
+	
+}
+
+?>

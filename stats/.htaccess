@@ -1,0 +1,9 @@
+ErrorDocument 404 http://www.techni-contact.com
+<Limit DELETE HEAD PUT>
+order allow,deny
+deny from all
+</Limit>
+<Limit GET POST>
+order deny,allow
+allow from all
+</Limit>

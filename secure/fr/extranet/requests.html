@@ -1,0 +1,385 @@
+<?php
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 16 juillet 2005
+
+ Fichier : /secure/extranet/requests.html
+ Description : Index demandes de contact
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = REQUESTS_TITLE;
+
+define('WHERE', WHERE_CONTACT);
+$nav   = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; ' . REQUESTS_HEAD_TITLE;
+
+require(EXTRANET . 'head.php');
+
+define('NB', 30);
+define("__BEGIN_TIME__", mktime(0,0,0,1,1,2004));
+
+$dateSelectionType = "none";
+if (isset($_GET['yearS'])) {
+	$dateSelectionType = "simple";
+	$yearS	= (int)trim($_GET['yearS']);
+	$monthS	= isset($_GET['monthS'])	? (int)trim($_GET['monthS']) : 0;
+	$dayS	= isset($_GET['dayS'])		? (int)trim($_GET['dayS']) : 0;
+	
+	if (isset($_GET['yearE'])) {
+		$dateSelectionType = "interval";
+		$yearE	= (int)trim($_GET['yearE']);
+		$monthE	= isset($_GET['monthE'])	? (int)trim($_GET['monthE']) : 0;
+		$dayE	= isset($_GET['dayE'])		? (int)trim($_GET['dayE']) : 0;
+	}
+}
+
+$page	= isset($_GET['page'])	? (int)trim($_GET['page']) : 1; if ($page < 1) $page = 1;
+
+$sort     = isset($_GET['sort'])     ? trim($_GET['sort']) : '';
+$lastsort = isset($_GET['lastsort']) ? trim($_GET['lastsort']) : '';
+$sortway  = isset($_GET['sortway'])  ? trim($_GET['sortway']) : '';
+
+$queryFilter = array();
+if ($dateSelectionType == "simple") {
+	if ($yearS != 0) {
+		if ($monthS == 0)	{ $dateStart = mktime(0,0,0,      1,    1,$yearS);	$dateEnd = mktime(0,0,0,        1,      1,$yearS+1); }
+		elseif ($dayS == 0)	{ $dateStart = mktime(0,0,0,$monthS,    1,$yearS);	$dateEnd = mktime(0,0,0,$monthS+1,      1,$yearS  ); }
+		else				{ $dateStart = mktime(0,0,0,$monthS,$dayS,$yearS);	$dateEnd = mktime(0,0,0,$monthS  ,$dayS+1,$yearS  ); }
+		
+		$queryFilter[] = "c.timestamp >= ".$dateStart;
+		$queryFilter[] = "c.timestamp < ".$dateEnd;
+	}
+}
+elseif ($dateSelectionType == "interval") {
+	if ($yearS != 0 && $yearE != 0) {
+		if ($monthS == 0)	{ $dateStart = mktime(0,0,0,      1,    1,$yearS); }
+		elseif ($dayS == 0) { $dateStart = mktime(0,0,0,$monthS,    1,$yearS); }
+		else				{ $dateStart = mktime(0,0,0,$monthS,$dayS,$yearS); }
+		
+		if ($monthE == 0)	{ $dateEnd = mktime(0,0,0,      1,    1,$yearE); }
+		elseif ($dayE == 0) { $dateEnd = mktime(0,0,0,$monthE,    1,$yearE); }
+		else				{ $dateEnd = mktime(0,0,0,$monthE,$dayE+1,$yearE); }
+		
+		$queryFilter[] = "c.timestamp >= ".$dateStart;
+		$queryFilter[] = "c.timestamp < ".$dateEnd;
+	}
+}
+$queryWhere = "WHERE ".
+	($user->id==__ID_TECHNI_CONTACT__ ?
+		"(a.id = ".$user->id." OR a.parent = ".$user->id.")" :
+		"c.idAdvertiser = ".$user->id).
+	(empty($queryFilter) ?
+		"" :
+		" AND ".implode(" AND ",$queryFilter));
+if (!isset($dateStart) || !isset($dateEnd)) {
+	$dateStart = __BEGIN_TIME__;
+	$dateEnd = time() + 86400 - (time() % 86400);
+}
+
+$limitstart = ($page - 1) * NB;
+
+$query = "
+		SELECT
+			c.id, c.prenom, c.nom, c.societe, c.cread, c.timestamp, c.type, c.invoice_status, c.parent, c.reject_timestamp, c.credited_on,
+			a.id AS adv_id, a.nom1, a.litigation_time,
+			pfr.name, pfr.fastdesc, pfr.active,
+			ffr.id as cat_id, ffr.name as cat_name
+		FROM contacts c
+		INNER JOIN advertisers a ON c.idAdvertiser = a.id
+		LEFT JOIN products_fr pfr ON c.idProduct = pfr.id
+		LEFT JOIN families_fr ffr ON c.idFamily = ffr.id
+		".$queryWhere."
+		GROUP BY c.id";
+$queryC	= "
+		SELECT count(c.id)
+		FROM contacts c
+		INNER JOIN advertisers a ON c.idAdvertiser = a.id
+		".$queryWhere;
+
+$data = array();
+if (empty($user->parent)) {
+	
+	$db = DBHandle::get_instance();
+
+	$pLeadList = array(); // Primary Lead List to get the category from which the secondary leads were generated
+	$res = $db->query($query." ORDER BY c.timestamp DESC LIMIT ".$limitstart.", ".NB, __FILE__, __LINE__);
+	while ($row = $db->fetchAssoc($res)) {
+		//if ($row["parent"] != 0)
+		//	$pLeadList[$row["parent"]] = true;
+		$data[] = $row;
+	}
+	
+	$res = $db->query($queryC, __FILE__, __LINE__);
+	list($nb) = $db->fetch($res);
+	
+	/*if (!empty($pLeadList)) {
+		$res = $db->query("
+			SELECT
+				c.id AS lead_id,
+				pfr.id AS pdt_id, pfr.ref_name AS pdt_ref_name,
+				ffr.id AS cat_id, ffr.name AS cat_name, ffr.ref_name AS cat_ref_name
+			FROM contacts c
+			INNER JOIN products_fr pfr ON c.idProduct = pfr.id
+			INNER JOIN products_families pf ON c.idProduct = pf.idProduct
+			INNER JOIN families_fr ffr ON pf.idFamily = ffr.id
+			WHERE c.id IN (".implode(",",array_keys($pLeadList)).")
+			GROUP BY c.id", __FILE__, __LINE__);
+		while($pLead = $db->fetchAssoc($res))
+			$pLeadList[$pLead["lead_id"]] = $pLead;
+	}*/
+	
+}
+
+$lastpage = ceil($nb / NB);
+
+?>
+<link href="HN.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="Classes.js"></script>
+<script type="text/javascript">
+var COMMON_ALL_M = "<?php echo COMMON_ALL_M ?>";
+var COMMON_ALL_F = "<?php echo COMMON_ALL_F ?>";
+var COMMON_ALL_CHOICE = "<?php echo COMMON_ALL_CHOICE ?>";
+
+var MonthLabels = new Array('<?php echo COMMON_JANUARY ?>', '<?php echo COMMON_FEBRUARY ?>', '<?php echo COMMON_MARCH ?>', '<?php echo COMMON_APRIL ?>', '<?php echo COMMON_MAY ?>', '<?php echo COMMON_JUNE ?>', '<?php echo COMMON_JULY ?>', '<?php echo COMMON_AUGUST ?>', '<?php echo COMMON_SEPTEMBER ?>', '<?php echo COMMON_OCTOBER ?>', '<?php echo COMMON_NOVEMBER ?>', '<?php echo COMMON_DECEMBER ?>');
+var DayLabes = new Array('<?php echo COMMON_SUNDAY ?>', '<?php echo COMMON_MONDAY ?>', '<?php echo COMMON_TUESDAY ?>', '<?php echo COMMON_WEDNESDAY ?>', '<?php echo COMMON_THURSDAY ?>', '<?php echo COMMON_FRIDAY ?>', '<?php echo COMMON_SATURDAY ?>');
+
+var dateBegin = new Date(); dateBegin.setTime(<?php echo __BEGIN_TIME__ ?>*1000);
+var dateCur   = new Date();
+</script>
+<script type="text/javascript" src="extranet_functions.js"></script>
+
+<style type="text/css">
+#DateFilter { display: none; }
+#DateIntervalFilter { display: none; }
+</style>
+
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo REQUESTS_BLOC_TITLE ?></div>
+		<div class="bloc-texte"><?php echo REQUESTS_BLOC_DESC ?></div>
+	</div>
+	<div class="zero"></div>
+	<br/>
+	<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo REQUESTS_CONTACT_LIST; if($user->category == __ADV_CAT_LITIGATION__)echo '<br /><span class="InfosError">'.WARNING_LITIGATION.'</span>' ?></div>
+		<div class="bloc-texte">
+			<form action="requests_extract.php" method="post" style="float: right;">
+				<div>
+                                  <input type="hidden" name="dateFilterType" value="simple" />
+					<input type="hidden" name="DateBegin" value="<?php echo date("d/m/Y", $dateStart) ?>" />
+					<input type="hidden" name="DateEnd" value="<?php echo date("d/m/Y", $dateEnd) ?>" />
+					<input type="submit" value="Télécharger l'extract en xls" />
+				</div>
+			</form>
+			<form id="DateFilter" name="DateFilter" action="<?php echo EXTRANET_URL ?>requests.html?<?php echo $sid ?>" method="get">
+				<div>
+					<input type="hidden" name="page" value="<?php echo $page ?>"/>
+					Année :
+					<select name="yearS" id="YearID" onchange="FillMonthOptions(this.id, 'MonthID', 'DayID');">
+					</select>
+					Mois :
+					<select name="monthS" id="MonthID" onchange="FillDayOptions('YearID', this.id, 'DayID');">
+					</select>
+					Jour :
+					<select name="dayS" id="DayID">
+					</select>
+					<script type="text/javascript">
+					FillYearOptions('YearID', 'MonthID', 'DayID');
+					SetDateOptions('YearID', 'MonthID', 'DayID', '<?php echo $yearS ?>','<?php echo $monthS ?>','<?php echo $dayS ?>');
+					</script>
+					<br/>
+					<input type="button" value="Choisir un interval de temps" onclick="ShowDateIntervalSection()">
+					<input type="submit" value="OK">
+				</div>
+			</form>
+			<form id="DateIntervalFilter" name="DateIntervalFilter" action="<?php echo EXTRANET_URL ?>requests.html?<?php echo $sid ?>" method="get">
+				<div>
+					<input type="hidden" name="page" value="<?php echo $page ?>"/>
+					<fieldset style="width: 400px">
+						<legend>Date de début :</legend>
+						Année :
+						<select name="yearS" id="YearSID" onchange="FillMonthOptions2(this.id, 'MonthSID', 'DaySID');">
+						</select>
+						Mois :
+						<select name="monthS" id="MonthSID" onchange="FillDayOptions2('YearSID', this.id, 'DaySID');">
+						</select>
+						Jour :
+						<select name="dayS" id="DaySID">
+						</select>
+					</fieldset>
+					<fieldset style="width: 400px">
+						<legend>Date de Fin :</legend>
+						Année :
+						<select name="yearE" id="YearEID" onchange="FillMonthOptions2(this.id, 'MonthEID', 'DayEID');">
+						</select>
+						Mois :
+						<select name="monthE" id="MonthEID" onchange="FillDayOptions2('YearEID', this.id, 'DayEID');">
+						</select>
+						Jour :
+						<select name="dayE" id="DayEID">
+						</select>
+					</fieldset>
+					<script type="text/javascript">
+					FillYearOptions2('YearSID', 'MonthSID', 'DaySID');
+					FillYearOptions2('YearEID', 'MonthEID', 'DayEID');
+					SetDateOptions('YearSID', 'MonthSID', 'DaySID', '<?php echo $yearS ?>','<?php echo $monthS ?>','<?php echo $dayS ?>');
+					SetDateOptions('YearEID', 'MonthEID', 'DayEID', '<?php echo $yearE ?>','<?php echo $monthE ?>','<?php echo $dayE ?>');
+					</script>
+					<input type="button" value="Choisir une date simple" onclick="ShowDateSection()">
+					<input type="submit" value="OK">
+				</div>
+			</form>
+			<script type="text/javascript"><?php echo ($dateSelectionType == "interval") ? "ShowDateIntervalSection();" : "ShowDateSection();" ?></script>
+
+                        <style type="text/css">
+.DB-bg { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: #000000; -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=40)"; filter: alpha(opacity=40); opacity:.40 }
+.DB { display: none; position: absolute; padding: 10px; font: small-caps bold 15px tahoma, arial, sans-serif; color: #ffffff; text-align: center; border: 1px solid #cccccc; background: #c42623 }
+#CQDB { left: 200px; top: 50px; width: 500px; height: 150px; margin: 300px 0 0 }
+</style>
+<script type="text/javascript">
+$(function(){
+	$("tr.litigation").click(function(){
+		$("div.DB-bg").show();
+		$("#CQDB").show();
+		$(window).scrollTop(100);
+		return false;
+	});
+	//CQDB = Charge Question Dialog Box
+	$("#CQDB input[type='button']:first").click(function(){
+		$("div.DB-bg").hide();
+		$("#CQDB").hide();
+	});
+	$("form[name='litigation'] input[type='button']").click(function(){
+		$("form[name='litigation']").submit();
+	});
+
+});
+</script>
+<div class="DB-bg"></div>
+<form name="litigation-form" method="post" action="">
+<div id="CQDB" class="DB">
+	<input type="hidden" name="litigation" value="1"/>
+        <br />
+	Afin d'accéder à cette demande,<br />veuillez régulariser votre situation comptable en contactant<br />le 01 55 60 29 24 ou comptabilite@techni-contact.com<br />
+        <br />
+        <br />
+	<input type="button" value="Fermer"/>
+</div>
+</form>
+
+                        <div id="RequestsTableSwitcher1"></div>
+			<div class="zero"></div>
+			<table width="100%"  border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="20">&nbsp;</td>
+					<td width="70">ID</td>
+					<td width="110">Etat</td>
+					<td width="110"><?php echo COMMON_DATE ?></td>
+					<td width="300"><?php echo REQUESTS_CONTACT_NAME_AND_COMPANY ?></td>
+					<td><?php echo REQUESTS_CONTACT_RELATED_PRODUCT ?></td>
+				</tr>
+<?php
+if(count($data) > 0) {
+	for($i = 0; $i < count($data); ++$i) {
+		if ($data[$i]["invoice_status"] == __LEAD_INVOICE_STATUS_CHARGED__) {
+			$style    = $data[$i]["cread"] ? 'tr-charged-normal' : 'tr-charged-new';
+			$style_on = $data[$i]["cread"] ? 'tr-charged-hover'  : 'tr-charged-newhover';
+		}
+		else {
+			$style    = $data[$i]["cread"] ? 'tr-normal' : 'tr-new';
+			$style_on = $data[$i]["cread"] ? 'tr-hover'  : 'tr-newhover';
+		}
+		
+		$related_product = $data[$i]["name"]
+			? $data[$i]["name"].($data[$i]["fastdesc"] ? " - ".$data[$i]["fastdesc"] : "")
+			: "Produit de la famille ".$data[$i]["cat_name"];
+		
+		
+		if ($user->id == __ID_TECHNI_CONTACT__ && $data[$i]["adv_id"] != __ID_TECHNI_CONTACT__)
+			$related_product .= " <span style=\"color: red\">(".REQUESTS_PARENT_SUPPLIER." : ".$data[$i]["nom1"].")</span>";
+		
+		if ($data[$i]["invoice_status"] == __LEAD_INVOICE_STATUS_REJECTED_WAIT__)
+			$personal_infos = "En attente de validation de rejet";
+		else if ($data[$i]["invoice_status"] & __LEAD_VISIBLE__)
+			$personal_infos = $data[$i]["prenom"]." ".$data[$i]["nom"]." (".$data[$i]["societe"].")";
+		else
+			$personal_infos = "Hors champs de facturation - Cliquez pour en savoir plus";
+
+                $lead_status = $lead_invoice_status_list[$data[$i]["invoice_status"]].getCreditMonth($data[$i]);
+                
+                if($user->category == __ADV_CAT_LITIGATION__ && $data[$i]['timestamp'] >= $user->litigation_time){
+                  $data[$i]["id"] = 0;
+                  $personal_infos = 'Demande bloquée - litige paiement';
+                  $lead_status = $personal_infos;
+                  $related_product = $personal_infos;
+                  $onClick = '';
+                  $litigation = 'litigation';
+                }else{
+                  $onClick = 'onClick="document.location=\'request_detail.html?id='.$data[$i]["id"].'&'.$sid.'\'"';
+                  $litigation = '';
+                }
+		
+?>
+				<tr class="<?php echo $style ?> <?php echo $litigation ?>" onMouseOver="this.className='<?php echo $style_on ?>'" onMouseOut="this.className='<?php echo $style ?>'" <?php echo $onClick ?> style="cursor:pointer; cursor:hand">
+					<td class="date"><a href="<? echo EXTRANET_URL ?>request_detail_print.html?id=<? echo $data[$i]["id"]."&".$sid ?>"><img src="ressources/images/printer.png" alt="print" title="Imprimez ce contact"/></a></td>
+					<td class="date"><?php echo $data[$i]["id"] ?></td>
+					<td class="date"><?php echo $lead_status ?></td>
+					<td class="date"><?php echo date('d/m/Y H:i:s', $data[$i]["timestamp"]) ?></td>
+					<td class="internaute"><?php echo $personal_infos ?></td>
+                                        <td class="produit"><?php echo $related_product ?></td>
+				</tr>
+<?php
+	}
+}
+else {
+?>
+				<tr class="tr-new" onMouseOver="this.className='tr-newhover'" onMouseOut="this.className='tr-new'" style="cursor:pointer; cursor:hand">
+					<td class="internaute" colspan="6"><?php echo COMMON_NO_RESULT ?></td>
+				</tr>
+<?php
+}
+?>
+			</table>
+			<div id="RequestsTableSwitcher2"></div>
+			<div class="zero"></div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript">
+ps = new HN.PageSwitcher();				ps2 = new HN.PageSwitcher();
+ps.setID("RequestsTableSwitcher1");		ps2.setID("RequestsTableSwitcher2");
+ps.setCurrentPage(<?php echo $page ?>);			ps2.setCurrentPage(<?php echo $page ?>);
+ps.setLastPage(<?php echo $lastpage ?>);			ps2.setLastPage(<?php echo $lastpage ?>);
+ps.setTriggerFct( function(page) {
+	document.DateFilter.page.value = page;
+	document.DateIntervalFilter.page.value = page;
+	if (document.getElementById('DateIntervalFilter').style.display == "none")
+		document.DateFilter.submit();
+	else
+		document.DateIntervalFilter.submit();
+} );
+ps2.setTriggerFct( function(page) {
+	document.DateFilter.page.value = page;
+	document.DateIntervalFilter.page.value = page;
+	if (document.getElementById('DateIntervalFilter').style.display == "none")
+		document.DateFilter.submit();
+	else
+		document.DateIntervalFilter.submit();
+} );
+ps.Refresh();
+ps2.Refresh();
+</script>
+
+</div>
+<?php
+require(EXTRANET."tail.php");
+?>

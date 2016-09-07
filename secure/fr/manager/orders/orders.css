@@ -1,0 +1,64 @@
+#item-cart-delete { position: absolute; left: 19.6%; top: -11px }
+#item-cart-resend-client-email { position: absolute; left: 41%; top: -11px }
+#item-cart-save-order { position: absolute; left: 62%; top: -11px}
+#item-cart-system-msg { height: 14px; font-weight: bold; font-size: 11px }
+#item-cart-error-msg { display: none; width: 49%; color: #b00000; text-align: center }
+#item-cart-success-msg { display: none; width: 49%; color: #164183; text-align: center }
+#item-cart-processing_status_texts { display: none }
+#item-cart-validation { display: none }
+#item-cart-supplier_orders-margins { width: 500px }
+#item-cart-supplier_orders-margins td.price { width: 100px }
+#item-cart-sso-db textarea.comment { display: block; width: 700px; height: 90px }
+.cart-items .line { height: 51px }
+#item-cart-sso-db .cart-items .line { height: 70px }
+
+/* UI */
+.ui-icon:hover { background-image: url(../css/themes/apple_pie/images/icons-top.png); cursor: pointer}
+/* UI */
+
+/* customer secondary contacts */
+#secondary_contacts_mails_dialog{display: none}
+
+
+#inCallbar {
+    height: 60px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 125px;
+    width: 250px;
+}
+
+.ui-statelike-choice-no {
+    background: #f6f6f6 url("images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50%;
+    border: 1px solid #f66;
+    color: #990000;
+    font-weight: bold;
+    outline: medium none;
+}
+
+.ui-statelike-choice-no {
+    background: #f6f6f6 url("images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50%;
+    border: 1px solid #f66;
+    color: #990000;
+    font-weight: bold;
+    outline: medium none;
+}
+
+a.btn {
+    display: block;
+    float: left;
+    margin: 5px;
+    padding: 0.4em 1em 0.4em 20px;
+    position: relative;
+}
+
+#result_equip {
+	float: left; margin-right: 10px; border: 1px solid rgb(221, 221, 221); padding: 10px; width: 220px;
+}
+
+.name_campgne {
+    color: #fff;
+    font-weight: bold;
+    margin-left: -110px;
+    width: 440px;
+}

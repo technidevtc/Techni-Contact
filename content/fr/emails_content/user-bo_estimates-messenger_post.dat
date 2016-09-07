@@ -1,0 +1,36 @@
+<p>
+  Bonjour CLIENT_FIRSTNAME CLIENT_LASTNAME<br />
+  <br />
+  Nous vous contactons <strong>à propos de votre devis n°ESTIMATE_ID</strong> ou de la question que vous nous avez soumise concernant celui-ci :<br />
+  <br />
+  <i>MESSENGER_POST</i><br/>
+  MESSENGER_ATTACHMENTS
+  <br />
+  Vous pouvez aussi directement nous répondre en cliquant sur le lien ci-dessous :<br />
+  <a href="FO_ESTIMATE_CONTACT_FORM_LINK">Répondre à ce message</a><br />
+  <br />
+Vous pouvez nous faire part de votre réponse en nous envoyant un message depuis votre <a href="FO_CUSTOMER_ACCOUNT_URL">compte client</a>, menu « Mes devis ».<br />
+  <br />
+  Afin d'assurer un meilleur suivi des commandes, <strong>merci de ne pas répondre directement au présent message mais d'utiliser le formulaire dédié.</strong><br />
+  <br />
+  Nous vous remercions par avance,<br />
+  <br />
+  Cordialement.<br />
+  <br />
+  Le service commercial
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br />
+	Md2i<br />
+	253 rue Gallieni<br />
+	F-92774 BOULOGNE BILLANCOURT cedex<br />
+	Tel : 01 55 60 29 29 (appel local)<br />
+	Fax: 01 83 62 36 12<br />
+	<a href="http://www.techni-contact.com/?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com/</a><br />
+	<br />
+	SAS au capital de 160.000 €<br />
+	SIRET : 392 772 497 000 39<br />
+	TVA n° FR12 392 772 497<br />
+	R.C. NANTERRE B 392 772 497
+</p>

@@ -1,0 +1,492 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 17 juillet 2005
+
+ Fichier : /secure/extranet/stats.html
+ Description : Statistiques produits
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = STATS_TITLE;
+
+define('WHERE', WHERE_STATS);
+
+$tabm = array(	"01" => COMMON_JANUARY,
+				"02" => COMMON_FEBRUARY,
+				"03" => COMMON_MARCH,
+				"04" => COMMON_APRIL,
+				"05" => COMMON_MAY,
+				"06" => COMMON_JUNE,
+				"07" => COMMON_JULY,
+				"08" => COMMON_AUGUST,
+				"09" => COMMON_SEPTEMBER,
+				"10" => COMMON_OCTOBER,
+				"11" => COMMON_NOVEMBER,
+				"12" => COMMON_DECEMBER);
+
+if (isset($_GET['month']) && preg_match('/^[0-1][0-9]$/', $_GET['month']) && $_GET['month'] >= 1 && $_GET['month'] <= 12)
+{
+	$r_month = $_GET['month'];
+	$r_year  = date('Y');
+	$nav     = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; <a href="stats.html?SESSION">' . STATS_HEAD_TITLE . '</a> &raquo; ' . STATS_MONTH_DETAIL . ' : ' . $tabm[$_GET['month']];
+}
+elseif (isset($_POST['month']) && isset($_POST['year']) && isset($_POST['product']))
+{
+	if (!preg_match('/^[0-9]{4}$/', $_POST['year']) || $_POST['year'] < 2005 || $_POST['year'] > date('Y'))
+		$r_year = date('Y');
+	else
+		$r_year = $_POST['year'];
+
+	if ($_POST['month'] != '' && (!preg_match('/^[0-1][0-9]$/', $_POST['month']) || $_POST['month'] < 1 || $_POST['month'] > 12 || ($_POST['year'] == date('Y') && $_POST['month'] > date('m'))))
+		$r_month = date('m');
+	else
+		$r_month = $_POST['month'];
+
+
+	if ($_POST['product'] != '' && !preg_match('/^[0-9]{1,8}$/', $_POST['product']))
+		$r_product = '';
+	else
+		$r_product = $_POST['product'];
+
+	$nav = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; <a href="stats.html?SESSION">' . STATS_HEAD_TITLE . '</a> &raquo; ' . STATS_DETAIL;
+
+	if ($r_month != '') $nav .=  STATS_OF_MONTH . ' : ' . $tabm[$r_month] . ' ' ;
+
+	$nav .= $r_year;
+}
+else
+{
+	$r_year = date('Y');
+	$nav = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; ' . STATS_HEAD_TITLE;
+}
+
+require(EXTRANET . 'head.php');
+
+$products = array();
+$max      = 0;
+
+if (isset($r_month) && $r_month != '')
+{
+	$days = array();
+
+	switch ($r_month)
+	{
+		case '01' :
+		case '03' :
+		case '05' :
+		case '07' :
+		case '08' :
+		case '10' :
+		case '12' : $nbj = 31;  break;
+		case '02' : $nbj = 29;  break;
+		default   : $nbj = 30;
+	}
+
+	for ($i = 1; $i <= $nbj; ++$i)
+	{
+		if ($i < 10 && strlen($i) == 1) $i = '0' . $i;
+		$days[$i] = 0;
+	}
+}
+else
+{
+	$months = array('01' => 0, '02' => 0, '03' => 0, '04' => 0, '05' => 0, '06' => 0, '07' => 0, '08' => 0, '09' => 0, '10' => 0, '11' => 0, '12' => 0);
+}
+
+$liste = array();
+
+if($user->id == '61049')
+{
+	$liste_adv = $user->id;
+
+	$res = & $handle->query("select id from advertisers where parent = 61049", __FILE__, __LINE__);
+	while($row = & $handle->fetch($res)) $liste_adv .= ', ' . $row[0];
+
+	$query = "select s.id, s.data, p.name, p.fastdesc, a.nom1 from stats_products s, products_fr p, advertisers a where p.idAdvertiser in (" . $liste_adv . ") and p.id = s.id and a.id = p.idAdvertiser order by p.name";
+}
+else
+{
+	$query = "select s.id, s.data, p.name, p.fastdesc from stats_products s, products_fr p where p.idAdvertiser = " . $handle->escape($user->id) . " and p.id = s.id order by p.name";
+}
+
+$products = array();
+if ($user->parent == '0')
+{
+	$res = & $handle->query($query, __FILE__, __LINE__);
+	while ($row = & $handle->fetch($res))
+	{
+		$tab = unserialize($row[1]);
+		
+		if ($user->id == '61049')
+			$liste[$row[0]] = array($row[2], $row[3], $row[4]);
+		else
+			$liste[$row[0]] = array($row[2], $row[3]);
+		
+		// Eventuel tris sur le produit
+		if (isset($r_year))
+		{
+			if ($r_product != '' && $r_product != $row[0])
+				continue;   // Produit non pris en compte
+		}
+		
+		$tmax = 0;
+		foreach ($tab as $k => $v)
+		{
+			// Eventuel tris sur l'année
+			if (isset($r_year) && date('Y', $k) != $r_year)
+				continue;   // Année non prise en compte
+			
+			if (isset($r_month) && $r_month != '')
+			{
+				if (date('m', $k) != $r_month)
+					continue;   // Pas le bon mois
+				
+				$d = date('d', $k);
+				$days[$d] += $v;
+			}
+			else
+			{
+				$m = date('m', $k);
+				$months[$m] += $v;
+			}
+			
+			if (isset($products[$row[0]]))
+				$products[$row[0]][2] += $v;
+			else
+			{
+				if ($user->id == '61049')
+					$products[$row[0]] = array($row[2], $row[3], $v, $row[4]);
+				else
+					$products[$row[0]] = array($row[2], $row[3], $v);
+			}
+			
+			$tmax += $v;
+		}
+		
+		if ($tmax > $max)
+		{
+			$max = $tmax;
+		}
+	}
+	
+	//27/02/2007
+	if ($r_year >= 2007)
+	{
+		$liste = array();
+		
+		if($user->id == '61049')
+			$query = "select pfr.id, pfr.name, pfr.fastdesc, a.nom1 from products_fr pfr, advertisers a where pfr.idAdvertiser = a.id and a.parent = " . __ID_TECHNI_CONTACT__;
+		else
+			$query = "select pfr.id, pfr.name, pfr.fastdesc, a.nom1 from products_fr pfr, advertisers a where pfr.idAdvertiser = a.id and a.id = " . $handle->escape($user->id);
+		
+		$res = & $handle->query($query, __FILE__, __LINE__);
+		while ($rec = & $handle->fetch($res))
+			$liste[$rec[0]] = array($rec[1], $rec[2], $rec[3]);
+		
+		if (isset($r_month) && $r_month != '')
+		{
+			$nbdays = (mktime(0,0,0,$r_month+1,1,$r_year) - mktime(0,0,0,$r_month,1,$r_year)) / 86400;
+			for ($i = 1; $i <= $nbdays; $i++)
+			{
+				$res = & $handle->query("select count(idProduct) from stats_hit where idAdvertiser = " . $handle->escape($user->id) .
+					(!empty($r_product) ? " and idProduct = " . $handle->escape($r_product) : "") .
+					" and timestamp > " . mktime(0,0,0,$r_month,$i,$r_year) . " and timestamp < " . mktime(0,0,0,$r_month,$i+1,$r_year), __FILE__, __LINE__);
+				
+				list($c) = $handle->fetch($res, __FILE__, __LINE__);
+				$d = ($i>9) ? (string)$i : '0'.$i;
+				$days[$d] += $c;
+			}
+			
+			if (empty($r_product))
+			{
+				$res = & $handle->query("select s.idProduct as id, pfr.name, pfr.fastdesc, pfr.idAdvertiser, count(s.idProduct) as c from stats_hit s, products_fr pfr where s.idAdvertiser = " . $handle->escape($user->id) .
+					" and pfr.id = s.idProduct" .
+					" and s.timestamp > " . mktime(0,0,0,$r_month,1,$r_year) . " and s.timestamp < " . mktime(0,0,0,$r_month+1,1,$r_year) . " group by s.idProduct", __FILE__, __LINE__);
+				
+				while ($stat = $handle->fetchAssoc($res, __FILE__, __LINE__))
+				{
+					if (isset($products[$stat['id']]))
+						$products[$stat['id']][2] += $stat['c'];
+					else
+					{
+						$products[$stat['id']] = array($stat['name'], $stat['fastdesc'], $stat['c']);
+						if ($user->id == '61049') $products[$stat['id']][] = $stat['idAdvertiser'];
+					}
+					if ($products[$stat['id']][2] > $max) $max = $products[$stat['id']][2];
+				}
+			}
+		}
+		else
+		{
+			for ($i = 1; $i <= 12; $i++)
+			{
+				$res = & $handle->query("select count(idProduct) from stats_hit where idAdvertiser = " . $handle->escape($user->id) .
+					(!empty($r_product) ? " and idProduct = " . $handle->escape($r_product) : "") .
+					" and timestamp > " . mktime(0,0,0,$i,1,$r_year) . " and timestamp < " . mktime(0,0,0,$i+1,1,$r_year), __FILE__, __LINE__);
+				
+				list($c) = $handle->fetch($res, __FILE__, __LINE__);
+				$m = ($i>9) ? (string)$i : '0'.$i;
+				$months[$m] += $c;
+			}
+			
+			if (empty($r_product))
+			{
+				$res = & $handle->query("select s.idProduct as id, pfr.name, pfr.fastdesc, pfr.idAdvertiser, count(s.idProduct) as c from stats_hit s, products_fr pfr where s.idAdvertiser = " . $handle->escape($user->id) .
+					" and pfr.id = s.idProduct" .
+					" and s.timestamp > " . mktime(0,0,0,1,1,$r_year) . " and s.timestamp < " . mktime(0,0,0,1,1,$r_year+1) . " group by s.idProduct", __FILE__, __LINE__);
+				
+				while ($stat = $handle->fetchAssoc($res, __FILE__, __LINE__))
+				{
+					if (isset($products[$stat['id']]))
+						$products[$stat['id']][2] += $stat['c'];
+					else
+					{
+						$products[$stat['id']] = array($stat['name'], $stat['fastdesc'], $stat['c']);
+						if ($user->id == '61049') $products[$stat['id']][] = $stat['idAdvertiser'];
+					}
+					if ($products[$stat['id']][2] > $max) $max = $products[$stat['id']][2];
+				}
+			}
+		}
+	}
+}
+
+?>
+<div class="centre">
+<div class="bloc">
+	<div class="bloc-titre"><?php echo STATS_YOUR_STATS_BLOC_TITLE ?></div>
+	<div class="bloc-texte"><?php echo STATS_YOUR_STATS_BLOC_DESC ?></div>
+</div>
+<br>
+<div class="miseAZero"></div>
+<div class="bloc">
+	<div class="bloc-titre2"><?php echo STATS_CONFIG ?></div>
+	<div class="bloc-texte">
+		<center>
+		<form method="post" action="stats.html?<?php print(session_name() . '=' . session_id()) ?>">
+			<table border="0" cellspacing="0" cellpadding="0">
+				<tr>
+					<td width="120"><?php echo STATS_YEAR ?> :
+						<select name="year">
+<?php
+for ($i = date('Y'); $i >= 2005; $i--)
+{
+	$sel = (isset($r_year) && $r_year == $k) ? ' selected' : '';
+	print '							<option value="' . $i . '"' . $sel . '>' . $i . " </option>\n";
+}
+?>
+						</select>
+					</td>
+					<td width="180"><?php echo STATS_MONTH ?> :
+						<select name="month">
+							<option value="" selected><?php echo STATS_EVERY_MONTH ?></option>
+<?php
+foreach ($tabm as $k => $v)
+{
+	$sel  = (isset($r_month) && $_SERVER['REQUEST_METHOD'] == 'POST' && $r_month == $k) ? ' selected' : '';
+	print '							<option value="' . $k . '"' . $sel . '>' . ucwords($v) . " </option>\n";
+}
+?>
+						</select>
+					</td>
+					<td><?php echo COMMON_PRODUCT ?> :
+						<select name="product">
+							<option value=""><?php echo STATS_ALL_PRODUCTS ?></option>
+<?php
+foreach ($liste as $k => $v)
+{
+	$sel   = (isset($r_product) && $r_product == $k) ? ' selected' : '';
+	$extra = (trim($v[1]) != '') ? ' - ' . $v[1] : '';
+
+	$sel_product_value = $v[0] . $extra;
+	if (strlen($sel_product_value) > 80)
+	{
+		$sel_product_value_length = strlen($sel_product_value);
+		
+		while ($sel_product_value_length > 80 || $sel_product_value[$sel_product_value_length - 1] != ' ')
+			--$sel_product_value_length;
+		
+		$sel_product_value = substr($sel_product_value, 0, $sel_product_value_length - 1) . ' ...';
+	}
+
+	if ($user->id == '61049' && $v[2] != 'TECHNI-CONTACT')
+	{
+		$sel_product_value .= ' (' . COMMON_SUPPLIER . ' : ' . $v[2] . ')';
+	}
+
+	print '<option value="' . $k . '"' . $sel . '>' . to_entities($sel_product_value) . "</option>\n";
+}
+?>
+						</select>
+					</td>
+					<td width="150">
+						<center>
+						<input type="button" value="<?php echo COMMON_APPLY ?>" onClick="this.form.submit(); this.disabled = true;" />
+						</center>
+					</td>
+				</tr>
+			</table>
+		</form>
+		</center>
+	</div>
+</div>
+<br />
+<div class="bloc">
+	<div class="bloc-titre2"><?php echo STATS_STATS_BLOC_TITLE_ ?>
+<?php
+if (isset($r_year))
+{
+	if ($r_month != '')
+	{
+		$eot = STATS_OF_MONTH . ' : ' . $tabm[$r_month] . ' ' . $r_year;
+	}
+	else
+	{
+		$eot = STATS_OF_YEAR . ' : ' . $r_year;
+	}
+}
+else
+{
+	$eot = STATS_GLOBAL . ' ';
+
+	if (isset($r_month))
+	{
+		$eot .= STATS_OF_MONTH . ' : ' . $tabm[$r_month];
+	}
+}
+
+if (isset($r_product) && $r_product != '')
+{    
+	$rn_product = $liste[$r_product][0];
+	if (trim($liste[$r_product][1]) != '')
+	{
+		$rn_product .= ' - ' . $liste[$r_product][1];
+	}
+	$eot .= ' ' . STATS_OF_PRODUCT . ' ' . to_entities($rn_product);
+}
+
+print($eot);
+
+?>
+	</div>
+	<div class="bloc-texte">
+		<center>
+		<br />
+		<br />			
+		<table border="0" cellspacing="1" cellpadding="0" class="stats">
+			<tr class="tr-baton">
+<?php
+$height = 150;
+
+if (isset($r_month) && $r_month != '')
+{
+    if (max($days) != 0)
+        $ratio  = $height / max($days);
+    else
+        $ratio = 0;
+
+    foreach ($days as $k)
+    {
+        $w = floor($k * $ratio);
+        print '<td>' . $k . '<br /><img src="ressources/images/baton.gif" width="10" height="' . $w . '" border="0"></td> ' . "\n";
+    }
+?>
+			</tr>
+			<tr class="tr-label">
+<?php for($i = 1; $i <= $nbj; ++$i) print '				<td>' . $i . '</td>' ?>
+			</tr>
+<?php
+}
+else
+{
+	if (max($months) != 0)
+		$ratio = $height / max($months);
+	else
+		$ratio = 0;
+
+	foreach ($months as $c => $k)
+	{
+		$w = floor($k * $ratio);
+		print '<td>' . $k . '<br><a href="stats.html?' . session_name() . '=' . session_id() . '&month=' . $c . '"><img src="ressources/images/baton.gif" width="40" height="' . $w . '" border="0"></a></td> ' . "\n";
+	}
+?>
+			</tr>
+			<tr class="tr-label">
+				<td><?php echo COMMON_JAN ?></td>
+				<td><?php echo COMMON_FEB ?></td>
+				<td><?php echo COMMON_MAR ?></td>
+				<td><?php echo COMMON_APR ?></td>
+				<td><?php echo COMMON_MAY ?></td>
+				<td><?php echo COMMON_JUN ?></td>
+				<td><?php echo COMMON_JUL ?></td>
+				<td><?php echo COMMON_AUG ?></td>
+				<td><?php echo COMMON_SEP ?></td>
+				<td><?php echo COMMON_OCT ?></td>
+				<td><?php echo COMMON_NOV ?></td>
+				<td><?php echo COMMON_DEC ?></td>
+			</tr>
+<?php
+}
+?>
+		</table>
+		</center>
+	</div>
+</div>
+<br />
+<?php
+if(!isset($r_product) || $r_product == '')
+{
+?>
+<div class="bloc">
+	<div class="bloc-titre2"><?php echo STATS_PRODUCTS_STATS ?></div>
+	<div class="bloc-texte">
+		<center>
+		<br />
+		<table border="0" cellspacing="1" cellpadding="0" class="stats">
+<?php
+	$length = 500;
+
+	if($max != 0)
+	{
+		$ratio = $length / $max;
+	}
+	else
+	{
+		$ratio = 0;
+	}
+
+	foreach ($products as $k => $v)
+	{
+		$w = floor($ratio * $v[2]);
+		$desc = (trim($v[1]) != '') ? ' - ' . $v[1] : '';
+		
+		if($user->id == '61049' && $v[3] != 'TECHNI-CONTACT')
+		{
+			$desc .= ' (Fournisseur : ' . $v[3] . ')';
+		}
+		
+		print '<tr><td class="labelbarre">' . to_entities($v[0] . $desc) . ' </td><td class="statsbarre"><img src="ressources/images/baton2.gif" width="' . $w . '" height="20">' . $v[2] . "</td></tr>\n";
+	}
+?>
+		</table>
+		<br />
+		</center>
+	</div>
+</div>
+<?php 
+}
+?>
+</div>
+<?php
+require(EXTRANET . 'tail.php');
+?>

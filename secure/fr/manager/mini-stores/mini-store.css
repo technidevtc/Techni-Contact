@@ -1,0 +1,63 @@
+#ms-form { margin: 10px 0 0 }
+#ms-form input.edit { border: 1px solid #c3c3c3; border-color: #7c7c7c #c3c3c3 #dddddd }
+#ms-form textarea { margin: 0 }
+#ms-form tr td { padding: 2px; vertical-align: top }
+#ms-form tr td.text { height: 22px }
+#ms-form tr td:first-child { width: 200px }
+
+.section { max-width: 1140px; min-width: 1010px; color: #333333 }
+.section .line { min-height: 18px; margin: 2px 0; line-height: 18px }
+.section label { display: inline-block; width: 200px; vertical-align: top; font-weight: bold }
+.section input[type='text'],
+.section select,
+.section textarea { width: 500px; margin: 0; padding: 1px 1px 0; vertical-align: middle; font: normal 12px arial,helvetica,sans-serif; border: 1px solid #CCCCCC; background: #f8f8f8 }
+
+.select-list ul { margin: 0; padding: 0 }
+.select-list li { height: 22px; margin: 0; padding: 0 }
+.select-list li > * { margin: 0 0 0 2px; vertical-align: middle!important }
+.select-list select { width: 300px }
+
+#CSDB { z-index: 4; position: absolute; top: 170px; left: 65px; border: 2px solid #999999; visibility: hidden; }
+#MPSDB { z-index: 4; position: absolute; top: 170px; left: 65px; width: 720px; min-height: 240px; visibility: hidden; border: 2px solid #205683 }
+.family-window { height: auto }
+
+#products-selection-section { display: none }
+#categories-selection-section { display: none }
+
+.item-list-table { font: normal 10px verdana, helvetica, sans-serif; border: 1px solid #000000; border-collapse: collapse; background-color: #ffffff }
+.item-list-table tr.selected { background: #ffd9a7 }
+.item-list-table th { height: 17px; padding: 1px; text-align: center; background: #f0f0f0 }
+.item-list-table td { height: 17px; padding: 1px; text-align: center; border: 1px solid #000000; border-width: 1px 0 }
+.item-list-table .id { width: 100px }
+.item-list-table .catID { width: 100px }
+.item-list-table .name { width: 300px; text-align: left }
+.item-list-table .actions { width: 110px }
+.item-list-table .actions .icon { display: inline; float: left; width: 16px; height: 16px; margin: 0 4px; background-repeat: no-repeat; cursor: pointer }
+.item-list-table .actions .icon-up { background: url(arrow_up.png) }
+.item-list-table .actions .icon-down { background: url(arrow_down.png) }
+.item-list-table .actions .icon-edit { background: url(table_edit.png) }
+.item-list-table .actions .icon-del { background: url(table_delete.png) }
+
+/*#btn-add-category { float: left; width: 150px; height: 20px; margin: 5px 0; background: url(btn-add-cf-up.png) no-repeat; cursor: pointer }
+#btn-add-category.down { background: url(btn-add-cf-down.png) no-repeat }
+#btn-select-products { float: left; width: 150px; height: 20px; margin: 5px 0; background: url(btn-add-cf-up.png) no-repeat; cursor: pointer }
+#btn-select-products.down { background: url(btn-add-cf-down.png) no-repeat }*/
+
+#btn-save { float: right; width: 200px; margin: 5px 0 0 }
+.grey-block { clear:both; border: 1px solid #e4e4e4; background: #fcfcfc url(block-bg-grey-150.gif) repeat-x }
+
+a.btn-red { display: block; padding: 5px; font: bold 12px arial, sans-serif; color: #ffffff; text-align: center; background: #9d0503 url(../ressources/images/dot-bg.png) repeat-x }
+a.btn-red:hover { text-decoration: underline }
+
+#PPSDB { z-index: 4; position: absolute; left: 75px; top: 5px; width: 500px; border: 2px solid #205683; visibility: hidden }
+#pic-selection { position: relative; }
+#box-pic-add { position: absolute;  }
+#box-pic { margin: 0; padding: 0; border: 1px solid #cccccc }
+#box-pic ul li{ display: inline ; clear: none !important; display: block;}
+#box-pic .pic-block { margin: 10px; cursor: pointer }
+#box-pic .pic-del, #box-pic ul li{ width: 166px }
+#box-pic .btn-pic-del { padding: 2px; font-size: 9px }
+#btn-add-pic { width: 160px }
+#btn-reorder{display: none; margin-left: 10px}
+#home_carrousel_sort_dialog{display: none}
+.padding-2{padding: 2px}

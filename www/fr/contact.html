@@ -1,0 +1,406 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$dom = new DomDocument();
+$dom->load(XML_FORM_CONTENT);
+$xPath = new DOMXPath($dom);
+$subjects = $xPath->query("//forms/form[attribute::name=\"main_contact\"]/subjects");
+if ($subjects->length > 0) {
+  $subjects = $subjects->item(0);
+  $options = $xPath->query("child::option", $subjects);
+}
+
+$error = $infos = array();
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  
+  $infos["nom"]        = isset($_POST["nom"]) ?        strtoupper(substr(trim($_POST["nom"]), 0, 255)) : "";
+  $infos["prenom"]     = isset($_POST["prenom"]) ?     ucfirst(substr(trim($_POST["prenom"]), 0, 255)) : "";
+  $infos["societe"]    = isset($_POST["societe"]) ?    ucfirst(substr(trim($_POST["societe"]), 0, 255)) : "";
+  $infos["telephone"]  = isset($_POST["telephone"]) ?  preg_replace("/[^0-9]/", "", $_POST["telephone"]) : "";
+  $infos["adresse"]    = isset($_POST["adresse"]) ?    substr(trim($_POST["adresse"]), 0, 255) : "";
+  $infos["cp"]         = isset($_POST["cp"]) ?         substr(trim($_POST["cp"]), 0, 255) : "";
+  $infos["ville"]      = isset($_POST["ville"]) ?      substr(trim($_POST["ville"]), 0, 255) : "";
+  $infos["pays"]       = isset($_POST["pays"]) ?       substr(trim($_POST["pays"]), 0, 255) : "";
+  $infos["email"]      = isset($_POST["email"]) ?      substr(trim($_POST["email"]), 0, 255) : "";
+  $infos["objet"]      = isset($_POST["objet"]) ?      (int)$_POST["objet"] : null;
+  $infos["message"]    = isset($_POST["message"]) ?    $_POST["message"] : "";
+  
+  if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos["email"])) {
+    $error["email"] = true;
+    $errorstring_log .= "Email non valide<br/>\n";
+  }
+  
+  if (empty($infos['nom'])) $error['nom'] = true;        else setCookie('nom', $infos['nom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['prenom'])) $error['prenom'] = true;    else setCookie('prenom', $infos['prenom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['societe'])) $error['societe'] = true;    else setCookie('societe', $infos['societe'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['adresse'])) $error['adresse'] = true;    else setCookie('adresse', $infos['adresse'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['cp'])) $error['cp'] = true;        else setCookie('cp', $infos['cp'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['ville'])) $error['ville'] = true;      else setCookie('ville', $infos['ville'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['pays'])) $error['pays'] = true;      else setCookie('pays', $infos['pays'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if ($infos["objet"] === null)  $error["objet"] = true;
+  if (empty($infos['message'])) $error['message'] = true;
+  
+  if (!preg_match(REGEX_TEL, $infos["telephone"]))
+    $error['telephone'] = true;
+  else setCookie('telephone', $infos['telephone'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  
+  if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos['email']))
+    $error['email'] = true;
+  else setCookie('email', $infos['email'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  
+  if (empty($error)) {
+    $option = $xPath->query("child::option[attribute::value='".$infos["objet"]."']", $subjects)->item(0);
+    if ($option) {
+      $emails = $option->getAttribute("emails");
+      $text =  $option->getAttribute("text");
+    }
+    if (!empty($emails)) {
+      //require(ICLASS . '_ClassEmail.php');
+      //$db = $handle = DBHandle::get_instance();
+      $mail_infos = array(
+        "CUSTOMER_LASTNAME" => $infos['nom'],
+        "CUSTOMER_FIRSTNAME" => $infos['prenom'],
+        "CUSTOMER_COMPANY_NAME" => $infos['societe'],
+        "CUSTOMER_PHONE" => $infos['telephone'],
+        "CUSTOMER_ADDRESS" => $infos['adresse'],
+        "CUSTOMER_PC" => $infos['cp'],
+        "CUSTOMER_CITY" => $infos['ville'],
+        "CUSTOMER_COUNTRY" => $infos['pays'],
+        "CUSTOMER_EMAIL" => $infos['email'],
+        "CONTACT_SUBJECT" => $text,
+        "CONTACT_MESSAGE" => $infos['message'],
+        "CONTACT_DATE" => date("d/m/Y - H:i:s")
+      );
+      $mailContent = array(
+            'email' => utf8_decode($emails),
+            'subject' => "Contact de ".$infos['societe']." pour ".$text,
+            'headers' => "From: Techni-Contact contact form client <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n",
+            'template' => "customer-contact_client-generic",
+            'data' => $mail_infos
+        );
+      $mail = new Email($mailContent);
+      
+      //$mail->Build("Contact de ".$infos['societe']." pour ".$text, "", "contact-client-generic", "From: Techni-Contact contact form client <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n", $mail_infos);
+      $mail->send();
+      //$mail->Save();
+      
+      include(ADMIN."generator.php");
+      $db = DBHandle::get_instance();
+      $contactID = generateID(1, 0x7fffffff, 'id', 'contacts_form', $db);
+      
+      $db->query("
+      INSERT INTO contacts_form (
+        id, timestamp, nom, prenom, societe,
+        adresse, cadresse, cp, ville, pays,
+        tel, fax, email, source, objet,
+        message)
+      VALUES (
+        '".$contactID."', '".time()."', '".$db->escape($infos["nom"])."', '".$db->escape($infos["prenom"])."', '".$db->escape($infos["societe"])."',
+        '".$db->escape($infos["adresse"])."', '".$db->escape($infos["cadresse"])."', '".$db->escape($infos["cp"])."', '".$db->escape($infos["ville"])."', '".$db->escape($infos["pays"])."',
+        '".$db->escape($infos["telephone"])."', '', '".$db->escape($infos["email"])."', 'customer-contact_client-generic', '".$db->escape($text)."',
+        '".$db->escape($infos["message"])."')", __FILE__, __LINE__);
+      
+      $session = new UserSession();
+      $session->authorized_contact_infos = $mail_infos;
+      header("Location: " . URL . "contact-success.html");
+      exit();
+      
+    }
+    else $error_app = true;
+    //$cart->save();
+  }
+}
+if (empty($infos)) {
+  $infos['nom'] =       isset($_COOKIE['nom']) ?       $_COOKIE['nom'] : "";
+  $infos['prenom'] =    isset($_COOKIE['prenom']) ?    $_COOKIE['prenom'] : "";
+  $infos['societe'] =   isset($_COOKIE['societe']) ?   $_COOKIE['societe'] : "";
+  $infos['telephone'] = isset($_COOKIE['telephone']) ? $_COOKIE['telephone'] : "";
+  $infos['adresse'] =   isset($_COOKIE['adresse']) ?   $_COOKIE['adresse'] : "";
+  $infos['cp'] =        isset($_COOKIE['cp']) ?        $_COOKIE['cp'] : "";
+  $infos['ville'] =     isset($_COOKIE['ville']) ?     $_COOKIE['ville'] : "";
+  $infos['pays'] =      isset($_COOKIE['pays']) ?      $_COOKIE['pays'] : "FRANCE";
+  $infos['email'] =     isset($_COOKIE['email']) ?     $_COOKIE['email'] : "";
+  $infos["objet"] = "";
+}
+
+
+// Préparation liste des pays en majuscule
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC . "list_country.csv","r")) {
+  while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+  $cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+
+$title = "Contacter Techni-Contact";
+$meta_desc = "";
+$pageName = "contact";
+require(SITE . "head.php");
+?>
+<script type="text/javascript">
+var RevDate = new Date();
+document.write( unescape( "%3Cscript src='" + (("https:" == document.location.protocol) ? "https://api.reversoform.com/www.reversoform.com/includes/js/reversoObj.js" : "http://api.reversoform.com/includes/js/reversoObj.js") + "?t="+RevDate.getTime()+"' type='text/javascript'%3E%3C/script%3E" ) );
+</script>
+<script type="text/javascript">
+var reversoLoaded = window.ClassReverso !== undefined;
+if (reversoLoaded) {
+// Reverso
+  var ObjReverso = new ClassReverso();
+  ObjReverso.serial    = '8389615817859';
+  ObjReverso.phone    = 'telephone';
+  ObjReverso.company    = 'societe';
+  ObjReverso.firstname  = 'prenom';
+  ObjReverso.lastname    = 'nom';
+  ObjReverso.address    = 'adresse';
+  ObjReverso.zip      = 'cp';
+  ObjReverso.city      = 'ville';
+  ObjReverso.country    = 'pays';
+}
+
+// Reverso test
+if (reversoLoaded) {
+  ObjReverso.fireCallback = function( response ) {
+    if ( response!="NULL") {
+      $("input[name='reversoReversed']").val(1);
+    }else{
+      $("input[name='reversoReversed']").val(0);
+    }
+  };
+}
+</script>
+<script type="text/javascript">
+$(function () {
+  var errorFields = <?php echo json_encode(array_keys($error)); ?>;
+  if (errorFields.length > 0) {
+    alertstring = "Afin de nous transmettre votre demande, veuillez renseigner le(s) champs suivants :<br />";
+    for (var i=0; i<errorFields.length; i++){
+      alertstring += " - " + $('label[for='+errorFields[i]+']').text() + "<br />";
+    }
+    $('.form-error').html(alertstring);
+    $('.form-error').show();
+    //alert(alertstring);
+  }
+  
+  var main_contact_form = $("form[name='main_contact_form']");
+  $("input[name='telephone']", main_contact_form).keyup(function(){
+    var tel = this.value.match(/\d+/g).join("");
+    if (tel.length >=10) ObjReverso.reverso(tel);
+  });
+});
+</script>
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="main-contact-form">
+            <div class="big-blue-title">Contactez-nous</div>
+            Vous avez des remarques, des suggestions ? Vous souhaitez devenir annonceur ou fournisseur ?<br/>
+            Vous souhaitez un complément d'information sur nos offres ? <b>Contactez-nous !</b><br/>
+            <br/>
+            <div class="title">Par e-mail</div>
+            <br/>
+            <div class="note">
+              Vous êtes déjà client ? Merci de vous rendre dans votre <a href="<?php echo COMPTE_URL."infos.html"; ?>">espace client</a> et d'utiliser votre formulaire personnalisé
+            </div>
+            <br/>
+            <br/>
+            <form id="lead_form" name="main_contact_form" action="<?php echo URL."contact.html"; ?>" method="post">
+            <div class="contact-infos">
+              <div class="box white-mr-box mcf-pi">
+                <div class="btl"></div>
+                <div class="btr"></div>
+                <div class="bbl"></div>
+                <div class="bbr"></div>
+                <div class="box-out">
+                  <div class="box-in">
+
+                    <label for="telephone">Téléphone <span class="blue-title">*</span></label>
+                    <input id="field_telephone" name="telephone" type="text" maxlength="30" class="edit form-lead" value="<?php echo $infos['telephone']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_telephone"></div>
+                      <div class="leadform_error" id="error_telephone"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                          
+                    <label for="email">E-mail <span class="blue-title">*</span></label>
+                    <input id="field_email" name="email" type="text" maxlength="255" class="edit  form-lead edit-long" value="<?php echo $infos['email']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                    <div class="leadform_ok" id="ok_email"></div>
+                      <div class="leadform_error" id="error_email"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                          
+                    <label for="nom">Nom <span class="blue-title">*</span></label>
+                    <input id="field_nom" name="nom" type="text" maxlength="255" class="edit form-lead" value="<?php echo $infos['nom']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_nom"></div>
+                      <div class="leadform_error" id="error_nom"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="prenom">Prénom <span class="blue-title">*</span>*</label>
+                    <input  id="field_prenom" name="prenom" type="text" maxlength="255" class="edit form-lead" value="<?php echo $infos['prenom']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_prenom"></div>
+                      <div class="leadform_error" id="error_prenom"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="societe">Société <span class="blue-title">*</span></label>
+                    <input  id="field_societe" name="societe" type="text" maxlength="255" class="edit form-lead" value="<?php echo $infos['societe']; ?>"/>
+                    <div class="leadform_ok" id="ok_societe"></div>
+                      <div class="leadform_error" id="error_societe"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="nom">Adresse <span class="blue-title">*</span></label>
+                    <input  id="field_adresse" name="adresse" type="text" maxlength="255" class="edit form-lead edit-long" value="<?php echo $infos['adresse']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_adresse"></div>
+                      <div class="leadform_error" id="error_adresse"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="cp">Code postal <span class="blue-title">*</span></label>
+                    <input  id="field_cp" name="cp" type="text" maxlength="30" class="edit form-lead" value="<?php echo $infos['cp']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_cp"></div>
+                      <div class="leadform_error" id="error_cp"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="ville">Ville <span class="blue-title">*</span></label>
+                    <input  id="field_ville" name="ville" type="text" maxlength="255" class="edit form-lead" value="<?php echo $infos['ville']; ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_ville"></div>
+                    <div class="leadform_error" id="error_ville"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <label for="pays">Pays <span class="blue-title">*</span></label>
+                    <select  id="field_pays" name="pays" class="edit form-lead">
+                    <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                      <option value="<?php echo $cl[$i]; ?>"<?php if ($infos["pays"] == $cl[$i]) { ?> selected="selected"<?php } ?>><?php echo $cl[$i]; ?></option>
+                    <?php } ?>
+                    </select>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_pays"></div>
+                      <div class="leadform_error" id="error_pays"></div>
+                    </div>
+                    <div class="zero"></div>
+                    <!-- End .error -->
+                    
+                    <input type="hidden" name="reversoReversed" value="0">
+                    <div class="zero"></div>
+                  </div>
+                </div>
+              </div>
+
+              <br/>
+              <br/>
+              <label for="objet"><?php echo $subjects->getAttribute("title"); ?>:</label>
+              <select name="objet" class="edit  form-lead">
+                <?php foreach($options as $option) { ?>
+                  <option value="<?php echo $option->getAttribute("value"); ?>"<?php echo ($infos["objet"] == $option->getAttribute("value") ? " selected" : ""); ?>><?php echo utf8_decode($option->getAttribute("text")); ?></option>
+                <?php } ?>
+              </select>
+              <div class="zero"></div>
+              <br/>
+              <br/>
+              <div class="box white-sr-box mcf-message">
+                <div class="btl"></div>
+                <div class="btr"></div>
+                <div class="bbl"></div>
+                <div class="bbr"></div>
+                <div class="box-out">
+                  <div class="box-in">
+                    <div class="legend"><label for="message">Votre message  <span class="blue-title">*</span></label></div>
+                    <textarea class="edit  form-lead" name="message" rows="4"><?php echo isset($infos["message"]) ? $infos["message"] : ""; ?></textarea>
+                    <div class="zero"></div>
+                  </div>
+                </div>
+              </div>
+              <br/>
+              <div class="lead-form-submit-zone">
+                    <div class="btn-send-message"></div>
+                    <div class="zero"></div>
+                    <div class="form-error"></div>
+                </div>
+              <br/>
+            </div>
+
+            
+            </form>
+            <div class="zero"></div>
+            <br/>
+            <br/>
+            <div class="blue-title">Nos coordonnées:</div>
+            <div id="contact-us">
+              <?php if (defined('PREVIEW')) echo $_POST['content']; else echo file_get_contents(MISC_INC."contact.dat"); ?>
+            </div>
+          </div>
+<script type="text/javascript">
+// Postal code autocomplete
+var champCodePostal = $('input[name=cp]');
+
+champCodePostal.keyup( function(){
+  if(champCodePostal.val().match('[0-9]{5}') && $("input[name='reversoReversed']").val() == 0){
+
+    $.ajax({
+      type: "GET",
+      data: "code_postal="+champCodePostal.val(),
+      dataType: "json",
+      url: "ressources/ajax/AJAX_codesPostaux.php",
+      success: function(data) {
+
+        var refBox = $('input[name=ville]');
+
+        if(data['reponses'].length > 1){
+
+          var html = '<table id="cpAutocomplete" class="auto-completion-box" style="min-width: 221px; top: '+(refBox.offset().top + refBox.height() + 7)+'px; left: '+refBox.offset().left+'px; -moz-user-select: none;" >';
+          $.each(data['reponses'], function(){
+            html += '<tr class=""><td class="prop">'+this.commune+'</td><td class="results"></td></tr>';
+
+          });
+          html += '</table>';
+
+          $('#cpAutocomplete').remove(); // avoid multiple layers in case of multiple keyups
+          $('body').append(html);
+
+          $.each($('#cpAutocomplete tr'), function(){
+            $(this).mouseenter(function(){
+              $(this).addClass('over');
+            }).mouseleave(function(){
+              $(this).removeClass('over');
+            }).click(function(){
+              refBox.val($(this).find('td.prop').html());
+              $('#cpAutocomplete').remove();
+            });
+          });
+
+          refBox.blur(function(){
+            setTimeout(function(){$('#cpAutocomplete').remove();}, 200);
+          });
+
+        }else if(data['reponses'].length == 1){
+          refBox.val(data['reponses'][0].commune);
+        }
+      }
+    });
+  } // endif(id == champCodePostal)
+});
+// Postal code autocomplete
+
+</script>
+
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+
+<?php require(SITE . "foot.php"); ?>

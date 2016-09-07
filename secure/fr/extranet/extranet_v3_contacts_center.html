@@ -1,0 +1,54 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-user"></i> <?php echo $contact_top_h1; ?></h1>
+    </div>
+	
+	<?php
+	
+		//variables for the page
+		//The first day hour minute and second of this month
+		$sql_condition_start_date	= strtotime(date("Y-m", time()).'-01 00:00:00');
+		//$sql_condition_start_date	= strtotime('2014-04-01 00:00:00');
+		
+		//The last day hour minute and second of this month
+		$sql_condition_end_date		= strtotime(date("Y-m-t", time()).' 23:59:59');
+		//$sql_condition_end_date		= strtotime('2014-04-30  23:59:59');
+	
+		//echo($sql_condition_start_date.' * '.$sql_condition_end_date);
+	?>
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h4>
+						Tous
+					</h4>
+				</div>
+				
+				<div class="panel-body">
+					
+					<div class="panel-form">
+						<?php require_once('extranet_v3_contacts_form.html'); ?>
+					</div>
+					
+					<div id="loader_panel-table">
+						<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</div>
+					
+					<div id="panel-table">
+						Contacts
+					</div>
+					
+					<!-- To open a link in a new window ! -->
+					<form id="contacts_external_formid" method="GET" action="#" target="_self"></form>
+					
+				</div><!-- end div .panel-heading -->
+			</div><!-- end div .panel panel-primary -->
+			
+	
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	
+
+</div><!-- end div .za -->

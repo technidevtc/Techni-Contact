@@ -1,0 +1,22 @@
+<p>
+	Bonjour <b>FRIEND_EMAIL</b><br/>
+	<br/>
+	<b>CUSTOMER_EMAIL</b> a trouvé un produit sur <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-bloc-viral-produit">Techni-Contact.com</a> qui pourrait vous intéresser.<br/>
+	<br/>
+	<a href="PRODUCT_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-bloc-viral-produit">Consulter le produit</a>
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

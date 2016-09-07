@@ -1,0 +1,1034 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$memoryUsage = 0;
+function showAddedMemoryUsage($s){
+  global $lastMemoryUsage;
+  $curMemoryUsage = memory_get_usage()/(1024*1024);
+  pp($s." - MEM ADDED = ".($curMemoryUsage-$lastMemoryUsage)." - MEM TOTAL = ".$curMemoryUsage);
+  $lastMemoryUsage = $curMemoryUsage;
+}
+
+define("SEARCH", true);
+
+$db = DBHandle::get_instance();
+$db2 = $conn->getDbh();
+
+$q = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_SPECIAL_CHARS);
+$catDetailID = filter_input(INPUT_GET, 'catDetailID', FILTER_VALIDATE_INT);
+
+$ql = strlen($q);
+
+// "Google-ing" terms and ignoring plurals
+$preterms = preg_split("`\s|-`", Utils::noDiphthong($q));
+$terms = array();
+$terms_regexp = array();
+for ($i=0; $i<count($preterms); $i++) {
+  if (Utils::is_plural($preterms[$i])) {
+    $terms[$i] = (strlen($preterms[$i]) > 3 ? "+" : "").Utils::get_singular($preterms[$i])."* <<".$preterms[$i]."*";
+    if (strlen($preterms[$i]) > 3 || is_numeric($preterms[$i]))
+      $terms_regexp[$i] = Utils::toDashAz09(Utils::get_singular($preterms[$i]))."?";
+  } else {
+    $terms[$i] = (strlen($preterms[$i]) > 3 ? "+" : "").$preterms[$i]."*";
+    if (strlen($preterms[$i]) > 2 || is_numeric($preterms[$i]))
+      $terms_regexp[$i] = Utils::toDashAz09($preterms[$i]);
+  }
+}
+$match_expr = implode(" ", $terms);
+$match_expr_regexp = "/".implode(".*", $terms_regexp)."/i";
+$match_expr_regexp_start = "/^".implode(".*", $terms_regexp)."/i";
+print "match_expr=".to_entities($match_expr) . "<br/>\n";
+print "match_expr_regexp=".to_entities($match_expr_regexp) . "<br/>\n";
+print "match_expr_regexp_start=".to_entities($match_expr_regexp_start) . "<br/>\n";
+
+define("SEARCH_RESULTS_COUNT_MAX", 10000);
+define("SEARCH_SIMPLE_CAT_COUNT_MAX", 60);
+define("SEARCH_DETAILED_CAT_COUNT_MAX", 3);
+define("SEARCH_DETAILED_CAT_PDT_COUNT_MAX", 5);
+define("GLOBAL_AVERAGE_PRICE", 700);
+define("TYPICAL_DATA_SET_SIZE", 10);
+
+if ($ql >= 3) {
+  
+  $mts['TOTAL TIME']['start'] = microtime(true);
+  
+// --------------------------------------------------------------------------------
+// XML LOADING
+// Loading XML with complete categories information
+// Loading time of an xml = nb_element_to_check * size/3.5
+// --------------------------------------------------------------------------------
+  $mts['XML LOAD']['start'] = microtime(true);
+  $dom = Families::getDomXML();
+  $xPath = Families::getXPathXML();
+  $mts['XML LOAD']['end'] = microtime(true);
+  
+  //foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt['end']-$mt['start'])*1000 . "ms</b><br/>\n";
+  //exit();
+  
+  // If a exact category name is found
+  $gq = Utils::toDashAz09($q);
+  $exact_cat = $xPath->query("//category[@ref_name='".$gq."']")->item(0);
+  if ($exact_cat) {
+    header("Location: ".URL."familles/".$gq.".html");
+    exit(); 
+  }
+  
+// --------------------------------------------------------------------------------
+// GLOBAL VAR SETTING
+// --------------------------------------------------------------------------------
+  
+  // Checking if the specific level 3 category is valid
+  if ($catDetailID) {
+    $cur_cat = $xPath->query("parent::category",$dom->getElementById(XML_KEY_PREFIX.$catDetailID))->item(0);
+    if ($cur_cat)
+      $catTree = $xPath->query("ancestor-or-self::category", $cur_cat);
+    if (!$cur_cat || $catTree->length != 3)
+      $catDetailID = 0;
+  }
+  
+// --------------------------------------------------------------------------------
+// SQL QUERIES SETTING
+// --------------------------------------------------------------------------------
+  $fieldsResults_total = array(
+    "count" => 0
+  );
+  $params = array(
+    'search' => $db->escape($match_expr)
+  );
+  $fieldsSettings = array(
+    'products-title' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          pfr.id, pfr.name, pfr.ref_name,
+          ffr.id as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (pfr.name) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM products_fr pfr
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          pfr.active = 1 AND
+          pfr.deleted = 0 AND
+          MATCH (pfr.name) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY pfr.id
+        ORDER BY score ASC',
+      'params' => $params,
+      'first_term_weight' => 'name'
+    ),
+    'products-fastdesc' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          pfr.id, pfr.name, pfr.ref_name, pfr.fastdesc,
+          ffr.id as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (pfr.fastdesc) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM products_fr pfr
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          pfr.active = 1 AND
+          pfr.deleted = 0 AND
+          MATCH (pfr.fastdesc) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY pfr.id
+        ORDER BY score ASC',
+      'params' => $params,
+      'first_term_weight' => 'fastdesc'
+    ),
+    'products-id' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          pfr.id, pfr.name, pfr.ref_name, pfr.fastdesc,
+          ffr.id as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (pfr.id) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM products_fr pfr
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          pfr.active = 1 AND
+          pfr.deleted = 0 AND
+          MATCH (pfr.id) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY pfr.id
+        ORDER BY score ASC',
+      'params' => $params,
+    ),
+    'references-idtc' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          rc.idProduct as id,
+          pfr.name, pfr.ref_name,
+          pf.idFamily as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (rc.id) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM references_content rc
+        INNER JOIN products_fr pfr ON pfr.id = rc.idProduct AND pfr.active = 1 AND pfr.deleted = 0
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          rc.vpc = 1 AND
+          rc.deleted = 0 AND
+          MATCH (rc.id) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY rc.idProduct
+        ORDER BY score ASC',
+      'params' => $params,
+    ),
+    'references-refSupplier' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          rc.idProduct as id, rc.refSupplier,
+          pfr.name, pfr.ref_name,
+          pf.idFamily as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (rc.refSupplier) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM references_content rc
+        INNER JOIN products_fr pfr ON pfr.id = rc.idProduct AND pfr.active = 1 AND pfr.deleted = 0
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          rc.vpc = 1 AND
+          rc.deleted = 0 AND
+          MATCH (rc.refSupplier) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY rc.idProduct
+        ORDER BY score ASC',
+      'params' => $params,
+      'first_term_weight' => 'refSupplier'
+    ),
+    'products-alias' => array(
+      'query' => '
+        SELECT SQL_NO_CACHE
+          pfr.id, pfr.name, pfr.ref_name, pfr.alias,
+          pf.idFamily as catID,
+          ps.hits, ps.orders, ps.leads, ps.first_hit_time,
+          MATCH (pfr.alias) AGAINST (:search IN BOOLEAN MODE) as score
+        FROM products_fr pfr
+        INNER JOIN products_families pf ON pf.idProduct = pfr.id
+        INNER JOIN products_stats ps ON ps.id = pfr.id
+        INNER JOIN families_fr ffr ON ffr.id = pf.idFamily
+        INNER JOIN advertisers a ON a.id = pfr.idAdvertiser AND a.actif = 1
+        WHERE
+          pfr.active = 1 AND
+          pfr.deleted = 0 AND
+          MATCH (pfr.alias) AGAINST (:search IN BOOLEAN MODE) AND
+          pf.orderFamily <= 1
+        GROUP BY pfr.id
+        ORDER BY score ASC',
+      'params' => $params,
+      'first_term_weight' => 'alias'
+    )
+  );
+  $fk = array_keys($fieldsSettings); // Fields Keys
+  $fieldsResults = array_flip($fk);
+  $fkCount = count($fk);
+  
+  showAddedMemoryUsage("INIT");
+  
+  define("SCORE2_FREQ_W2", 1.2); // score2 2 times greated than average = 20% more weith
+  define("SCORE2_FREQ_W2P", 0.2630344058337938); // log(SCORE2_FREQ_W2, 2)
+  define("SCORE2_MAX_MUL", 2); // clamp max score influence
+  define("SCORE2_MIN_MUL", 0.5);
+
+// --------------------------------------------------------------------------------
+// REQUESTING PRODUCTS
+// Loop 1 : getting results by field type
+// --------------------------------------------------------------------------------
+  $mts['LOOP 1 : SQL REQUEST']['start'] = microtime(true);
+  for ($i=0; $i<$fkCount; $i++) {
+    $settings = &$fieldsSettings[$fk[$i]];
+    
+    $mt = microtime(true);
+    $mts['LOOP 1 : SQL REQUEST FOR '.$fk[$i]]['start'] = microtime(true);
+    $sth = $db2->prepare($settings['query']);
+    $sth->execute($settings['params']);
+    $mts['LOOP 1 : SQL REQUEST FOR '.$fk[$i]]['end'] = microtime(true);
+    
+    $pdtCount = $sth->rowCount();
+    print $fk[$i] . " RESULTS COUNT :" . $pdtCount . "<br/>\n";
+    showAddedMemoryUsage("SQL FOR ".$fk[$i]);
+    if ($pdtCount === 0) {
+      $fieldsResults[$fk[$i]] = array('count' => 0);
+      continue;
+    }
+    
+    $mts['LOOP 1 : PHP PROCESSING FOR '.$fk[$i]]['start'] = microtime(true);
+    $pdtList = $sth->fetchAll(PDO::FETCH_ASSOC);
+    $min_score = $pdtList[0]['score'];
+    $max_score = $pdtList[$pdtCount-1]['score'];
+    $mts['LOOP 1 : PHP PROCESSING FOR '.$fk[$i]]['end'] = microtime(true);
+    showAddedMemoryUsage("PHP PROCESSING FOR ".$fk[$i]);
+
+    // Priorizing the results beginning with the first searched term
+    if (isset($settings['first_term_weight'])) {
+      // results with the first term are always prioritized
+      // be sure to take into account the score2 later influence
+      $scoreMul = $min_score/$max_score * SCORE2_MIN_MUL/SCORE2_MAX_MUL*0.9;
+      foreach ($pdtList as &$pdt) {
+        if (stripos($pdt[$settings['first_term_weight']], $preterms[0]) !== 0)
+          $pdt['score'] *= $scoreMul;
+      }
+      unset($pdt);
+    }
+    
+    $fieldsResults[$fk[$i]] = array(
+      'count' => $pdtCount,
+      'data' => $pdtList,
+      'max_score' => $max_score
+    );
+    
+    $fieldsResults_total['count'] += $pdtCount;
+    
+    // don't show more than SEARCH_RESULTS_COUNT_MAX results
+    if ($fieldsResults_total['count'] > SEARCH_RESULTS_COUNT_MAX) {
+      $fk = array_slice($fk, 0, $i+1);
+      $fieldsResults = array_slice($fieldsResults, 0, $i+1, true);
+      $fkCount = count($fk);
+      break;
+    }
+  }
+  unset($settings, $results);
+  $mts['LOOP 1 : SQL REQUEST']['end'] = microtime(true);
+  
+  if ($fieldsResults_total['count'] == 1) { // only 1 result
+    for ($i=0; $i<$fkCount; $i++)
+      if ($fieldsResults[$fk[$i]]['count'] == 1) break;
+    $single_pdt = $fieldsResults[$fk[$i]]['data'][0];
+    
+    header("Location: ".Utils::get_pdt_fo_url($single_pdt['id'], $single_pdt['ref_name'], $single_pdt['catID']));
+    exit(); 
+  
+  } elseif ($fieldsResults_total['count'] > 1) { // several results
+  
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------
+// PRODUCTS/CATEGORIES PERFORMANCE AND FINAL SCORES
+// Loop 2 : get products score2 per search set, then compute their final scores (scoref)
+//  - scoref is score * weighted score2 influence with up/down limits
+//  - the weighted score2 is the propensity of score2 to change the natural score, compared to the average score2 of the products from the same sql requiest
+//  - SCORE2_FREQ_W2 represent the %age to multiply by if a product has a score2 2 times greated than the average.
+//  - SCORE2_MIN_MUL and SCORE2_MAX_MUL avoid having an influence too big
+//
+// We're also filling the list of cat3 found for the current search, and computing some stats to sort them later on
+//
+// Everything is done in reverse to clamp each search set using scoreOffset, while also being able to sort all the products later on
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------
+    $mts['LOOP 2 : SCORE2 AND SCOREF COMPUTING']['start'] = microtime(true);
+    $catList = array(); // list of cat 3 from the products
+    $pdtListFull = array(); // detailed product list before any filtering
+    $fkr = array_reverse($fk); // Fields Results Keys Reversed
+    $scoreOffset = 0;
+    for ($i=0; $i<$fkCount; $i++) {
+      $results = &$fieldsResults[$fkr[$i]];
+      if ($results['count'] == 0)
+        continue;
+      
+      // get pdt score2
+      $mts['LOOP 2 : '.$fkr[$i].' GET SCORE2']['start'] = microtime(true);
+      $pdtStats = Products::setProductsPerformanceScore($results['data']);
+      $mts['LOOP 2 : '.$fkr[$i].' GET SCORE2']['end'] = microtime(true);
+      
+      foreach ($results['data'] as &$pdt) {
+        
+        // compute scoref
+        if ($pdtStats['avg'] > 0) { // can happen if not product in the result group has any lead/order
+          $score2Mul = pow($pdt['score2']/$pdtStats['avg'], SCORE2_FREQ_W2P);
+          if ($score2Mul > SCORE2_MAX_MUL)
+            $score2Mul = SCORE2_MAX_MUL;
+          elseif ($score2Mul < SCORE2_MIN_MUL)
+            $score2Mul = SCORE2_MIN_MUL;
+        } else {
+          $score2Mul = 1;
+        }
+        $pdt['scoref'] = $pdt['score'] * $score2Mul + $scoreOffset;
+        
+        // fill cat3 list, taking advantage of the loop to compute some stats
+        $cat3 = &$catList[$pdt['catID']];
+        if (!isset($cat3)) {
+          $ccat3 = $xPath->query("parent::category",$dom->getElementById(XML_KEY_PREFIX.$pdt['catID']))->item(0);
+          if ($ccat3 !== null) {
+            $ccat3Name = $ccat3->getAttribute("name");
+            $ccat3RefName = $ccat3->getAttribute("ref_name");
+            // name_score = name match search + name's first word match search's first term
+            //pp($ccat3Name.' '.$ccat3RefName);
+            //pp($match_expr_regexp.'='.(int)preg_match($match_expr_regexp, $ccat3RefName).' '.$match_expr_regexp_start.'='.(int)preg_match($match_expr_regexp_start, $ccat3RefName));
+            $cat3 = array(
+              'id' => $pdt['catID'],
+              'name' => $ccat3Name,
+              'ref_name' => $ccat3RefName,
+              'name_score' => (int)preg_match($match_expr_regexp, $ccat3RefName) + (int)preg_match($match_expr_regexp_start, $ccat3RefName),
+              'count' => 0,
+              'max_score' => 0,
+              'scoref' => 0
+            );
+          } else {
+            $cat3 = false;
+          }
+        }
+        
+        if ($cat3 !== false) {
+          // check if this product should have its detailed information loaded afterward
+          // if the same product is in 2 different set of search, take the most important one = the last one because its reversed
+          if ($catDetailID === 0 || $cat3['id'] == $catDetailID)
+            $pdtListFull[$pdt['id']] = &$pdt;
+          
+          $cat3['count']++;
+          $cat3['max_score'] = max($cat3['max_score'], $pdt['scoref']);
+          $cat3['scoref'] += $pdt['scoref'];
+        }
+        unset($cat3);
+      }
+      
+      $scoreOffset += $results['max_score'] * SCORE2_MAX_MUL;
+    }
+    $catListLen = count($catList);
+    $mts['LOOP 2 : SCORE2 AND SCOREF COMPUTING']['end'] = microtime(true);
+    showAddedMemoryUsage("AFTER LOOP 2");
+    
+    $mts['CATEGORIES SORTING ('.$catListLen.')']['start'] = microtime(true);
+    if ($catListLen > 1)
+      Utils::sortDbInPlace($catList, "name_match", SORT_DESC, SORT_NUMERIC, "max_score", SORT_DESC, SORT_NUMERIC, "scoref", SORT_DESC, SORT_NUMERIC);
+    $mts['CATEGORIES SORTING ('.$catListLen.')']['end'] = microtime(true);
+    showAddedMemoryUsage("CATEGORIES SORTING");
+    //pp($catList);
+ 
+    foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt['end']-$mt['start'])*1000 . "ms</b><br/>\n";
+    exit();
+    
+// --------------------------------------------------------------------------------
+// DETERMININING THE PRODUCT DETAILED INFOS TO GET
+// --------------------------------------------------------------------------------
+
+    // Getting a limited number of products to be showed, or all the products from a level 3 category
+    $mts['GET PRODUCT DETAILED INFOS']['start'] = microtime(true);
+    
+    if (!empty($pdtListFull)) {
+// --------------------------------------------------------------------------------
+// GETTING PRODUCT DETAILED INFOS
+// --------------------------------------------------------------------------------
+      // Shipping fee
+      $res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ );
+      while ($rec = $db->fetch($res)) {
+        $$rec[0] = $rec[1];
+      }
+      
+      define('NB', 50);
+      
+      // Getting filter/sort/.. vars
+      $page   = isset($_GET['page'])   ? (int)(trim($_GET['page'])) : 1;
+      $sort   = isset($_GET['sort'])   ? trim($_GET['sort']) : "";
+      $filter = isset($_GET['filter']) ? trim($_GET['filter']) : "";
+      $range  = isset($_GET['range'])  ? (preg_match("/^[0-9]+-[0-9]+$/", $_GET['range']) ? $_GET['range'] : "") : "";
+      switch ($filter) {
+        case "all": break;
+        case "saleable": break;
+        case "partner": break;
+        case "price":
+          if (!empty($range))
+            list($minPrice, $maxPrice) = explode("-", $range);
+          break;
+        default: $filter = "";
+      }
+      
+      switch ($sort) {
+        case "price-asc"  : Utils::sortDbInPlace($pdtList['data'], "price", SORT_ASC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+        case "price-desc" : Utils::sortDbInPlace($pdtList['data'], "price", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+        case "relevant"   :
+        default :
+          $sort = "";
+          Utils::sortDbInPlace($pdtList['data'], "scoref", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING);
+          break;
+      }
+      
+      $pdtIDs = array_keys($pdtListFull);
+      
+      // Getting detailed information for showed products
+      $res = $db->query("
+        SELECT
+          p.id, p.price as pdt_price, p.timestamp, p.shipping_fee,
+          pfr.name, pfr.ref_name, pfr.fastdesc, pfr.delai_livraison AS delivery_time,
+          pf.idFamily as catID,
+          a.id as adv_id, a.nom1 as adv_name, a.category as adv_cat, a.delai_livraison as adv_delivery_time,
+          rc.id as ref_idtc, rc.refSupplier as ref_refSupplier, rc.price+rc.ecotax as ref_price, (p.as_estimate + a.as_estimate) as product_as_estimate,
+          (select count(idProduct) from references_content where idProduct = p.id) as nb_refs
+        FROM products p
+        INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1 AND pfr.deleted != 1
+        INNER JOIN products_families pf ON p.id = pf.idProduct
+        INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+        LEFT JOIN references_content rc ON p.id = rc.idProduct and rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+        WHERE p.id in (" . implode(",", $pdtIDs) . ")", __FILE__, __LINE__);
+      
+      $pdtInfos = array();
+      while ($pdt = $db->fetchAssoc($res)) {
+        $pdt['saleable'] = $pdt['hasPrice'] = false;
+        $pdt['price'] = $pdt['pdt_price'];
+        if ($pdt['price'] == "ref") {
+          $pdt['price'] = $pdt['ref_price'];
+        }
+        if (empty($pdt['price'])) {
+          $pdt['price'] = "sur devis";
+        }
+        elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt['price'])) { // real price
+          $pdt['hasPrice'] = true;
+          if ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__) {
+            $pdt['saleable'] = true;
+          }
+        }
+        else {
+          $pdt['price'] = "sur devis";
+        }
+        
+        $pdt['shipping_fee'] = empty($pdt['shipping_fee']) ? ($pdt['shipping_fee'] = $pdt['hasPrice'] ? ($pdt['price'] > $fdp_franco ? "Offert" : $fdp." € HT") : "N/D") : $pdt['shipping_fee']." € HT";
+        if (empty($pdt['delivery_time'])) $pdt['delivery_time'] = $pdt['adv_delivery_time'];
+        
+        $pdtInfos[$pdt['id']] = $pdt;
+      }
+      $mts['GET PRODUCT DETAILED INFOS']['end'] = microtime(true);
+    
+    
+// --------------------------------------------------------------------------------
+// SETTING CAT/PDT TO SHOW VARS
+// Setting hash table var with all the products to show on the page
+// --------------------------------------------------------------------------------
+      $mts['SETTING CAT/PDT TO SHOW VARS']['start'] = microtime(true);
+      
+      // final filtered product list to be shown with usefull vars
+      $pdtList = array(
+        'data' => array(),
+        'count' => 0,
+        'totalCount' => 0,
+        'saleableCount' => 0,
+        'advCatCount' => array(),
+        'priceSum' => 0,
+        'priceCount' => 0,
+        'priceMax' => 0,
+        'priceMin' => 0x7fffffff
+      );
+      foreach ($pdtListFull as $pdt) {
+        $pdt = array_merge($pdtInfos[$pdt['id']], $pdt);
+        
+        // vars for price/saleable filtering
+        if ($pdt['hasPrice']) {
+          $pdtList['priceCount']++;
+          $pdtList['priceSum'] += $pdt['price'];
+          $pdtList['priceMax'] = max($pdt['price'], $pdtList['priceMax']);
+          $pdtList['priceMin'] = min($pdt['price'], $pdtList['priceMin']);
+          if ($pdt['saleable'])
+            $pdtList['saleableCount']++;
+        }
+        
+        // product per partner
+        if (!isset($pdtList['advCatCount'][$pdt['adv_cat']]))
+          $pdtList['advCatCount'][$pdt['adv_cat']] = 0;
+        $pdtList['advCatCount'][$pdt['adv_cat']]++;
+        
+        // Filtering
+        $show = true;
+        switch ($filter) {
+          case "saleable" : if (!$pdt['saleable']) $show = false; break;
+          case "partner"  : if ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__) $show = false; break;
+          case "price" : if (!$pdt['hasPrice'] || $pdt['price'] < $minPrice || $pdt['price'] >= $maxPrice) $show = false; break;
+          default : break;
+        }
+        if ($show) {
+          $pdt['url'] = Utils::get_pdt_fo_url($pdt['id'], $pdt['ref_name'], $pdt['catID']);
+          $pdt['pic_url'] = Utils::get_pdt_pic_url($pdt['id'], 'thumb_big');
+          $pdt['cart_add_url'] = "panier:".$pdt['catID']."-".$pdt['id']."-".$pdt['ref_idtc'];
+          $pdt['set_as_estimate'] = $pdt['price'] >= __THRESHOLD_PRICE_FOR_ESTIMATE__ || $pdt['product_as_estimate'];
+          $pdtList['data'][] = $pdt;
+          $pdtList['count']++;
+        }
+        $pdtList['totalCount']++;
+        
+      }
+      
+      if ($pdtList['count']) { // there is products to show
+        // price sort options
+        $showPriceSortBlock = $pdtList['priceCount'] > 1;
+        
+        // price filtering block
+        $showPriceFilterBlock = $pdtList['priceCount'] > 4;
+        if ($showPriceFilterBlock) {
+        // Bayesian average of every products
+          $bayesianAvg = (GLOBAL_AVERAGE_PRICE * TYPICAL_DATA_SET_SIZE + $pdtList['priceSum']) / ($pdtList['priceCount'] + TYPICAL_DATA_SET_SIZE);
+          $priceBayesMean = round($bayesianAvg, -2);
+          $priceMin = floor($pdtList['priceMin']);
+          if ($priceMin % 100 != 0)
+            $priceMin = $priceMin - $priceMin % 100;
+          $priceMax = ceil($pdtList['priceMax']);
+          if ($priceMax % 100 != 0)
+            $priceMax = $priceMax - $priceMax % 100 + 100;
+          // CHANGE HERE
+          $priceRange1 = ($priceBayesMean + $priceMin) / 2;
+          $priceRange2 = ($priceBayesMean + $priceMax) / 2;
+        }
+        
+        define('GLOBAL_AVERAGE_PRICE', 700);
+        define('TYPICAL_DATA_SET_SIZE', 10);
+        
+        $urlOpt = array();
+        if (!empty($filter)) $urlOpt['filter'] = "filter=".$filter;
+        if (!empty($range))  $urlOpt['filter'] .= "&range=".$range;
+        
+        // Page calculations
+        $pageBorderRange = 5;
+        if ($page < 1) $page = 1;
+        $maxpage = floor((($pdtList['count']-1) - ($pdtList['count']-1)%NB) / NB) + 1;
+        if ($page > $maxpage) $page = $maxpage;
+        if ($page > 1) $urlOpt['page'] = "page=".$page;
+                  
+        $minBorderPage = $page>$pageBorderRange ? (($pageBorderRange-$page)<1 ? ($maxpage<= $pageBorderRange*2+1 ? 1 : $page-$pageBorderRange) :$pageBorderRange-$page) : 1;
+        $minBorderPage = $maxpage-$minBorderPage < ($pageBorderRange*2+1) && $maxpage>$pageBorderRange*2+1 ? $maxpage-$pageBorderRange*2 : $minBorderPage;
+        $maxBorderPage = $maxpage<$pageBorderRange*2+1 ? $maxpage : ($minBorderPage+$pageBorderRange*2+1>$maxpage ? $maxpage :$page+$pageBorderRange);
+        if($maxpage >= $pageBorderRange*2+1)
+          $maxBorderPage = ($page<=$pageBorderRange) ? $pageBorderRange*2+1 : ($page+$pageBorderRange>$maxpage ? $maxpage : $page+$pageBorderRange);
+        
+        // Items to show
+        $startItemIndex = ($page-1) * NB;
+        $endItemIndex = min($page * NB, $pdtList['count']) - 1;
+        $DisplayedItemCount = $endItemIndex - $startItemIndex + 1;
+        
+        if (!empty($sort)) $urlOpt['sort'] = "sort=".$sort;
+        
+        //$urlOpt['all'] = empty($urlOpt) ? "" : "&".implode("&", $urlOpt);
+        if (!empty($urlOpt['page'])) $urlOpt['page'] = "&".$urlOpt['page'];
+        if (!empty($urlOpt['sort'])) $urlOpt['sort'] = "&".$urlOpt['sort'];
+        if (!empty($urlOpt['filter'])) $urlOpt['filter'] = "&".$urlOpt['filter'];
+        
+        // criteo first 3 products
+        $criteo = array('pdt_ids' => array());
+        for ($k=$startItemIndex, $l=min($startItemIndex+2,$endItemIndex); $k<=$l; $k++)
+          $criteo['pdt_ids'][] = $pdtList['data'][$k]['id'];
+        
+      } // pdtList not empty
+      $mts['SETTING CAT/PDT TO SHOW VARS']['end'] = microtime(true);
+      
+    } // end pdtIDs not empty
+  
+  }
+  
+  $mts['TOTAL TIME']['end'] = microtime(true);
+
+} // ql >= 3
+
+$showFilterBlocks = true;
+// no direct result, we perform an autocompletion search
+if (!isset($pdtList) || !$pdtList['count']) {
+  $showFilterBlocks = false;
+  define("MAX_AUTOCOMPLETION_RESULTS", 30);
+  define("AUTOCOMPLETION_CATEGORIES_RESULT_COUNT", 10);
+  define("AUTOCOMPLETION_PRODUCTS_TITLE_RESULT_COUNT", 20);
+
+  $terms = preg_split("`\s|-`", Utils::noDiphthong(urldecode($q)));
+  for ($i = 0; $i < count($terms); $i++) {
+    if (Utils::is_plural($terms[$i])) {
+      $terms[$i] = "".Utils::get_singular($terms[$i])."* <<".$terms[$i]."*";
+    }
+    else
+      $terms[$i] = $terms[$i]."*";
+    if ($i == 0) $terms[$i] = ">".$terms[$i];
+  }
+  $match_expr = mb_convert_encoding(implode(" ", $terms), "ISO-8859-1", "UTF-8");
+
+  if ($ql >= 1) {
+
+    $results = array("total" => array("count" => 0, "start_time" => microtime(true), "end_time" => 0));
+
+  // Search in categories
+    $results['categories'] = array("data" => array(), "count" => 0, "start_time" => microtime(true), "end_time" => 0);
+    if ($results['total']['count'] < MAX_AUTOCOMPLETION_RESULTS) {
+      $ressource = $db->query("
+        SELECT
+          ffr.name, ffr.ref_name,
+          MATCH (ffr.name) AGAINST ('" . $db->escape($match_expr) . "' IN BOOLEAN MODE) AS score,
+          (SELECT count(idProduct) FROM products_families pf inner join products_fr pfr ON pfr.id = pf.idProduct where idFamily = ffr.id and pfr.deleted != 1) AS count_product
+        FROM
+          families_fr ffr
+        WHERE
+          MATCH (ffr.name) AGAINST ('" . $db->escape($match_expr) . "' IN BOOLEAN MODE)
+        ORDER BY
+          score DESC, ffr.name ASC");
+
+      $results['categories']['end_time'] = microtime(true);
+      while ($result = $db->fetchAssoc($ressource)) {
+        array_push($results['categories']['data'], array($result['name'],$result['ref_name'],$result['count_product']));
+        $results['categories']['count']++;
+        $results['total']['count']++;
+        if ($results['categories']['count'] >= AUTOCOMPLETION_CATEGORIES_RESULT_COUNT) break;
+        if ($results['total']['count'] >= MAX_AUTOCOMPLETION_RESULTS) break;
+      }
+    }
+
+    // Search in products titles
+    $results['products-title'] = array("data" => array(), "count" => 0, "start_time" => microtime(true), "end_time" => 0);
+    if ($results['total']['count'] < MAX_AUTOCOMPLETION_RESULTS) {
+      $ressource = $db->query("
+        SELECT
+          pfr.name, count(pfr.id) AS count_ref, pfr.id, pfr.fastdesc, pfr.ref_name,
+          (SELECT idFamily FROM products_families pf WHERE pf.idProduct = pfr.id limit 0,1) AS idFamily,
+          MATCH (pfr.name) AGAINST ('" . $db->escape($match_expr) . "' IN BOOLEAN MODE) AS score
+        FROM
+          products_fr pfr, advertisers a
+        WHERE
+          pfr.idAdvertiser = a.id AND
+          a.actif = 1 AND
+          pfr.deleted != 1 AND
+          MATCH (pfr.name) AGAINST ('" . $db->escape($match_expr) . "' IN BOOLEAN MODE)
+        GROUP BY pfr.ref_name
+        ORDER BY score DESC, pfr.name ASC");
+
+      $results['products-title']['end_time'] = microtime(true);
+      while ($result = $db->fetchAssoc($ressource)) {
+        array_push(
+          $results['products-title']['data'],
+          array(
+            $result['name'],
+            $result['count_ref'],
+            $result['id'],
+            $result['fastdesc'],
+            $result['ref_name'],
+            $result['idFamily'],
+            $result['id']
+          )
+        );
+        $results['products-title']['count']++;
+        $results['total']['count']++;
+        if ($results['products-title']['count'] >= AUTOCOMPLETION_PRODUCTS_TITLE_RESULT_COUNT) break;
+        if ($results['total']['count'] >= MAX_AUTOCOMPLETION_RESULTS) break;
+      }
+    }
+
+    // Search in IDTC
+    $results['references-idtc'] = array("data" => array(), "count" => 0, "start_time" => microtime(true), "end_time" => 0);
+    if ($results['total']['count'] < MAX_AUTOCOMPLETION_RESULTS) {
+      $ressource = $db->query("
+      SELECT
+        rc.id, rc.classement, rc.idProduct, pfr.name, pfr.ref_name, pf.idFamily, count(rc.id) AS count_id,  pfr.fastdesc
+      FROM
+        references_content rc, products_fr pfr, products_families pf, advertisers a
+      WHERE
+        rc.idProduct = pfr.id AND
+        pfr.id = pf.idProduct AND
+        pfr.idAdvertiser = a.id AND
+        a.actif = 1 AND
+        pfr.deleted != 1 AND
+        MATCH (rc.id) AGAINST ('" . $db->escape($match_expr) . "' IN BOOLEAN MODE)
+      GROUP BY rc.id
+      ORDER BY rc.id ASC");
+
+      $results['references-idtc']['end_time'] = microtime(true);
+      while ($result = $db->fetchAssoc($ressource)) {
+        array_push(
+          $results['references-idtc']['data'],
+          array(
+            $result['name'].' '.$result['id'],
+            $result['count_id'],
+            $result['id'],
+            $result['fastdesc'],
+            $result['ref_name'],
+            $result['idFamily'],
+            $result['idProduct']
+          )
+        );
+        $results['references-idtc']['count']++;
+        $results['total']['count']++;
+        if ($results['total']['count'] >= MAX_AUTOCOMPLETION_RESULTS) break;
+      }
+    }
+
+    $results['total']['end_time'] = microtime(true);
+
+    $out['categories'] = $results['categories']['data'];// $results['products-title']['data'], $results['references-idtc']['data']);
+    $out['products'] = array_merge($results['products-title']['data'], $results['references-idtc']['data']);
+    
+    // criteo first 3 products
+    $criteo = array('pdt_ids' => array());
+    for ($k=0, $l=min(3,count($out['products'])); $k<$l; $k++)
+      $criteo['pdt_ids'][] = $out['products'][$k][6];
+  }
+}
+
+
+$cq_url = URL."rechercher.html?search=".urlencode($q);
+$cqf_url = $cq_url . ($catDetailID ? "&catDetailID=".$catDetailID : "");
+$pageName = "rg";
+
+define("NOINDEX_FOLLOW", true);
+require(SITE . "head.php");
+$session->avail_saveSearch = $q; // Avail
+?>
+
+<div id="body" class="white-bg">
+  
+  <div class="categories" id="left-col">
+    
+    <div class="left-panel">
+      <?php if (!empty($msl)) : ?>
+      <div class="mini-stores-list">
+        <div class="title">Espaces thématiques</div>
+        <ul>
+        <?php foreach($msl as $ms) : ?>
+          <li><a href="<?php echo URL."miniboutiques/".$ms['id']."-".$ms['ref_name'].".html"; ?>"><?php echo $ms['name']; ?></a></li>
+        <?php endforeach ?>
+        </ul>
+      </div>
+      <?php endif ?>
+
+     <?php if ($showFilterBlocks) : ?>
+      <div id="search-cat-filtering">
+        <div class="pdt-filtering-title">Rayons concernés</div>
+        <ul class="cat3-cat-filtering">
+          <li><a href="<?php echo $cq_url.$urlOpt['sort'].$urlOpt['page']; ?>">Toutes les familles</a></li>
+        <?php foreach ($catList as $cat) : ?>
+          <li<?php if ($catDetailID == $cat['id']) {?> class="current"<?php } ?>>
+            <a href="<?php echo $cq_url."&catDetailID=".$cat['id'].$urlOpt['sort'].$urlOpt['page']; ?>"><?php echo $cat['name']; ?> <span class="color-lightgrey">(<?php echo $cat['count']; ?>)</span></a>
+          </li>
+        <?php endforeach ?>
+        </ul>
+      </div>
+     <?php endif // show filter blocks ?>
+   
+    </div>
+    <script type="text/javascript">
+      $("#search-cat-filtering").find("input[type='checkbox']").change(function(){
+        window.location.href = "<?php echo $cq_url; ?>" + ($(this).prop("checked") ? "&catDetailID="+$(this).data('cat_id') : "");
+      });
+    </script>
+    
+    <div class="right-panel">
+      <div class="search-results">
+       
+       <?php if ($pdtList['count']) { ?>
+        
+        <div class="bigger-blue-title margin-top-11">
+          Résultat de votre recherche &laquo; <?php echo to_entities($q); ?> &raquo;
+         <?php if ($catDetailID) : ?>
+          dans la famille <?php echo $cur_cat->getAttribute('name') ?>
+         <?php endif ?>
+        </div>
+        <div class="categories">
+          <div class="zero"></div>
+          
+          <div id="search-pagination-block">
+            <div class="search-pdt-count"><?php echo ($startItemIndex+1); ?> - <?php echo ($endItemIndex+1); ?> sur <?php echo $pdtList['count'];?></div>
+           
+           <?php if ($showPriceSortBlock) : ?>
+            <div class="filter-sort">
+              Trier par : <select class="search-price-sort">
+                <option value=""></option>
+                <option value="price-asc"<?php echo ($sort=="price-asc"?' selected="selected"':"") ?>>Prix - / +</option>
+                <option value="price-desc"<?php echo ($sort=="price-desc"?' selected="selected"':"") ?>>Prix + / -</option>
+              </select>
+            </div>
+           <?php endif ?>
+           
+            <div class="page-list">
+              <img src="<?php echo URL; ?>ressources/images/pagination-bg-left.png" alt="" class="fl" />
+              <div class="page-links">
+             <?php for ($k = $minBorderPage; $k <= $maxBorderPage; $k++): ?>
+               <?php if ($k == $page) : ?>
+                <span class="cat3-current-page cat3-pagination-page"><?php echo $k; ?></span>
+               <?php else : ?>
+                <a class="pagination-link" href="<?php echo $cqf_url."&page=".$k.$urlOpt['filter'].$urlOpt['sort']; ?>"><?php echo $k; ?></a>
+               <?php endif ?>
+             <?php endfor ?>
+              </div>
+              <img src="<?php echo URL; ?>ressources/images/pagination-bg-right.png" alt="" class="pagination-bg-right" />
+            </div>
+            
+            <div class="zero"></div>
+          </div>
+
+          <div class="pdt-list">
+           <?php for ($k=$startItemIndex; $k<=$endItemIndex; $k++) { $pdt = $pdtList['data'][$k]; ?>
+            <?php
+   // set if product is set as default estimate
+    $pdt_set_as_estimate = false;
+    if($pdt['price'] >= __THRESHOLD_PRICE_FOR_ESTIMATE__) $pdt_set_as_estimate = true;
+    if($pdt['product_as_estimate']) $pdt_set_as_estimate = true;
+    ?>
+            <div class="grey-block">
+              <div class="fl cat3-prod-list-pic">
+                <div class="picture fl">
+                  <div class="cat3-picture-border">
+                    <a href="<?php echo $pdt['url']; ?>"><img src="<?php echo $pdt['pic_url']; ?>" alt="" class="vmaib"/></a><div class="vsma"></div>
+                    <div class="cat3-product-show"></div>
+                  </div>
+                <?php if ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ ) : ?>
+                  <div class="conseils-d-experts">
+                    <img alt="Bénéficiez du conseil d'experts sur ce produit" src="<?php echo URL; ?>ressources/images/picto-supplier.png" class="vmaib fl">
+                    <span class="fr">Bénéficiez du conseils<br />d'experts sur ce produit</span>
+                  </div>
+                <?php else : ?>
+                  <div class="plusieurs-devis">
+                    <img alt="Gagnez du temps en recevant plusieurs devis" src="<?php echo URL; ?>ressources/images/picto-advertiser.png" class="vmaib fl">
+                    <span class="fr">Gagnez du temps,<br /> en recevant plusieurs devis</span>
+                  </div>
+                <?php endif ?>
+                </div>
+
+                <div class="fr cat3-prod-list-infos">
+                  <h2><a class="blue-small-title blue-smaller-title" href="<?php echo $pdt['url']; ?>"><?php echo $pdt['name'] ?></a></h2>
+                  <?php echo $pdt['fastdesc']; ?>
+                  <?php if ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ ) { ?>
+                  <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" />Livraison: <?php echo $pdt['delivery_time']; ?></p>
+                    <?php if(!$pdt['set_as_estimate']) { ?>
+                    <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" />Frais de port: <strong><?php echo $pdt['shipping_fee']; ?></strong></p>
+                    <?php }?>
+                 <?php } ?>
+                  <?php if(!empty ($pdt['average_note'])) {
+                    echo '<span class="cat3-checked-line"><img src="'.URL.'ressources/images/picto-avis.png" alt="picto-avis" /> Avis client ';
+                    showStarRater($pdt['average_note']);
+                    echo ' <a class="color-blue ShowProductFeedback" href="'.$pdt['id'].'">Lire les avis</a></span>';
+                  } ?>
+                </div>
+              </div>
+        
+              <div class="fr cat3-prod-list-relations">
+                <div class="cat3-price">
+                  <?php echo ($pdt['hasPrice'] ? ($pdt['set_as_estimate'] ? 'Sur devis' : 'à partir de : <span>'.sprintf("%.02f",$pdt['price'])."€ HT</span>") : 'à partir de : <span>'.$pdt['price'].'</span>'); ?>
+                </div>
+                <div class="cat3-action">
+                  <a href="<?php echo $pdt['cart_add_url']; ?>" class="<?php if ($pdt['saleable'] && !$pdt['set_as_estimate']) { echo $pdt['nb_refs'] > 1 ? 'btn-cart-add-big-pink': 'btn-cart-add-small-single'; } else { ?>btn-esti-ask-orange<?php } ?>" data-adv-type="<?php echo $pdt['adv_cat']; ?>" ></a>
+                 <?php if ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ ) : ?>
+                  <a href="<?php echo $pdt["cart_add_url"]; ?>" data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="ask-estimate-link"><div class="puce puce-4"></div>Demander un devis</a>
+                 <?php endif ?>
+                  <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+                    <?php $productList = new ProductsSavedList();
+                    if ($productList->isProductInSavedList($pdt['id'])) : ?>
+                    <div class="puce puce-9"></div><span class="color-green">Produit sauvegardé</span>
+                    <a href="<?php echo $session->logged ? COMPTE_URL.'saved-products-list.html' : URL.'liste-produits-sauvegardes.html';?>" class="color-blue">Voir liste</a>
+                   <?php else : ?>
+                    <a href="saveProductList:add-<?php echo $pdt['id']; ?>" class="btn-users-product-list"><div class="puce puce-5"></div>Sauvegarder ce produit</a>
+                   <?php endif; ?>
+                  </div>
+                </div>
+              </div>
+              <div class="zero"></div>
+            </div>
+           <?php } unset($pdt); ?>
+          </div>
+          <div class="zero"></div>
+
+          <div id="search-pagination-block">
+            <div class="search-pdt-count"><?php echo ($startItemIndex+1); ?> - <?php echo ($endItemIndex+1); ?> sur <?php echo $pdtList['count'];?></div>
+
+           <?php if ($showPriceSortBlock) : ?>
+            <div class="filter-sort">
+              Trier par : <select>
+                <option name=""></option>
+                <option name="sort-price-asc" <?php echo ($sort=="price-asc"?'selected="selected"':"") ?>>Prix - / +</option>
+                <option name="sort-price-desc"<?php echo ($sort=="price-desc"?'selected="selected"':"") ?>>Prix + / -</option>
+              </select>
+            </div>
+           <?php endif ?>
+
+            <div class="page-list">
+              <img src="<?php echo URL; ?>ressources/images/pagination-bg-left.png" alt="" class="fl" />
+              <div class="page-links">
+              <?php for ($k = $minBorderPage; $k <= $maxBorderPage; $k++): ?>
+                 <?php if ($k == $page) : ?>
+                  <span class="cat3-current-page cat3-pagination-page"><?php echo $k; ?></span>
+                 <?php else : ?>
+                  <a class="pagination-link" href="<?php echo $cqf_url."&page=".$k.$urlOpt['filter'].$urlOpt['sort']; ?>"><?php echo $k; ?></a>
+                 <?php endif ?>
+               <?php endfor ?>
+              </div>
+              <img src="<?php echo URL; ?>ressources/images/pagination-bg-right.png" alt="" class="pagination-bg-right" />
+            </div>
+            <div class="zero"></div>
+          </div>
+        </div><!-- categories -->
+        
+        <div class="search-form-product-ask">
+          <?php include_once('form-demande-recherche-produit.html'); // Formulaire demande de recherche produit moteur de recherche 06/05/2011 OD ?>
+        </div>
+       
+       <?php } else { // pdtList empty ?>
+       
+        <div class="search-bottom-form">
+        <?php if ($fieldsResults_total['count'] == 0) { ?>
+          <div class="search-sorry blue-title blue-smaller-title">Désolé, nous n'avons pas de résultat pour votre recherche &laquo; <?php echo to_entities($q); ?> &raquo;.</div>
+          <br/>
+          <div id="show-autocomplete-search-results" class="grey-block">
+            <div class="blue-title">Peut-être cherchiez-vous ?</div>
+           
+           <?php if (!empty($out['categories'])) : ?>
+            <div class="autocomplete-search-results-third-col">
+             <?php foreach ($out['categories'] as $cat) : ?>
+               <?php if ($cat[2] > 0) : ?>
+                <a href="<?php echo URL."familles/".$cat[1].".html" ?>"><?php echo $cat[0]." (".$cat[2].")" ?></a><br />
+               <?php endif ?>
+             <?php endforeach ?>
+            </div>
+           <?php endif // not empty categories ?>
+           
+           <?php if (!empty($out['products'])) : ?>
+            <div class="autocomplete-search-results-third-col">
+           <?php $a = 0; foreach($out['products'] as $prod) : ?>
+            <?php if (!empty($prod[5]) && !empty($prod[2]) && !empty($prod[4])) { ?>
+              <a href="<?php echo Utils::get_pdt_fo_url($prod[2], $prod[4], $prod[5]) ?>"><?php echo $prod[0] ?></a>
+             <?php if ($a == count($out['products'])/2) : ?>
+            </div>
+            <div class="autocomplete-search-results-third-col">
+             <?php else : ?>
+              <br />
+             <?php endif ?>
+            <?php } $a++; ?>
+           <?php endforeach ?>
+            </div>
+            <div class="zero"></div>
+           <?php endif // not empty product ?>
+          </div>
+          <?php $form_pdt_search_origin = "recherche"; include_once('form-demande-recherche-produit.html'); // Formulaire demande de recherche produit moteur de recherche 06/05/2011 OD ?>
+          <br />
+        <?php } else { ?>
+          <div class="search-sorry blue-title blue-smaller-title">Aucun produit correspondant aux critères de recherche n'est présent dans cette sous-famille</div>
+        <?php } ?>
+        </div>
+        
+       <?php } ?>
+
+      </div><!-- search-results -->
+    
+    </div><!-- right-panel -->
+
+    <div id="cat3-show-product-infos-dialog" title=""></div>
+    
+  </div><!-- categories -->
+  
+  <?php require(SITE . "blocks-right.php"); ?>
+  
+  <div class="clear"></div>
+
+</div><!-- white-bg -->
+<div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+<script type="text/javascript">
+$(function(){
+  $(".search-price-sort").change(function(){
+    window.location.href = "<?php echo $cqf_url.$urlOpt['filter'] ?>"+($(this).val() != "" ? "&sort="+$(this).val() : "")+"<?php echo $urlOpt['page'] ?>";
+  });
+});
+</script>
+<?php	if (SHOW_TAGS) { ?>
+<script type="text/javascript">
+xt_mtcl = "<?php echo to_entities($q) ?>";    //keyword value
+//do not modify below
+if (window.xtparam!=null){window.xtparam+="&mc="+xt_mtcl;}
+else{window.xtparam ="&mc="+xt_mtcl;};
+</script>
+<?php	} ?>
+
+<?php require(SITE . "foot.php") ?>
+<?php if (DEBUG) { foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt['end']-$mt['start'])*1000 . "ms</b><br/>\n"; } ?>

@@ -1,0 +1,20 @@
+.account-order-table table tr:hover,
+.account-lead-table table tr:hover,
+.account-primaryLead-table table tr:hover { background: #f8f8f8 }
+
+#header-menu a.last{ background: url('../images/header-main-menu-blue-grad.png') repeat-x 0 1px }
+
+#header-search-input { height: 26px; padding: 11px 0 0 10px }
+
+.search-page-form-find-product input { height: 20px; padding: 5px 0 1px }
+#right-col-search-block-form input { height: 18px; padding: 6px 0 2px 10px; }
+form#lead_form input.form-lead,
+form#lead_form textarea.form-lead,
+form#lead_form select.form-lead { height: 20px; padding: 6px 0 1px 4px }
+form#lead_form select.form-lead { height: 28px; padding: 3px 3px 4px }
+form#quick_account_form input { height: 20px; padding: 6px 0 1px 4px }
+form#coord_form input[type=text],
+form#coord_form input[type=password],
+form#coord_form textarea { height: 20px; padding: 6px 0 1px 4px }
+form#coord_form select { height: 28px; padding: 3px 3px 4px }
+.already-client-block input { height: 20px; padding: 5px 0 1px }

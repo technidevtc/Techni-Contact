@@ -1,0 +1,24 @@
+<table style="width: 800px" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="padding-right: 10px; font: normal 12px arial,sans-serif; vertical-align: top">
+      <p>
+        HELLO_TERM <b>M. CUSTOMER_LASTNAME</b><br/>
+        <br/>
+        Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <b><a href="MAINPRODUCT_URL">MAINPRODUCT_NAME</a></b>.<br/>
+        Nous vous en remercions.<br/>
+        <br/>
+          ML_ADV_INFOS
+          SL_ADV_INFOS
+        <br/>
+        Nous vous remercions une nouvelle fois votre confiance et restons à votre disposition au 01 55 60 29 29 pour répondre à tous vos besoins professionnels.<br/>
+        <br/>
+        Nous vous souhaitons une bonne DAYTIME_TERM.<br />
+        <br />
+        Le service clientèle<br/>
+      </p>
+    </td>
+    <td style="width: 160px; vertical-align: top">
+      RECOMMENDED_PRODUCTS_BLOCK
+    </td>
+  </tr>
+</table>

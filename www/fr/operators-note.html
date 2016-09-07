@@ -1,0 +1,98 @@
+﻿<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+  $db = DBHandle::get_instance();
+	
+ 
+$title = "Merci pour votre retour ! – Feedback Techni-Contact";
+$meta_desc = $data_guide->desc_meta;
+//$pageName = "guide_achat";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+		    		<h1 id="title_cat3">Merci pour votre retour, votre aide est précieuse.</h1>
+					
+					<?php
+					if(!isset($_POST['comments'])){
+						if(isset($_GET['id'])){
+							$sql_check  = "SELECT  id ,interaction_type , noted_operator ,id_event
+										   FROM feedback_u_operators_note
+										   WHERE id='".$_GET['id']."' ";
+							$req_check  =  mysql_query($sql_check);
+							$data_check =  mysql_fetch_object($req_check);
+							if(!empty($data_check->id)){	
+								
+								$sql_update = "UPDATE `feedback_u_operators_note` SET  `note` =  '".$_GET['note']."',
+																					   `timestamp_note` = NOW()
+											   WHERE  `id` ='".$_GET['id']."' ";
+								mysql_query($sql_update);
+								
+								if($data_check->interaction_type == 1) $interaction_type = " contacts ";
+								else $interaction_type = " estimate ";
+								
+								$sql_infos  =  "SELECT nom,prenom 
+												FROM ".$interaction_type." 
+												WHERE id= '".$data_check->id_event."'";
+								$req_infos  =   mysql_query($sql_infos);
+								$data_infos =   mysql_fetch_object($req_infos);
+								
+								?>
+					<br />
+					<div>
+						<p>Merci <?= $data_infos->prenom ?> <?= $data_infos->nom ?>  d’avoir participé directement à l’amélioration de nos services.</p><br />
+						<p>Vous avez attribué la note de <strong><?= $_GET['note'] ?></strong> à notre expert.</p>
+						<br />
+						<?php  
+							if(($_GET['note'] == 8 ) || ($_GET['note'] == 9 ) || ($_GET['note'] == 10 )){
+								echo '<p>Vous pouvez si vous le souhaitez compléter votre note avec un commentaire dans le champs-ci-dessous.</p>';
+								$commantaire = "Votre commentaire éventuel sur la prestation";
+							}
+							
+							if(($_GET['note'] == 6 ) || ($_GET['note'] == 7 ) ){
+								echo '<p><strong>Vous ne semblez par totalement satisfait de la prestation de notre expert.</strong><br /><br />    Nous en sommes désolés. Pourriez-vous nous indiquer pourquoi dans le champs ci-dessous ?</p>';
+								$commantaire = "Pourquoi n'êtes vous pas totalement satisfait ?";
+							}
+							
+							if(($_GET['note'] == 1 ) || ($_GET['note'] == 2 ) || ($_GET['note'] == 3 ) || 
+							   ($_GET['note'] == 4 ) || ($_GET['note'] == 5 ) ){
+								echo '<p><strong>Vous ne semblez par satisfait de la prestation de notre expert.</strong><br /><br />    Nous en sommes désolés. Pourriez-vous nous indiquer pourquoi dans le champs ci-dessous ?  </p>';
+								$commantaire = "Pourquoi n'êtes vous pas satisfait ?";
+							}	
+						?>
+						<br />
+						<div style="width: 422px;">
+						<form action="" method="POST">
+							<label><strong><?= $commantaire ?> :</strong></label><br /> 
+							<textarea cols="50" rows="10" required name="comments"></textarea>
+							<br /><br />
+							<input type="submit" value="Envoyer votre commentaire " class="myButton" style="float: right;" />
+						</form>
+						</div>
+					</div>
+					<?php }else {
+								echo '<br /><p>Id n\'existe pas !</p>';
+							}
+							} 
+							
+							}else{
+							$commets = mysql_real_escape_string($_POST['comments']);
+							$sql_update = "UPDATE `feedback_u_operators_note` SET  `comment` =  '".$commets."',timestamp_note=NOW() 
+											   WHERE  `id` ='".$_GET['id']."' ";
+							mysql_query($sql_update);
+							echo '<br />';
+							echo '<p>Il a été transmis à notre équipe, qui va l\'étudier avec attention pour améliorer nos services. </p><br />';
+							echo '<p ><center><a href="\" style="font-size: 16px;color: #0071bc;">[Retour à l\'accueil]</a></center></p>';
+							 } ?>
+          </div>
+  </div>
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+
+          
+<?php require(SITE."foot.php"); ?>

@@ -1,0 +1,23 @@
+body { background-image: url('fond_bloc.gif'); margin: 0; padding: 0; font: 12px/1.5 verdana, arial, helvetica, sans-serif; }
+a { color: #0000C0; }
+img { border: 0; clear: both; margin: 0; padding: 0; }
+div.mail_header { padding: 10px; width: 560px; }
+div.mail_body { padding: 0px 10px; width: 560px; }
+div.mail_footer { font-size: 10px; padding: 10px 100px 10px 10px; width: 560px; text-align: center; }
+#colc #mail_commande { width: 540px; font: 12px Arial, Helvetica, sans-serif; padding: 10px; }
+#colc #mail_commande h2 { margin: 0; padding: 0 0 5px 0; font-size: 12px; color: #889c48; }
+
+/* LISTE REFERENCES */
+#ref { clear: both; padding: 10px; font: 11px Arial, Helvetica, sans-serif;  text-align: left; }
+#ref h2 { margin: 0; padding: 0 0 5px 10px; font-size: 12px; background: url(flecheQuatre.gif) no-repeat 0 -4px; color: #889c48; }
+#ref table { border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; }
+#ref thead tr { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+#ref tr th, #ref tr td { font: 11px arial, helvetica, sans-serif; margin: 0; padding: 2px 10px 2px 5px; border-right: 1px solid #ccc; white-space: nowrap; text-align: center; }
+#ref tr th { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+#ref tr td { color: #000000; }
+#ref tr:hover td { background: #f0f0f0; }
+#ref tr.ref-2 { background-color: #F3F3F3; }
+#ref tr td.ref-prix { font-weight: bold; text-align: right; }
+#ref tr td.ref-qte { width: 28px; }
+#ref tr td.ref-qte input { font: bold 12px arial, helvetica, sans-serif; color: #f40309; width: 23px; height: 15px; padding: 0; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+#ref img { border: 0; }

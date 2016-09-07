@@ -1,0 +1,238 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$user = new CustomerUser($handle, $session->userID);
+
+if (!$session->logged){
+	header("Location: " . COMPTE_URL . "login.html");
+	exit();
+}
+
+$error = array();
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+	$tab_coord = array();
+	
+	$tab_coord["coord_livraison"] = isset($_POST["coord_livraison"]) ? (int)$_POST["coord_livraison"] : 0;
+	$tab_coord['titre']        = isset($_POST['titre']) ?       (int)(trim($_POST['titre'])) : 0;
+	$tab_coord['nom']          = isset($_POST['nom']) ?          strtoupper(substr(trim($_POST['nom']), 0, 255)) : '';
+	$tab_coord['prenom']       = isset($_POST['prenom']) ?       ucfirst(substr(trim($_POST['prenom']), 0, 255)) : '';
+	$tab_coord['societe']      = isset($_POST['societe']) ?      ucfirst(substr(trim($_POST['societe']), 0, 255)) : '';
+	$tab_coord['fonction']     = isset($_POST['fonction']) ?     ucfirst(substr(trim($_POST['fonction']), 0, 255)) : '';
+	$tab_coord['nb_salarie']       = isset($_POST['nb_salarie']) ?       substr(trim($_POST['nb_salarie']), 0, 255) : '';
+	$tab_coord['secteur_activite'] = isset($_POST['secteur_activite']) ? substr(trim($_POST['secteur_activite']), 0, 255) : '';
+	$tab_coord['code_naf']     = isset($_POST['code_naf']) ?     substr(trim($_POST['code_naf']), 0, 255) : '';
+	$tab_coord['num_siret']    = isset($_POST['num_siret']) ?    substr(trim($_POST['num_siret']), 0, 255) : '';
+	$tab_coord['adresse']      = isset($_POST['adresse']) ?      substr(trim($_POST['adresse']), 0, 255) : '';
+	$tab_coord['complement']       = isset($_POST['complement'])?    substr(trim($_POST['complement']), 0, 255) : '';
+	$tab_coord['ville']        = isset($_POST['ville']) ?        strtoupper(substr(trim($_POST['ville']), 0, 255)) : '';
+	$tab_coord['cp']           = isset($_POST['cp']) ?           substr(trim($_POST['cp']), 0, 5) : '';
+	$tab_coord['pays']         = isset($_POST['pays']) ?         strtoupper(substr(trim($_POST['pays']), 0, 255)) : '';
+	$tab_coord['infos_sup']    = isset($_POST['infos_sup']) ?    substr(trim($_POST['infos_sup']), 0, 2047) : '';
+
+	if ($tab_coord['titre'] < 1 || $tab_coord['titre'] > 3) $error['titre'] = true;
+	if (empty($tab_coord['prenom']))  $error['prenom'] = true;
+	if (empty($tab_coord['nom']))     $error['nom'] = true;
+	if (empty($tab_coord['societe'])) $error['societe'] = true;
+	//if (empty($tab_coord['fonction']))							$error['fonction'] = true;
+	//if (empty($tab_coord['nb_salarie']))						$error['nb_salarie'] = true;
+	//if (empty($tab_coord['secteur_activite']))					$error['secteur_activite'] = true;
+	if (empty($tab_coord['adresse'])) $error['adresse'] = true;
+	if (empty($tab_coord['ville']))   $error['ville'] = true;
+	if (empty($tab_coord['pays']))    $error['pays'] = true;
+	if (!preg_match('/^[0-9]+$/', $tab_coord['cp'])) $error['cp'] = true;
+
+	$tab_coord['tel1'] = isset($_POST['tel1']) ? preg_replace("/[^0-9]/", "", $_POST['tel1']) : '';
+	$tab_coord['tel2'] = isset($_POST['tel2']) ? preg_replace("/[^0-9]/", "", $_POST['tel2']) : '';
+	$tab_coord['fax1'] = isset($_POST['fax1']) ? preg_replace("/[^0-9]/", "", $_POST['fax1']) : '';
+	$tab_coord['fax2'] = isset($_POST['fax2']) ? preg_replace("/[^0-9]/", "", $_POST['fax2']) : '';
+	$tab_coord['url']  = isset($_POST['url']) ? trim($_POST['url']) : '';
+
+	if (!preg_match(REGEX_TEL, $tab_coord['tel1']))									$error['tel1'] = true;
+	if (!empty($tab_coord['tel2']) && !preg_match(REGEX_TEL, $tab_coord['tel2']))	$error['tel2'] = true;
+	if (!empty($tab_coord['fax1']) && !preg_match(REGEX_TEL, $tab_coord['fax1']))	$error['fax1'] = true;
+	if (!empty($tab_coord['fax2']) && !preg_match(REGEX_TEL, $tab_coord['fax2']))	$error['fax2'] = true;
+	if (!empty($tab_coord['url'])) {
+		if (!preg_match('/^((http|https|ftp):\/\/)?(([A-Z0-9][A-Z0-9_-]*)(\.[A-Z0-9][A-Z0-9_-]*)+)(:(\d+))?\/?$/i', $tab_coord['url']))
+			$error['url'] = true;
+		else {
+			if (!preg_match('/^(http|https|ftp):\/\//i', $tab_coord['url'])) $tab_coord['url'] = 'http://' . $tab_coord['url'];
+			if (strrpos($tab_coord['url'] , '/') != strlen($tab_coord['url'])-1) $tab_coord['url'] .= '/';
+		}
+	}
+	
+	//if ($tab_coord['coord_livraison'] == 1) {
+		$tab_coord['titre_l']      = isset($_POST['titre_l']) ?      (int)(trim($_POST['titre_l'])) : '';
+		$tab_coord['nom_l']    = isset($_POST['nom_l']) ?    strtoupper(substr(trim($_POST['nom_l']), 0, 255)) : '';
+		$tab_coord['prenom_l']     = isset($_POST['prenom_l']) ?     ucfirst(substr(trim($_POST['prenom_l']), 0, 255)) : '';
+		$tab_coord['societe_l']    = isset($_POST['societe_l']) ?    ucfirst(substr(trim($_POST['societe_l']), 0, 255)) : '';
+		$tab_coord['adresse_l']    = isset($_POST['adresse_l']) ?    substr(trim($_POST['adresse_l']), 0, 255) : '';
+		$tab_coord['complement_l'] = isset($_POST['complement_l']) ? substr(trim($_POST['complement_l']), 0, 255) : '';
+		$tab_coord['ville_l']      = isset($_POST['ville_l']) ?      strtoupper(substr(trim($_POST['ville_l']), 0, 255)) : '';
+		$tab_coord['cp_l']     = isset($_POST['cp_l']) ?     substr(trim($_POST['cp_l']), 0, 5) : '';
+		$tab_coord['pays_l']       = isset($_POST['pays_l']) ?       strtoupper(substr(trim($_POST['pays_l']), 0, 255)) : '';
+		$tab_coord['infos_sup_l']  = isset($_POST['infos_sup_l']) ?  substr(trim($_POST['infos_sup_l']), 0, 2047) : '';
+    $tab_coord['tel1_l']      = isset($_POST['tel1_l']) ?      strtoupper(substr(trim($_POST['tel1_l']), 0, 255)) : '';
+    $tab_coord['fax1_l']      = isset($_POST['fax1_l']) ?      strtoupper(substr(trim($_POST['fax1_l']), 0, 255)) : '';
+
+		if ($tab_coord['titre_l'] < 1 || $tab_coord['titre_l'] > 3) $error['titre_l'] = true;
+		if (empty($tab_coord['prenom_l']))  $error['prenom_l'] = true;
+		if (empty($tab_coord['nom_l']))     $error['nom_l'] = true;
+		if (empty($tab_coord['societe_l'])) $error['societe_l'] = true;
+		if (empty($tab_coord['adresse_l'])) $error['adresse_l'] = true;
+		if (empty($tab_coord['ville_l']))   $error['ville_l'] = true;
+		if (empty($tab_coord['pays_l']))    $error['pays_l'] = true;
+		if (!preg_match('/^[0-9]+$/', $tab_coord['cp_l'])) $error['cp_l'] = true;
+	//}
+
+	if (empty($error)) {
+		$user->setCoordFromArray($tab_coord);
+		$user->save();
+		header("Location: " . COMPTE_URL . "infos.html");
+		exit();
+	}
+}
+else {
+	$tab_coord = $user->getCoordFromArray();
+	//$tab_coord["titre"] = CustomerUser::getTitle($tab_coord["titre"]);
+	//$tab_coord["titre_l"] = CustomerUser::getTitle($tab_coord["titre_l"]);
+	if ($tab_coord['coord_livraison'] != 0) $tab_coord['coord_livraison'] = 1;
+}
+//foreach ($tab_coord as $coord => $value) $tab_coord[$coord] = htmlentities($value);
+
+
+// Country list
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC . "list_country.csv","r")) {
+	while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+	$cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+	fclose($fh);
+}
+
+$current_account_menuitem = "Mes coordonnées";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class=" account right-account-panel">
+  <div class="right-account-panel-inlay fl">
+    <div class="blue-title">Informations Personnelles</div>
+    <div class="contact-infos infos-resume">
+      <ul>
+        <li>
+          <label class="fl">Identifiant :</label>
+          <div class="text email fl margin-right-10"><?php echo $customerInfos["login"] ?></div>
+          <div class="actions fl"><a href="" class="color-blue">Modifier</a></div>
+          <input type="text" name="email" class="edit" style="display: none" value="<?php echo $customerInfos["login"] ?>"/>
+          <div class="zero"></div>
+        </li>
+        <li>
+          <label class="fl">Mot de passe:</label>
+          <div class="text fl margin-right-10">******</div>
+          <div class="actions fl"><a href="" class="color-blue">Modifier</a><?php // / <a href="">Modifier mes alertes e-mail</a> ?></div>
+          <input type="password" name="pass" class="edit" style="display: none" value=""/>
+          <div class="zero"></div>
+        </li>
+      </ul>
+      <div class="actions hidden"><b><a href="" class="color-blue">Sauvegarder les modifications</a></b> | <a href="" class="color-blue">Annuler les modifications</a></div>
+      <div class="zero"></div>
+    </div>
+    
+    <div class="blue-title">Gestion de mes coordonnées</div>
+    <div class="actions"><a href="#" class="color-blue"id="infos-modify-save"><b>Sauvegarder les modifications</a></b> | <a href="<?php echo COMPTE_URL . "infos.html" ?>" class="color-blue">Annuler les modifications</a></div>
+    <div class="zero"></div>
+    
+    <form name="coord" method="post" action="<?php echo COMPTE_URL . "infos-modify.html" ?>">
+      <div class="infos-modify">
+        
+        <div class="contact-infos delivery-infos fl grey-block">
+          <strong><i>Coordonnées de Livraison</i></strong>
+          <ul>
+            <li>
+              <label for="titre_l">Titre:</label>
+              <select name="titre_l" class="edit">
+                <option value="1"<?php echo $tab_coord['titre_l'] == '1' ? 'selected' : ''?>><?php echo INFOS_MR ?></option>
+                <option value="2"<?php echo $tab_coord['titre_l'] == '2' ? 'selected' : ''?>><?php echo INFOS_MRS ?></option>
+                <option value="3"<?php echo $tab_coord['titre_l'] == '3' ? 'selected' : ''?>><?php echo INFOS_MISS ?></option>
+              </select>
+              <div class="zero"></div>
+            </li>
+            <li><label for="nom_l">Nom:</label><input type="text" name="nom_l" class="edit" value="<?php echo $tab_coord['nom_l'] ?>"/><div class="zero"></div></li>
+            <li><label for="prenom_l">Prénom:</label><input type="text" name="prenom_l" class="edit" value="<?php echo $tab_coord['prenom_l'] ?>"/><div class="zero"></div></li>
+            <li><label for="societe_l">Société:</label><input type="text" name="societe_l" class="edit" value="<?php echo $tab_coord['societe_l'] ?>"/><div class="zero"></div></li>
+            <li><label for="adresse_l">Adresse:</label><textarea name="adresse_l" class="edit" rows="3"><?php echo $tab_coord['adresse_l'] ?></textarea><div class="zero"></div></li>
+            <li><label for="cp_l">Code postal*:</label><input type="text" name="cp_l" class="edit" value="<?php echo $tab_coord['cp_l'] ?>"/><div class="zero"></div></li>
+            <li><label for="ville_l">Ville*:</label><input type="text" name="ville_l" class="edit" value="<?php echo $tab_coord['ville_l'] ?>"/><div class="zero"></div></li>
+            <li>
+              <label for="pays_l">Pays:</label>
+              <select name="pays_l" class="edit">
+               <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                <option value="<?php echo $cl[$i] ?>"<?php echo ($tab_coord['pays_l'] == $cl[$i] ? ' selected' : '') ?>><?php echo $cl[$i] ?></option>
+               <?php } ?>
+              </select>
+              <div class="zero"></div>
+            </li>
+            <li><label for="tel2">Téléphone:</label><input type="text" name="tel2" class="edit" value="<?php echo $tab_coord['tel2'] ?>"/><div class="zero"></div></li>
+            <li><label for="fax2">Fax:</label><input type="text" name="fax2" name="fax2" class="edit" value="<?php echo $tab_coord['fax2'] ?>"/><div class="zero"></div></li>
+            <li><label for="infos_sup_l">Instruction de livraison:</label><textarea name="infos_sup_l" class="edit" rows="4"><?php echo $tab_coord['infos_sup_l'] ?></textarea><div class="zero"></div></li>
+          </ul>
+        </div>
+        
+        <div class="contact-infos billing-infos fr grey-block">
+          <strong><i>Coordonnées de Facturation</i></strong>
+          <ul>
+            <li>
+              <label for="titre">Titre:</label>
+              <select name="titre" class="edit">
+                <option value="1"<?php echo $tab_coord['titre'] == '1' ? 'selected' : ''?>><?php echo INFOS_MR ?></option>
+                <option value="2"<?php echo $tab_coord['titre'] == '2' ? 'selected' : ''?>><?php echo INFOS_MRS ?></option>
+                <option value="3"<?php echo $tab_coord['titre'] == '3' ? 'selected' : ''?>><?php echo INFOS_MISS ?></option>
+              </select>
+              <div class="zero"></div>
+            </li>
+            <li><label for="nom">Nom:</label><input type="text" name="nom" class="edit" value="<?php echo $tab_coord['nom'] ?>"/><div class="zero"></div></li>
+            <li><label for="prenom">Prénom:</label><input type="text" name="prenom" class="edit" value="<?php echo $tab_coord['prenom'] ?>"/><div class="zero"></div></li>
+            <li><label for="societe">Société:</label><input type="text" name="societe" class="edit" value="<?php echo $tab_coord['societe'] ?>"/><div class="zero"></div></li>
+            <li><label for="adresse">Adresse:</label><textarea name="adresse" class="edit" rows="3"><?php echo $tab_coord['adresse'] ?></textarea><div class="zero"></div></li>
+            <li><label for="cp">Code postal*:</label><input type="text" name="cp" class="edit" value="<?php echo $tab_coord['cp'] ?>"/><div class="zero"></div></li>
+            <li><label for="ville">Ville*:</label><input type="text" name="ville" class="edit" value="<?php echo $tab_coord['ville'] ?>"/><div class="zero"></div></li>
+            <li>
+              <label for="pays">Pays:</label>
+              <select name="pays" class="edit">
+               <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                <option value="<?php echo $cl[$i] ?>"<?php echo ($tab_coord['pays'] == $cl[$i] ? ' selected' : '') ?>><?php echo $cl[$i] ?></option>
+               <?php } ?>
+              </select>
+              <div class="zero"></div>
+            </li>
+            <li><label for="tel1">Téléphone:</label><input type="text" name="tel1" class="edit" value="<?php echo $tab_coord['tel1'] ?>"/><div class="zero"></div></li>
+            <li><label for="fax1">Fax:</label><input type="text" name="fax1" class="edit" value="<?php echo $tab_coord['fax1'] ?>"/><div class="zero"></div></li>
+          </ul>
+        </div>
+
+      </div>
+    </form>
+
+  </div>
+  <div class="zero"></div>
+  
+</div>
+<script type="text/javascript">
+$(function () {
+	var coord_form = $("form[name='coord']");
+	var errorFields = <?php echo json_encode(array_keys($error)) ?>;
+	if (errorFields.length > 0) {
+		for (var i=0; i<errorFields.length; i++) errorFields[i] = "label[for='"+errorFields[i]+"']";
+		alertstring = "Nous n'avons malheureusement pas compris les informations suivantes :\n";
+		$(errorFields.join(","), coord_form).addClass("error").each(function() {
+ 			alertstring += " - " + $.trim(this.innerHTML.substring(0, this.innerHTML.lastIndexOf(":"))) + "\n";
+		});
+		alertstring += "Merci de bien vouloir les corriger";
+		alert(alertstring);
+	}
+});
+</script>
+
+<?php require(SITE . 'account-foot.php') ?>
+<?php require(SITE . 'foot.php') ?>

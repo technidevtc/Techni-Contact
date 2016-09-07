@@ -1,0 +1,95 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$session = new UserSession();
+
+$infos = $session->authorized_catalogs_infos;
+
+if (empty($infos)) {
+	header("Location: " . URL);
+	exit();
+}
+
+$title = "Les catalogues Techni-Contact";
+$meta_desc = "";
+$pageName = "nos_catalogues";
+require(SITE . "head.php");
+?>
+<div class="white-bg">
+  <div class="blocks-left">
+      <div class="catalogs-form lead-form-pdt-preview fl">
+              <div class="blue-title">Nos catalogues</div>
+              <br/>
+              Nous avons bien reçu votre demande, et nous vous en remercions.
+              <br/>
+              <br/>
+              <a href="<?php echo URL; ?>">Retourner à la page d'accueil</a>
+              <br/>
+      </div>
+      <div class="fr">
+        <div class="cart-left">
+            <div class="q-a-block block">
+              <div class="q-a-title">Vos questions, nos réponses</div>
+              <ul>
+                <li><a href="javascript:questionsAnswers('differences');">Différences entre une commande et un devis</a></li>
+                <li><a href="javascript:questionsAnswers('commandes');">Comment payer ma commande</a></li>
+                <li><a href="javascript:questionsAnswers('payment');">Quels sont les modes de paiement</a></li>
+                <li><a href="javascript:questionsAnswers('payback');">Modalités de remboursement</a></li>
+              </ul>
+            </div>
+            <div class="trust-block block">
+              <div class="trust-block-title">Ils nous font confiance</div>
+                <table>
+                  <tr>
+                  <td><img src="<?php echo $res_url.'images/theytrustus/clairefontaine.jpg'; ?>" alt="clairefontaine"/></td>
+                  <td><img src="<?php echo $res_url.'images/theytrustus/postit.jpg'; ?>" alt="postit"/></td>
+                  <td><img src="<?php echo $res_url.'images/theytrustus/hp.jpg'; ?>" alt="hp"/></td>
+                </tr>
+                <tr>
+                  <td><img src="<?php echo $res_url.'images/theytrustus/rubbermaid.jpg'; ?>" alt="rubbermaid"/></td>
+                  <td><img src="<?php echo $res_url.'images/theytrustus/whirlpool.jpg'; ?>" alt="whirlpool"/></td>
+                  <td></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+      </div>
+    </div>
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+ </div>
+<div id="q-a-dialog" title=""></div>
+<script  type="text/javascript">
+  function questionsAnswers(type){
+    $('#q-a-dialog').prev().addClass('ui-no-title');
+    var html = '';
+    switch(type){
+      case 'differences':
+        html += 'differences text';
+        break;
+
+      case 'commandes':
+        html += 'commandes text';
+        break;
+
+      case 'payment':
+        html += 'payment text';
+        break;
+
+      case 'payback':
+        html += 'payback text';
+        break;
+    }
+    $('#q-a-dialog').html(html);
+    $('#q-a-dialog').dialog('open');
+  }
+
+  $('#q-a-dialog').dialog({
+    width: 840,
+    autoOpen: false,
+    modal: true,
+    draggable: false,
+    resizable: false
+  });
+</script>
+<?php require(SITE . "foot.php"); ?>

@@ -1,0 +1,32 @@
+<p>
+  Bonjour CLIENT_FIRSTNAME CLIENT_LASTNAME<br/>
+  <br />
+  La société ADVERTISER_NAME vous envoie un message suite à votre demande de devis sur Techni-Contact.com.<br />
+  <br />
+  <pre>MESSENGER_POST</pre>
+  MESSENGER_ATTACHMENTS
+  <br />
+  <br />
+  Vous pouvez répondre par mail à ADVERTISER_NAME en cliquant sur le lien ci-dessous<br />
+  <br />
+  <a href="FO_LEAD_FORM_LINK">Répondre au message de ADVERTISER_NAME</a><br />
+  <br />
+  Pour rappel, votre demande devis concernait le produit <a href="PDT_FO_URL">PDT_NAME</a><br />
+  <br />
+  Cordialement.<br />
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

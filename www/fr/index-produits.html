@@ -1,0 +1,142 @@
+﻿<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$breadcrumb_label = 'Tous les produits sur Techni-Contact';
+define('NOINDEX_DOFOLLOW', true);
+// Defining initial variables
+$currentPage    = !empty($_GET['page']) && is_numeric($_GET['page'])? $_GET['page'] : 1;
+$resultsPerPage = 150;
+
+$getLettre = substr($_GET['lettre'], 0, 1);
+$lettre = !empty($getLettre) ? $getLettre : ($getLettre!=''?'[0-9]':'a');
+// Creating pager object
+$pager = new Doctrine_Pager(
+    Doctrine_Query::create()
+        ->from( 'Products p' )
+        ->innerJoin( 'p.product_fr pfr' )
+        ->innerJoin( 'p.advertiser a' )
+        ->innerJoin('p.families pf')
+        ->where('pfr.ref_name REGEXP "^'.$lettre.'"')
+        ->andWhere('pfr.active = 1')
+        ->andWhere('a.actif = 1')
+        ->andWhere('pfr.deleted = 0')
+        ->orderby( 'pfr.ref_name ASC' ),
+    $currentPage, // Current page of request
+    $resultsPerPage // (Optional) Number of results per page. Default is 25
+);
+$pager->getExecuted();
+$items = $pager->execute(array(), Doctrine_Core::HYDRATE_ARRAY); //[$args = array() [, $fetchType = null]]
+$i=0;
+$title_new = "";
+$total  = count($items);
+
+foreach ( $items as $value ){
+	if($total == 1){
+		$first_product_name = $value['product_fr']['name'];
+		$title_new .= $first_product_name.'';
+	}else{
+		if($i==0){
+		$first_product_name = $value['product_fr']['name'];
+		$title_new .= $first_product_name.'';
+		}	
+		if($i==$total-1){
+		$last_product_name = $value['product_fr']['name'];
+		$title_new .= ' à '.$last_product_name;
+		}
+	}	
+$i++;	
+}
+
+$title = $title_new.' - Techni-Contact';
+$meta_desc = "Retrouvez tous les produits proposés par Techni-Contact de ".$title_new." Techni-contact facilite vos achats professionnels.";
+
+//$query_doctrine =  $pager->getQuery();
+
+
+$MetaLinksNextPrev = '';
+/*Start modification pn 26/05/2015 15h49m*/
+/*if($pager->getPage()==1 && empty($_GET['lettre']))*/
+if($pager->getPage() !=1)
+  $MetaLinksNextPrev .= '<link rel="prev" href="'.URL.'index-produits.html?page='.($pager->getPage()-1).'&lettre='.$_GET['lettre'].'" />';
+if($pager->getPage() < $pager->getLastPage())
+  $MetaLinksNextPrev .= '<link rel="next" href="'.URL.'index-produits.html?page='.($pager->getPage()+1).'&lettre='.$_GET['lettre'].'" />';
+
+require(SITE . "head.php");
+?>
+<div class="white-bg padding-top-20">
+  <div class="blocks-left">
+    <div class="blue-title">
+		<h1><?= $title_new.' : tous nos produits'; ?></h1>
+	</div>
+    <div class="zero"></div>
+    <br />
+    <div class="blue-title" style="letter-spacing: -0.1px">
+      <?php for($a=65; $a<=90; $a++)
+        echo '<a class="color-blue" href="'.URL.'index-produits.html?lettre='.  strtolower(chr($a)).'">'.chr($a).'</a> | ';
+      echo '<a class="color-blue" href="'.URL.'index-produits.html?page=0&lettre=0">[0-9]</a>';
+      ?>
+    </div>
+    <div class="zero"></div>
+    <br />
+    <br />
+    <div id="index-produits">
+      <div class="col-index-produit">
+      <?php 
+      $a = $c = 0;
+      foreach ( $items as $item ){
+		$item['families'][0]['id'];
+        echo '<a href="'.URL.'produits/'.$item['families'][0]['id'].'-'.$item['product_fr']['id'].'-'.$item['product_fr']['ref_name'].'.html">'.$item['product_fr']['name'].'</a><br />';
+           if($a%50 == 49 && $c<2){
+             echo '</div><div class="col-index-produit">';
+             $c++;
+           }
+           $a++;
+        }
+      ?>
+        </div>
+        <div class="zero"></div>
+        <br />
+        <div class="blue-title" style="letter-spacing: -0.1px">
+          <?php 
+          $rangeValue = 10;
+          $pagerRange = $pager->getRange(
+              'Jumping',
+              array(
+                  'chunk' => $rangeValue
+              )
+          );
+          $pages = $pagerRange->rangeAroundPage();
+
+          if($pages[0] !=1)
+            echo '<a class="color-blue" href="'.URL.'index-produits.html?page='.($pages[0]-1).'&lettre='.$_GET['lettre'].'">Précédent</a> ';
+
+		  /*Start*/
+		  if(empty($_GET['lettre'])){
+			echo '<a '.($pages[0]==$_GET['page']?"":'class="color-blue"').' href="'.URL.'index-produits.html">';
+		  }else if(!empty($_GET['lettre']) && (empty($pages[0]) || strcmp($pages[0],'1')==0)){
+			echo '<a '.($pages[0]==$_GET['page']?"":'class="color-blue"').' href="'.URL.'index-produits.html?lettre='.$_GET['lettre'].'">';
+		  }else{
+			echo '<a '.($pages[0]==$_GET['page']?"":'class="color-blue"').' href="'.URL.'index-produits.html?page='.$pages[0].'&lettre='.$_GET['lettre'].'">';
+		  }
+		  /*End*/
+		  
+          foreach ($pages as $page)
+            echo $page.'</a>'.(($page%10)==0?'':' | '.'<a '.(($page+1)==$_GET['page']?"":'class="color-blue"').'href="'.URL.'index-produits.html?page='.($page+1).'&lettre='.$_GET['lettre'].'">') ;
+                  echo'</a>';
+          if(!empty($pages[$rangeValue-1]) && $pages[$rangeValue-1] <= $pager->getLastPage())
+            echo ' <a class="color-blue" href="'.URL.'index-produits.html?page='.($pages[$rangeValue-1]+1).'&lettre='.$_GET['lettre'].'">Suivant</a>';
+          ?>
+        
+      </div>
+    </div>
+  </div>
+	<style>
+	.blue-title h1 {
+		font: normal 18px georgia, serif;
+		color: #0071bc;
+		top: 0px;
+	}
+	</style>	
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

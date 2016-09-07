@@ -1,0 +1,15 @@
+#item-cart-save-invoice { position: absolute; left: 62%; top: -11px}
+#item-cart-system-msg { height: 14px; font-weight: bold; font-size: 11px }
+#item-cart-error-msg { display: none; width: 49%; color: #b00000; text-align: center }
+#item-cart-success-msg { display: none; width: 49%; color: #164183; text-align: center }
+#item-cart-resend { display: none }
+#item-cart-generate-credit-note { display: none }
+#item-cart-see-credit-note { display: none }
+#item-cart-validation { display: none }
+
+/* UI */
+.ui-icon:hover { background-image: url(../css/themes/apple_pie/images/icons-top.png); cursor: pointer}
+/* UI */
+
+/* customer secondary contacts */
+#secondary_contacts_mails_dialog{display: none}

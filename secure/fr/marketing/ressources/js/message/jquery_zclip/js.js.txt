@@ -1,0 +1,39 @@
+Page
+<script type="text/javascript" src="ressources/js/message/jquery.zclip.min.js"></script>
+
+##############
+
+PHP
+
+echo('<input id="message_copy_field_btn_id_'.$field_id.'" type="button" value="Copier" class="btn btn-default message_copy_field_btn" style="padding: 4px 15px; margin-bottom: 4px;" text="'.$content_get_tables_fields['name_sql'].'" />');
+
+##############
+
+
+function init_field_copy_click_listner(){
+		
+	/*$('#message_copy_field_btn_id_0').zclip({
+		path:'/fr/marketing/ressources/js/message/ZeroClipboard.swf',
+		copy: function(){
+			//alert($("#"+id+"").attr('text'));
+			//return $(this).text();
+			return "{{"+$('#message_copy_field_btn_id_0').attr('text')+"}}";
+		},
+		afterCopy: function() {}
+	});*/
+		
+	$('.message_copy_field_btn').each(function(){
+		$(this).zclip({
+			path:"/fr/marketing/ressources/js/message/ZeroClipboard.swf",
+			copy: function(){
+					return $(this).attr('text');
+				},
+			afterCopy: function(){
+					alert('After Copy !');
+				}
+        });
+	});
+	
+	
+	alert('Listner OK ! '+$('#message_copy_field_btn_id_0').attr('text'));
+}

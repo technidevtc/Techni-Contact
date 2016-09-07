@@ -1,0 +1,15 @@
+@media projection, screen { .ui-tabs-hide { display:none; } }
+@media print { .ui-tabs-nav { display: none; } }
+
+.ui-tabs-nav { padding-left: 6px; float: left; margin: 0; }
+.ui-tabs-nav li { list-style: none; float: left; }
+.ui-tabs-nav a { display: block; margin: 0 1px 0 0; padding: 2px 4px 1px; width: 80px; text-decoration: none!important; border: 1px solid #a0a0a0; font: 11px verdana, helvetica, sans-serif; color: #000000; background: #ffffff; }
+.ui-tabs-nav span { padding: 2px 13px 2px; color: #ffffff; background: #333333; }
+.ui-tabs-nav a:hover,
+.ui-tabs-nav a:hover span { background: #f0f0f0; border-color: #808080; }
+.ui-tabs-nav .ui-tabs-selected a { position: relative; z-index: 1; background: #e8e8e8; border-color: #404040; border-bottom-color: #e8e8e8; font-weight: bold; }
+.ui-tabs-nav .ui-tabs-selected a span { margin-bottom: 0; color: #ffffff; background: #181818; border-bottom: 1px solid #181818; cursor: default; }
+.ui-tabs-nav .ui-tabs-disabled a,
+.ui-tabs-nav .ui-tabs-disabled a span { background:#161616; color:#333; border-color:#161616; cursor:default; }
+.ui-tabs-container { background: #ffffff; border: 1px solid #202020; clear: both; position: relative; top: -1px; padding: 10px 10px 8px 10px; *padding-top: 3px; *margin-top: -24px; clear: left; }
+

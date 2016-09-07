@@ -1,0 +1,66 @@
+#item-cart { padding: 10px 0 0 }
+#item-cart-cancel { position: absolute; left: 5%; top: -11px }
+#item-cart-delete { position: absolute; left: 22%; top: -11px }
+#item-cart-save-estimate { position: absolute; left: 69%; top: -11px}
+#item-cart-schedule-phone-call { position: absolute; left: 42%; top: -11px}
+#item-cart-system-msg { height: 14px; font-weight: bold; font-size: 11px }
+#item-cart-error-msg { display: none; width: 49%; color: #b00000; text-align: center }
+#item-cart-success-msg { display: none; width: 49%; color: #164183; text-align: center }
+#item-cart-set-status-won { display: none }
+#item-cart-generate-invoice-line { display: none }
+#item-cart-see-order-line { display: none }
+#item-cart-see-invoice-line { display: none }
+#item-cart-send-estimate {  }
+#item-cart-update-estimate { display: none }
+#item-cart-resend-estimate { display: none }
+
+/* UI */
+.ui-icon:hover { background-image: url(../css/themes/apple_pie/images/icons-top.png); cursor: pointer}
+/* UI */
+
+/* customer secondary contacts */
+#secondary_contacts_mails_dialog{display: none}
+
+
+#inCallbar {
+    height: 60px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 125px;
+    width: 250px;
+}
+
+.ui-statelike-choice-no {
+    background: #f6f6f6 url("images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50%;
+    border: 1px solid #f66;
+    color: #990000;
+    font-weight: bold;
+    outline: medium none;
+}
+
+.ui-statelike-choice-no {
+    background: #f6f6f6 url("images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50%;
+    border: 1px solid #f66;
+    color: #990000;
+    font-weight: bold;
+    outline: medium none;
+}
+
+a.btn {
+    display: block;
+    float: left;
+    margin: 5px;
+    padding: 0.4em 1em 0.4em 20px;
+    position: relative;
+}
+
+#result_equip {
+	float: left; margin-right: 10px; border: 1px solid rgb(221, 221, 221); padding: 10px; width: 220px;
+}
+
+.name_campgne {
+    color: #fff;
+    font-weight: bold;
+    margin-left: -115px;
+    width: 440px;
+}

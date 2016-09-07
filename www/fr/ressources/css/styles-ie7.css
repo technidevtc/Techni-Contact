@@ -1,0 +1,29 @@
+.ib { display: inline; zoom: 1 }
+.vmaib { display: inline; zoom: 1 }
+.vtaib { display: inline; zoom: 1 }
+.vsma { display: inline; zoom: 1 }
+.zero { height: 0 }
+
+.header-mid-div{display: block; float: left; min-width: 1px}
+#breadcrumb-cat3-button img, #breadcrumb-cat3-button span{display: inline; float: left}
+.carrouselLinkToItem{display: inline; float: left}
+
+
+div#my-account-title span, div#my-basket-title span{vertical-align: bottom}
+div#my-basket-title{height: 22px}
+#right-col-links{top: 10px; position: relative}
+
+#right-col-search-block-center{height: 340px; top: 0px}
+#right-col-search-block-form{top: 0px}
+#right-col-search-block img.right-col-search-block-footer{bottom: 0px}
+#right-col-catalog-link, #right-col-partner-link{top: 40px; position: relative; height: 94px}
+
+#block-they-trust-us{margin-bottom:60px}
+
+.product-page-cart-table td.quantity div { position: static; }
+.product-page-cart-table td.quantity .add { position: static;}
+.product-page-cart-table td.quantity .sub { position: static; }
+.product-page-cart-table td.quantity input {position: static; }
+
+
+.order-bottom-submit-btns { zoom: 1 }

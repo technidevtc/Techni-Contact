@@ -1,0 +1,66 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$session = new UserSession();
+
+$infos = $session->authorized_contact_search_infos;
+
+if (empty($infos)) {
+	header("Location: " . URL);
+	exit();
+}
+
+$title = "Votre demande de recherche a bien été envoyée";
+$meta_desc = "";
+$pageName = "message_recherche_produit";
+require(SITE . "head.php");
+
+// getting latest user searches
+  $user_searches = array();
+ /* $res = $db->query("
+    SELECT `search_terms`, `match_expr`, `nb_pdt_results`, `nb_cat_results`, MAX(`timestamp`) AS `latest_search_time`
+    FROM `user_searches`
+    WHERE `nb_pdt_results` >= 5
+    GROUP BY `search_terms`
+    ORDER BY `latest_search_time` DESC
+    LIMIT 25", __FILE__, __LINE__);
+  while ($user_search = $db->fetchAssoc($res))
+    $user_searches[] = $user_search;*/
+
+
+?><div class="search-results white-bg">
+
+  <div class="summary blocks-left">
+        <div class="catalogs-form">
+                <div class="blue-title">Votre demande de recherche a bien été envoyée</div>
+                <br/>
+<?php echo $infos['nom'].' '.$infos['prenom']; ?>, merci pour votre confiance.<br/>
+Nos conseillers démarrent dès à présent leurs recherches.<br/>
+Si un produit en catalogue répond à votre recherche nous ne manquerons pas de reprendre contact avec vous. 
+
+                <br/>
+                <br/>
+                <a href="<?php echo URL; ?>">Retourner à la page d'accueil</a>
+                <br/>
+        </div>
+<br />
+  <!--    
+      <div class="catalogs-form">
+        <div class="block-pdt-title">Dernières recherches des internautes</div>
+      <br/>
+        <ul class="user-searches">
+       <?php foreach($user_searches as $user_search) { ?>
+          <li>
+            <a href="<?php echo URL."dernieres-recherches/".str_replace("%","%25",urlencode($user_search["search_terms"])).".html"; ?>"><?php echo $user_search["search_terms"]; ?></a>
+            - <?php echo $user_search["nb_pdt_results"]; ?> résultats
+            - le <?php echo date("d/m/Y à H:i:s",$user_search["latest_search_time"]); ?>
+          </li>
+       <?php } ?>
+        </ul>
+      </div>-->
+  </div>
+    
+
+  <?php require(SITE . "blocks-right.php"); ?>
+  </div>
+<?php require(SITE . "foot.php"); ?>

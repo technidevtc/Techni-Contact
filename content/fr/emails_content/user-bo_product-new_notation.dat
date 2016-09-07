@@ -1,0 +1,18 @@
+<br />
+<br />
+Bonjour,<br />
+<br />
+Un client a posté un avis pour la fiche PRODUCT_NAME <a href="FO_PRODUCT_LINK">FO_PRODUCT_LINK</a><br />
+<br />
+Nom du client : Sté CUSTOMER_COMPANY,  CUSTOMER_NAME<br />
+Mail du client : <a href="mailto:CUSTOMER_MAIL">CUSTOMER_MAIL</a><br />
+Date : NOTATION_DATE<br />
+<br />
+
+Contenu du commentaire :<br />
+<p>
+Note : NOTATION_VALUE<br />
+Avis : NOTATION_COMMENT<br />
+</p>
+<br />
+<a href="BO_PRODUCT_LINK">Gérer ce commentaire</a>

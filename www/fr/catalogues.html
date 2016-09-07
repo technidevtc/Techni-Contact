@@ -1,0 +1,980 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+
+$error = $infos = array();
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+  $infos['nom'] =      isset($_POST['nom']) ?      substr(trim($_POST['nom']), 0, 255) : '';
+  $infos['prenom'] =    isset($_POST['prenom']) ?    substr(trim($_POST['prenom']), 0, 255) : '';
+  $infos['fonction'] =  isset($_POST['fonction']) ?    substr(trim($_POST['fonction']), 0, 255) : '';
+  $infos['societe'] =    isset($_POST['societe']) ?    substr(trim($_POST['societe']), 0, 255) : '';
+  $infos['salaries'] =  isset($_POST['salaries']) ?    substr(trim($_POST['salaries']), 0, 255) : '';
+  $infos['secteur'] =    isset($_POST['secteur']) ?    substr(trim($_POST['secteur']), 0, 255) : '';
+  $infos['naf'] =      isset($_POST['naf']) ?      substr(trim($_POST['naf']), 0, 255) : '';
+  $infos['siret'] =    isset($_POST['siret']) ?    substr(trim($_POST['siret']), 0, 255) : '';
+  $infos['adresse'] =    isset($_POST['adresse']) ?    substr(trim($_POST['adresse']), 0, 255) : '';
+  $infos['cadresse'] =  isset($_POST['cadresse']) ?    substr(trim($_POST['cadresse']), 0, 255) : '';
+  $infos['cp'] =      isset($_POST['cp']) ?      substr(trim($_POST['cp']), 0, 255) : '';
+  $infos['ville'] =    isset($_POST['ville']) ?    substr(trim($_POST['ville']), 0, 255) : '';
+  $infos['pays'] =    isset($_POST['pays']) ?      substr(trim($_POST['pays']), 0, 255) : '';
+  $infos['telephone'] =  isset($_POST['telephone']) ?  substr(trim($_POST['telephone']), 0, 255) : '';
+  $infos['fax'] =      isset($_POST['fax']) ?      substr(trim($_POST['fax']),   0, 255) : '';
+  $infos['email'] =    isset($_POST['email']) ?    substr(trim($_POST['email']), 0, 255) : '';
+  //$infos['infos_sup'] =  isset($_POST['infos_sup']) ?  substr(trim($_POST['infos_sup']), 0, 2047) : '';
+  $infos['precisions'] =  isset($_POST['precisions']) ?  substr(trim($_POST['precisions']), 0, 2047) : '';
+  if ($infos["precisions"] == FORM_PERSONNAL_INFOS_WARNING) $infos["precisions"] = "";
+  
+  if (empty($infos['nom'])) $error['nom'] = true;        else setCookie('nom', $infos['nom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['prenom'])) $error['prenom'] = true;    else setCookie('prenom', $infos['prenom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['fonction'])) $error['fonction'] = true;  else setCookie('fonction', $infos['fonction'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['societe'])) $error['societe'] = true;    else setCookie('societe', $infos['societe'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['salaries'])) $error['salaries'] = true;  else setCookie('salaries', $infos['salaries'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['adresse'])) $error['adresse'] = true;    else setCookie('adresse', $infos['adresse'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['cp'])) $error['cp'] = true;        else setCookie('cp', $infos['cp'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['ville'])) $error['ville'] = true;      else setCookie('ville', $infos['ville'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['pays'])) $error['pays'] = true;      else setCookie('pays', $infos['pays'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  if (empty($infos['telephone'])) $error['telephone'] = true;  else setCookie('telephone', $infos['telephone'], time() + 24 * 3600 * 365, '/', DOMAIN);
+
+          // restraining activity sector and naf
+          $terms = preg_replace('/ de /', ' ', $infos['societe']);
+          $terms = explode(' ', $terms);
+          $ActivitySector = Doctrine_Core::getTable('ActivitySectorSurqualification');
+//          $ActivitySector->batchUpdateIndex();
+          $array_results = array();
+          foreach($terms as $term){
+            $term = Utils::toDashAz09($term);
+
+            if($result = $ActivitySector->search($term)){
+              $q = Doctrine_Query::create()
+                ->from('ActivitySector as')
+                ->leftJoin('as.Surqualifications ass')
+                ->where('ass.id = ?', $result[0]['id']);
+
+              $array_results[$result[0]['id']] = $result[0]['id'];
+              $sector = $q->fetchArray();
+              $results[] = $result;
+            }
+          }
+
+          if(count($array_results) == 1){
+            $infos["secteur"] = $sector[0]['sector'];
+            $infos["naf"] = $sector[0]['Surqualifications'][0]['naf'];
+          }
+          // restraining activity sector and naf
+  if (empty($infos['secteur'])) $error['secteur'] = true;    else setCookie('secteur', $infos['secteur'], time() + 24 * 3600 * 365, '/', DOMAIN);
+
+
+  setCookie('naf', $infos['naf'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  setCookie('siret', $infos['siret'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  setCookie('cadresse', $infos['cadresse'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  setCookie('fax', $infos['fax'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  //setCookie('infos_sup', $infos['infos_sup'], time() + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos['email']))
+    $error['email'] = true;
+  else setCookie('email', $infos['email'], time() + 24 * 3600 * 365, '/', DOMAIN);
+  
+  $edition = isset($_POST['$edition']) ? $_POST['$edition'] : 0;
+  $gen = (isset($edition) && $edition == 'gen') ? 1 : 0;
+  $col = (isset($edition) && $edition == 'col')  ? 1 : 0;
+  $ind = (isset($edition) && $edition == 'ind') ? 1 : 0;
+  if (!$gen && !$col && !$ind) $error["edition"] = true;
+  
+  $when = isset($_POST['when']) ? ($_POST['when'] == "p" ? "p" : "dp") : "dp";
+  
+  if (empty($error) && !isset($_POST["onlyCheck"]) ) {
+    $liste_cat = "";
+    if ($gen) $liste_cat  = "Catalogue général";
+    if ($col) $liste_cat .= (empty($liste_cat) ? "" : " - ") . "Catalogue collectivités";
+    if ($ind) $liste_cat .= (empty($liste_cat) ? "" : " - ") . "Catalogue industries";
+    $mail_infos = array(
+      "CUSTOMER_INSCRIPTION_DATE" => date("d/m/Y - H:i:s"),
+      "CUSTOMER_IP" => $_SERVER['REMOTE_ADDR'],
+      "CUSTOMER_LASTNAME" => $infos['nom'],
+      "CUSTOMER_FIRSTNAME" => $infos['prenom'],
+      "CUSTOMER_JOB" => $infos['fonction'],
+      "CUSTOMER_COMPANY_NAME" => $infos['societe'],
+      "CUSTOMER_COMPANY_WORKFORCE" => $infos['salaries'],
+      "CUSTOMER_COMPANY_ACTIVITYSECTOR" => $infos['secteur'],
+      "CUSTOMER_COMPANY_NAFCODE" => $infos['naf'],
+      "CUSTOMER_COMPANY_SIRENNUMBER" => $infos['siret'],
+      "CUSTOMER_ADDRESS" => $infos['adresse'],
+      "CUSTOMER_CADDRESS" => $infos['cadresse'],
+      "CUSTOMER_PC" => $infos['cp'],
+      "CUSTOMER_CITY" => $infos['ville'],
+      "CUSTOMER_COUNTRY" => $infos['pays'],
+      "CUSTOMER_PHONE" => $infos['telephone'],
+      "CUSTOMER_FAX" => $infos['fax'],
+      "CUSTOMER_EMAIL" => $infos['email'],
+      "CATALOG_LIST" => $liste_cat,
+      "CATALOG_EDITION" => ($when == "p" ? "L'utilisateur souhaite uniquement recevoir les prochaines éditions" : "L'utilisateur souhaite recevoir la dernière et les prochaines éditions"),
+      "CATALOG_PRECISIONS" => $infos["precisions"]
+    );
+    
+    $mailContent = array(
+            'email' => 'demande-catalogue@techni-contact.com',
+            'subject' => "Demande de catalogue(s)",
+            'headers' => "From: Techni-Contact contact form client <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n",
+            'template' => "customer-demande-catalogues",
+            'data' => $mail_infos
+        );
+    $mail = new Email($mailContent);
+    
+    //$mail->Build("Demande de catalogue(s)", "", "demande-catalogues", "From: Techni-Contact contact form client <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n", $mail_infos);
+//    $mail->Send(RECEIVE_CATS_MAIL);
+//                $mail->Send('e.adil@techni-contact.com');
+    $mail->send();
+    //$mail->Save();
+    
+    include(ADMIN."generator.php");
+    $db = DBHandle::get_instance();
+    $idDemande = generateID(1, 16777215, 'id', 'demandes', $db);
+    
+    if ($when == "dp") { // Current Catalog Edition
+      $db->query("
+      INSERT INTO catalogues (
+        id, nom, prenom, fonction, societe,
+        salaries, secteur, naf, siret, adresse,
+        cadresse, cp, ville, pays, tel,
+        fax, email, gen, ind, col,
+        timestamp, imp)
+      VALUES (
+        '".$idDemande."', '".$db->escape($infos["nom"])."', '".$db->escape($infos["prenom"])."', '".$db->escape($infos["fonction"])."', '".$db->escape($infos["societe"])."',
+        '".$db->escape($infos["salaries"])."', '".$db->escape($infos["secteur"])."', '".$db->escape($infos["naf"])."', '".$db->escape($infos["siret"])."', '".$db->escape($infos["adresse"])."',
+        '".$db->escape($infos["cadresse"])."', '".$db->escape($infos["cp"])."', '".$db->escape($infos["ville"])."', '".$db->escape($infos["pays"])."', '".$db->escape($infos["telephone"])."',
+        '".$db->escape($infos["fax"])."', '".$db->escape($infos["email"])."', '".$gen."', '".$ind."','".$col."',
+        '".time()."', '0')", __FILE__, __LINE__);
+    }  
+    
+    $db->query("
+    INSERT INTO demandes (
+      id, nom, prenom, fonction, societe,
+      salaries, secteur, naf, siret, adresse,
+      cadresse, cp, ville, pays, tel,
+      fax, email, gen, ind, col,
+      timestamp)
+    VALUES (
+      '".$idDemande."', '".$db->escape($infos["nom"])."', '".$db->escape($infos["prenom"])."', '".$db->escape($infos["fonction"])."', '".$db->escape($infos["societe"])."',
+      '".$db->escape($infos["salaries"])."', '".$db->escape($infos["secteur"])."', '".$db->escape($infos["naf"])."', '".$db->escape($infos["siret"])."', '".$db->escape($infos["adresse"])."',
+      '".$db->escape($infos["cadresse"])."', '".$db->escape($infos["cp"])."', '".$db->escape($infos["ville"])."', '".$db->escape($infos["pays"])."', '".$db->escape($infos["telephone"])."',
+      '".$db->escape($infos["fax"])."', '".$db->escape($infos["email"])."', '".$gen."', '".$ind."','".$col."',
+      '".time()."')", __FILE__, __LINE__);
+    
+    $session = new UserSession();
+    $session->authorized_catalogs_infos = true;
+    header("Location: ".URL."catalogues-success.html");
+    exit();
+  }
+  else {
+    if (!empty($error)) {
+      foreach($error as $key => $value) {
+        if ($value == true) {
+          echo $key.'|';
+        }
+      }
+    }
+    else {
+      echo 'checkOk';
+    }
+    exit();
+  }
+}
+if (empty($infos)) {
+  $infos['nom'] =       isset($_COOKIE['nom']) ?       $_COOKIE['nom'] : "";
+  $infos['prenom'] =    isset($_COOKIE['prenom']) ?    $_COOKIE['prenom'] : "";
+  $infos['fonction'] =  isset($_COOKIE['fonction']) ?  $_COOKIE['fonction'] : "";
+  $infos['societe'] =   isset($_COOKIE['societe']) ?   $_COOKIE['societe'] : "";
+  $infos['salaries'] =  isset($_COOKIE['salaries']) ?  $_COOKIE['salaries'] : "";
+  $infos['secteur'] =   isset($_COOKIE['secteur']) ?   $_COOKIE['secteur'] : "";
+  $infos['naf'] =       isset($_COOKIE['naf']) ?       $_COOKIE['naf'] : "";
+  $infos['siret'] =     isset($_COOKIE['siret']) ?     $_COOKIE['siret'] : "";
+  $infos['adresse'] =   isset($_COOKIE['adresse']) ?   $_COOKIE['adresse'] : "";
+  $infos['cadresse'] =  isset($_COOKIE['cadresse']) ?  $_COOKIE['cadresse'] : "";
+  $infos['cp'] =        isset($_COOKIE['cp']) ?        $_COOKIE['cp'] : "";
+  $infos['ville'] =     isset($_COOKIE['ville']) ?     $_COOKIE['ville'] : "";
+  $infos['pays'] =      isset($_COOKIE['pays']) ?      $_COOKIE['pays'] : "FRANCE";
+  $infos['telephone'] = isset($_COOKIE['telephone']) ? $_COOKIE['telephone'] : "";
+  $infos['fax'] =       isset($_COOKIE['fax']) ?       $_COOKIE['fax'] : "";
+  $infos['email'] =     isset($_COOKIE['email']) ?     $_COOKIE['email'] : "";
+}
+
+// Préparation liste des fonctions
+$n = $pc = 0; $pl = array(); // Post List
+if ($fh = fopen(MISC_INC . "list_post.csv","r")) {
+  while (($data = fgetcsv($fh, 128, ";")) !== false) $pl[$n++] = $data;
+  $pc = $n - 1; // Post Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+
+// Préparation liste des tailles salariales
+$n = $nec = 0; $nel = array(); // Number of Employee List
+if ($fh = fopen(MISC_INC . "list_number-of-employees.csv","r")) {
+  while (($data = fgetcsv($fh, 64, ";")) !== false) $nel[$n++] = $data[0];
+  $nec = $n - 1; // Number of Employee Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+
+// Préparation liste des secteurs d'activité
+$activity_sectors = Doctrine_Core::getTable('ActivitySector');
+$activity_sectorsList = $activity_sectors->findAll();
+
+// Préparation liste des pays en majuscule
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC . "list_country.csv","r")) {
+  while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+  $cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+  
+$title = "Les catalogues Techni-Contact";
+$meta_desc = "";
+$pageName = "nos_catalogues";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+<script type="text/javascript">
+var RevDate = new Date();
+document.write( unescape( "%3Cscript src='" + (("https:" == document.location.protocol) ? "https://api.reversoform.com/www.reversoform.com/includes/js/reversoObj.js" : "http://api.reversoform.com/includes/js/reversoObj.js") + "?t="+RevDate.getTime()+"' type='text/javascript'%3E%3C/script%3E" ) );
+</script>
+<script type="text/javascript">
+var reversoLoaded = window.ClassReverso !== undefined;
+// Reverso
+if (reversoLoaded) {
+  var ObjReverso = new ClassReverso();
+  ObjReverso.serial    = '8389615817859';
+  ObjReverso.phone    = 'telephone';
+  ObjReverso.company    = 'societe';
+  ObjReverso.firstname  = 'prenom';
+  ObjReverso.lastname    = 'nom';
+  ObjReverso.address    = 'adresse';
+  ObjReverso.zip      = 'cp';
+  ObjReverso.city      = 'ville';
+  ObjReverso.country    = 'pays';
+  ObjReverso.naf      = 'naf';
+  ObjReverso.siret    = 'siret';
+}
+
+// Reverso test
+if (reversoLoaded) {
+  ObjReverso.fireCallback = function( response ) {
+    if ( response!="NULL") {
+      $("input[name='reversoReversed']").val(1);
+    }else{
+      $("input[name='reversoReversed']").val(0);
+    }
+  };
+}
+
+
+var submited = false;
+
+var ERRORS_TEXT = new Array();
+ERRORS_TEXT["telephone"] = "Merci de renseigner votre téléphone.";
+ERRORS_TEXT["nom"] = "Merci de renseigner votre nom.";
+ERRORS_TEXT["prenom"] = "Merci de renseigner votre prénom.";
+ERRORS_TEXT["fax"] = "Merci de renseigner votre fax.";
+ERRORS_TEXT["email"] = "Merci de renseigner votre Email. Ex:xxx@domaine.com";
+ERRORS_TEXT["fonction"] = "Merci de renseigner votre fonction. <br /> Agriculteur : sélectionnez Directeur / Gérant <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral : sélectionnez Je suis libéral";
+ERRORS_TEXT["societe"] = "Merci de renseigner le nom de votre société. ";
+ERRORS_TEXT["adresse"] = "Merci de renseigner votre adresse.";
+ERRORS_TEXT["cadresse"] = "Merci de renseigner votre complément d'adresse.";
+ERRORS_TEXT["cp"] = "Merci de renseigner votre code postal.";
+ERRORS_TEXT["ville"] = "Merci de renseigner votre ville.";
+ERRORS_TEXT["pays"] = "Merci de renseigner votre pays.";
+ERRORS_TEXT["salaries"] = "Merci de renseigner votre taille salariale. <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral ou agriculteur : sélectionnez 0 à 10 salariés";
+ERRORS_TEXT["secteur"] = "Merci de renseigner votre secteur d'activité. <br /> Particulier, sélectionnez Je suis un particulier <br /> Aucune proposition ne correspond : sélectionnez Autres";
+ERRORS_TEXT["naf"] = "Merci de renseigner votre code NAF.";
+ERRORS_TEXT["siret"] = "Merci de renseigner votre Siret.";
+ERRORS_TEXT["autre"] = "Ce champ ne doit pas être vide.";
+
+$(function () {
+  var lead_form = $("form#lead_form");
+  var errorFields = <?php echo json_encode(array_keys($error)); ?>;
+  
+  if (errorFields.length > 0) {
+    alertstring = "Afin de nous transmettre votre demande, veuillez renseigner le(s) champs suivants :\n";
+    for (var i=0; i<errorFields.length; i++)
+      alertstring += " - " + errorFields[i] + "\n";
+    alert(alertstring);
+  }
+    
+  function checkFields(_this, cb){
+    $.ajax({
+      type: "POST",
+      data: lead_form.serialize()+"&onlyCheck=true",
+      url: lead_form.attr("action"),
+      success: function(data) {
+        var fname = $(_this).length ? $(_this).attr("id").split("_")[1] : "";
+        data = data.replace(/^\s*|\s*$/,"");
+        if (data != 'checkOk') {
+          var errors = data.split('|');
+
+          var i = 0;
+          var fieldNameError = false;
+          // Last element of errors will be empty
+          for (i=0; i<errors.length-1; i++) {
+
+            if (submited == true) {
+              var errorContent = '';
+              if (ERRORS_TEXT[errors[i]]) {
+                errorContent = ERRORS_TEXT[errors[i]];
+              }
+              else {
+                errorContent = "Merci de renseigner " + errors[i];
+              }
+              $("#error_"+errors[i]).html("Merci de renseigner ce champ.");
+              $("#error_"+errors[i]).show();
+              $("#field_"+errors[i]).addClass("badInfos");
+              $("#ok_"+errors[i]).html("<img src='<?php echo $res_url; ?>images/form-warn-error.png' class='okImg' alt='X' />");
+              /*$("#ok_"+errors[i]).hide();*/
+              if (errors[i] == fname)
+                fieldNameError = true;
+            }
+            else {
+              if (errors[i] == fname) {
+                fieldNameError = true;
+              }
+            }// end if submitted == true
+          }// end for
+
+          if (fieldNameError == true) {
+            var errorContent = 'Merci de renseigner ce champ.';
+            if (ERRORS_TEXT[fname]) {
+              errorContent = ERRORS_TEXT[fname];
+            }
+            else {
+              errorContent = "Merci de renseigner " + fname;
+            }
+            
+            $("#error_"+fname).html(errorContent);
+            $("#error_"+fname).show();
+            $("#field_"+fname).addClass("badInfos");
+            $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-warn-error.png' class='okImg' alt='X' />");
+          }
+          else {
+
+              $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-check-ok.png' class='okImg' alt='ok' />");
+              $("#ok_"+fname).show();
+              $("#error_"+fname).hide();
+              $("#error_"+fname).html("");
+          }
+          if (cb) cb(false);
+        }
+        else {
+          if (fname != '') {
+            $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-check-ok.png' class='okImg' alt='ok' />");
+            $("#ok_"+fname).show();
+          }
+          if (cb) cb(true);
+        }// end if data == checkOk
+
+      }// end success
+    });// end ajax
+  }
+  
+  $(".edit").focus(function() {
+    
+    $('form#lead_form div.form-error').hide().text('');
+    var bad = false;
+    if ($(this).hasClass("badInfos") == true) {
+      $(this).removeClass("badInfos");
+      $(this).next().find('.leadform_ok').html('');
+      bad = true;
+    }
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    $("#error_"+idArray[1]).hide();
+    if (idArray[1]) {
+      if (ERRORS_TEXT[idArray[1]]) {
+        var errContent = ERRORS_TEXT[idArray[1]];
+      }
+      else {
+        errContent = "Merci de renseigner " + idArray[1];
+      }
+
+      if (errContent.replace(/^\s*|\s*$/,"") != "" && bad == true) {
+        //$("#tooltip").html(errContent);
+        //tooltip.show();
+        //$(this).next().find('.leadform_error').html(errContent).show();
+      }
+    }
+  }).blur(function() {
+    submited = false;
+    checkFields(this);
+  });// end blur
+  
+  $("input[name='telephone']", catalogs_form).keyup(function(){
+    var tel = this.value.match(/\d+/g).join("");
+    if (tel.length >=10) ObjReverso.reverso(tel);
+  });
+  $("textarea[name='precisions']", catalogs_form).focus(function(){
+    if (this.innerHTML == "<?php echo FORM_PERSONNAL_INFOS_WARNING; ?>") this.innerHTML = "";
+  });
+  
+  $("#catalog-demand-validation-btn").on("click", function(){
+    submited = true;
+    checkFields(null, function(valid){
+      if (valid)
+        document.catalogs_form.submit();
+    });
+  });
+});
+</script>
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+            <div class="very-big-blue-title" style="margin-bottom: 15px;">Nos catalogues</div>
+				<div class="top-content">
+					<div class="top-content-left">
+						<p class="bold-txt">Le meilleur de Techni-Contact sur votre bureau, en PDF ou en version interactive ! </p>
+						<br />
+						<p>Afin de mieux préparer vos achats d’entreprise, Techni-Contact édite chaque année des catalogues papier reprenant les meilleures offres de son site internet et de ses partenaires sélectionnés.  </p>
+						<br />
+						<p>Ces beaux catalogues sont devenus les l’outils de travail de milliers décideurs.</p>
+						<br />
+						<p>Ils sont distribués sur les plus grands salons professionnels.</p>
+					</div>
+					<div class="top-content-right">
+						<div class="border-div">
+							<center><span class="grey-block-title">Devenez partenaire !</span></center><br />
+							<div>Vous souhaitez enrichir notre offre en proposant vos produits ou vos services ?</div><br />
+							<center><div class="myButton" onclick="javascript:HN.TC.ShowcontactezNousForm('show');">Contactez-nous</div></center>
+						</div>
+					</div>
+				</div>
+			
+				<div class="bottom-content">
+				<div class="bottom-content-first">
+					<div class="bottom-content-left">
+						<div class="img-catalogue">
+							<a href="https://fr.calameo.com/read/00000395813701c308e34" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Feuilletage catalogue', 'Visuel - Catalogue Général');"<?php endif; ?> target="_blink">
+								<img src="<?= URL ?>ressources/images/modele-visuel-catalogue.jpg" alt="modèle visuel catalogue" title="modèle visuel catalogue"/>
+							</a>
+						</div>
+					</div>
+					
+					
+					<div class="bottom-content-right">
+						<div class="txt-catalogue">
+							<div class="title-edition"><span class="grey-block-title">Edition Générale</span></div>
+							<div style="margin-left: 13px;">
+								<div>
+									Destinée à toutes les entreprises et aux collectivités, cette très belle édition comprend 350 pages d’équipements professionnels. 
+								</div><br />
+								<div>La sélection de produits couvre une très large gamme de besoins:</div>
+								<ul>
+									<li> - Services généraux, </li>
+									<li> - Logistique, </li>
+									<li> - Sécurité,</li>
+									<li> - Technique,</li>
+									<li> - Aménagements, </li>
+									<li> - Mobilier urbain,</li>
+									<li> - Restauration...</li>
+								</ul>
+								<br />
+								<div class="btn-orange bottom-download"> <a href="http://www.techni-contact.com/media/catalogues/Techni-Contact-Catalogue-General-2016.zip" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Téléchargement catalogue', 'CTA - Catalogue Général');"<?php endif; ?>> Télécharger (.zip)</a></div>
+								<div class="btn-orange left-span"><a href="https://fr.calameo.com/read/00000395813701c308e34" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Feuilletage catalogue', 'CTA - Catalogue Général');"<?php endif; ?>>  Feuilleter</a></div> 
+								<div class="txt-commande">ou 
+									<span class="point-href" onclick="javascript:HN.TC.ShowCatalogueForm('show');javascript:change_val('gen');">
+										commander
+									</span>
+								</div>
+							</div>
+						</div>						
+					</div>
+				</div>	
+				
+				<div>
+					<div class="bottom-content-left">
+						<div class="img-catalogue">
+							<a href="https://fr.calameo.com/read/0000039587ba25ff5bfc7" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Feuilletage catalogue', 'Visuel - Catalogue Industries');"<?php endif; ?>>
+								<img src="<?= URL ?>ressources/images/modele-visuel-industrie.jpg" alt="modèle visuel catalogue" title="modèle visuel catalogue"/>
+							</a>
+						</div>
+					</div>
+					
+					
+					<div class="bottom-content-right">
+						<div class="txt-catalogue">
+							<div class="title-edition"><span class="grey-block-title">Edition Industries</span></div>
+							<div style="margin-left: 13px;">
+								<div>
+									Tout spécialement conçu pour lles entreprises industrielles cette édition de 260 pages répond à leurs besoins spécifiques. 
+								</div><br />
+								<div>Il comprend des centaines de matériels répondant à leurs problématiques :</div>
+								<ul>
+									<li> - Logistique </li>
+									<li> - Technique et production</li>
+									<li> - Sécurité</li>
+									<li> - Atelier </li>
+									<li> - Protection de l’environnement...</li>
+								</ul>
+								<br />
+								<div class="btn-orange bottom-download">
+									<a href="http://www.techni-contact.com/media/catalogues/Techni-Contact-Catalogue-Industries-2016.zip" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Téléchargement  catalogue', 'CTA - Catalogue Industries');"<?php endif; ?>>Télécharger (.zip)</a>
+								</div>
+								<div class="btn-orange left-span">
+									<a href="https://fr.calameo.com/read/0000039587ba25ff5bfc7" target="_blink" <?php if(!TEST): ?> onclick="ga('send', 'event', 'Page pres catalogues', 'Feuilletage  catalogue', 'CTA - Catalogue Industries');"<?php endif; ?>> Feuilleter</a>
+								</div> 
+								<div class="txt-commande">ou 
+									<span class="point-href" onclick="javascript:HN.TC.ShowCatalogueForm('show');javascript:change_val('ind');">
+										commander
+									</span>
+								</div>
+							</div>
+						</div>						
+					</div>	
+				</div>
+				</div>
+				
+			<div id="contactez-nous-form-dialog">
+				<div class="popup-left">
+					<div class="txt-popup-left">Enrichissez l'offre Techni-Contact et exploitez toute la puissance de son catalogue !</div>
+					<div style="margin-left: 45px;"><img src="<?= URL ?>ressources/images/image-fevad.jpg" /></div>
+				</div>
+				<div class="popup-right">
+				<div id="loading" style="display:none;"><img src="<?= URL ?>ressources/images/ajax-loader.gif"  style="width: 60px; padding: 77px; margin-left: 85px;"/></div>
+				<div id="result_send_form" style=" margin-top: 70px;display: none;"></div>
+					<div class="form-popup">
+						<div>
+							<div style="margin-bottom: 10px;color:#4027ff;margin-left: 97px;">Recevez le détail de notre offre (diffusion, salons de distribution...)</div>
+							<div>
+								<div class="btm-form">
+									<span class="name">Nom</span> 
+									<span class="required">*</span> <input type="text" id="name" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="prenom">Prénom </span>
+									<span class="required">*</span> <input type="text" id="prenom" class="inp-form"  />
+								</div>
+								<div class="btm-form">
+									<span class="societe">Société </span>
+									<span class="required">*</span> <input type="text" id="societe" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="email">Email</span> 
+									<span class="required">*</span> <input type="text" id="email" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="tel">Téléphone</span> 
+									<span class="required">*</span> <input type="text" id="tel" class="inp-form" />
+								</div>
+							</div>
+							<div id="btn-send"><span>[Envoyer]</span></div>
+							<div id="close-send" onclick="close_popup_send_contact();"><span>Fermer</span></div>
+							
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="show-catalogue-form">
+				<input type="hidden" id="type_commande" value="" />
+				
+				<div class="popup-left">
+					<div class="txt-popup-left" id="dynamique-txt-left"></div>
+					<div style="margin-left: 45px;" id="dynamique-img-left"></div>
+				</div>
+				<div class="popup-right">
+				<div id="loading-form" style="display:none;"><img src="<?= URL ?>ressources/images/ajax-loader.gif"  style="width: 60px; padding: 77px; margin-left: 85px;"/></div>
+				<div id="result_send_form_cat" style="margin-top: 70px;display: none;"></div>
+					<div class="form-popup">
+						<div>
+							<div style="margin-bottom: 10px;color:#4027ff;margin-left: 95px;">
+								Remplissez ces quelques champs pour recevoir votre exemplaire
+							</div>
+							<div>
+								<div class="btm-form">
+									<span class="name_form">Nom</span> 
+									<span class="required">*</span> <input type="text" id="name_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="prenom_form">Prénom </span>
+									<span class="required">*</span> <input type="text" id="prenom_form" class="inp-form"  />
+								</div>
+								<div class="btm-form">
+									<span class="societe_form">Société </span>
+									<span class="required">*</span> <input type="text" id="societe_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="email_form">Email</span> 
+									<span class="required">*</span> <input type="text" id="email_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="tel_form">Téléphone</span> 
+									<span class="required">*</span> <input type="text" id="tel_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="tel_form">Adresse</span> 
+									<span class="required">*</span> <input type="text" id="adresse_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="tel_form">Code postal</span> 
+									<span class="required">*</span> <input type="text" id="cp_form" class="inp-form" />
+								</div>
+								<div class="btm-form">
+									<span class="ville_form">Ville</span> 
+									<span class="required">*</span> <input type="text" id="ville_form" class="inp-form" />
+								</div>
+								
+							</div>
+							<div id="btn-send-catalogue"><span>[Envoyer]</span></div>
+							<div id="close-send" onclick="close_popup_send_commande();"><span>Fermer</span></div>
+						</div>
+					</div>
+				</div>
+				
+				
+			</div>
+			
+          </div>
+  </div>
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+<script type="text/javascript">
+// Postal code autocomplete
+var champCodePostal = $('input[name=cp]');
+
+champCodePostal.keyup( function(){
+  if(champCodePostal.val().match('[0-9]{5}') && $("input[name='reversoReversed']").val() == 0){
+
+    $.ajax({
+      type: "GET",
+      data: "code_postal="+champCodePostal.val(),
+      dataType: "json",
+      url: "ressources/ajax/AJAX_codesPostaux.php",
+      success: function(data) {
+
+        var refBox = $('input[name=ville]');
+
+        if(data['reponses'].length > 1){
+
+          var html = '<table id="cpAutocomplete" class="auto-completion-box" style="min-width: 221px; top: '+(refBox.offset().top + refBox.height() + 7)+'px; left: '+refBox.offset().left+'px; -moz-user-select: none;" >';
+          $.each(data['reponses'], function(){
+            html += '<tr class=""><td class="prop">'+this.commune+'</td><td class="results"></td></tr>';
+
+          });
+          html += '</table>';
+
+          $('#cpAutocomplete').remove(); // avoid multiple layers in case of multiple keyups
+          $('body').append(html);
+
+          $.each($('#cpAutocomplete tr'), function(){
+            $(this).mouseenter(function(){
+              $(this).addClass('over');
+            }).mouseleave(function(){
+              $(this).removeClass('over');
+            }).click(function(){
+              refBox.val($(this).find('td.prop').html());
+              $('#cpAutocomplete').remove();
+            });
+          });
+
+          refBox.blur(function(){
+            setTimeout(function(){$('#cpAutocomplete').remove();}, 200);
+          });
+
+        }else if(data['reponses'].length == 1){
+          refBox.val(data['reponses'][0].commune);
+        }
+      }
+    });
+  } // endif(id == champCodePostal)
+});
+// Postal code autocomplete
+
+// activity sector surqualification
+var societe = $('input[name=societe]');
+
+societe.blur( function(){
+  if($(this).val() != ''){ // && $("input[name='reversoReversed']").val() == 0
+
+    $.ajax({
+      type: "GET",
+      data: {"params":[{"action":"processSector", "raison_sociale": $(this).val()}]},
+      dataType: "json",
+      url: "ressources/ajax/AJAX_surqualificationSecteursActivites.php",
+      success: function(data) {
+        if(data['retour'].length == 1){
+          var naf = $('input[name=naf]');
+          $('select[name=secteur] option[value='+data.data[0].sector+']').attr('selected', true);
+          if(data.data[0].Surqualifications[0].naf)
+            $('input[name=naf]').val(data.data[0].Surqualifications[0].naf);
+        }
+      }
+    });
+  } 
+});
+// activity sector surqualification
+$( "#btn-send" ).click(function() {
+	var name = $("#name").val();
+	var name_length = $("#name").val().length;
+	
+	var prenom = $("#prenom").val();
+	var prenom_length = $("#prenom").val().length;
+	
+	var email = $("#email").val();
+	var regex = /^[a-zA-Z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,4}$/;
+	
+	var tel = $("#tel").val();
+	var tel_length = $("#prenom").val().length;
+	//var filter = /^((\+[1-9]{1,4}[ \-]*)|(\([0-9]{2,3}\)[ \-]*)|([0-9]{2,4})[ \-]*)*?[0-9]{3,4}?[ \-]*[0-9]{3,4}?$/;
+	//parseInt
+	
+	var valid_form = false;
+	
+	var societe = $("#societe").val();
+	var societe_length = $("#societe").val().length;	
+	
+	if((name == '') || (name_length < 2)){
+		$("#name").css("border", "1px solid red");
+		$(".name").css("color", "red");
+		$("#name").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;
+	}else{
+		$("#name").css("border", "1px solid #75af06");
+		$(".name").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if((prenom == '') || (prenom_length < 2)){
+		$("#prenom").css("border", "1px solid red");
+		$(".prenom").css("color", "red");
+		$("#prenom").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}else{
+		$("#prenom").css("border", "1px solid #75af06");
+		$(".prenom").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if((societe == '') || (societe_length < 2)){
+		$("#societe").css("border", "1px solid red");
+		$(".societe").css("color", "red");
+		$("#societe").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}else{
+		$("#societe").css("border", "1px solid #75af06");
+		$(".societe").css("color", "#75af06");
+		valid_form = true;
+	}	
+	
+	if(regex.test(email)){
+		$("#email").css("border", "1px solid #75af06");
+		$(".email").css("color", "#75af06");
+		valid_form = true;
+	}else{
+		$("#email").css("border", "1px solid red");
+		$(".email").css("color", "red");
+		$("#email").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}
+	
+	
+	if((tel == '') || (tel_length < 5)){
+		$("#tel").css("border", "1px solid red");
+		$(".tel").css("color", "red");
+		$("#tel").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;
+	}else{
+		$("#tel").css("border", "1px solid #75af06");
+		$(".tel").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	
+	
+	if(valid_form == true){
+		$.ajax({
+			url: 'ressources/ajax/AJAX_catalogue_mail.php?action=add_form&name='+name+'&prenom='+prenom+'&email='+email+'&societe='+societe+'&tel='+tel,
+			type: 'GET',
+			
+			beforeSend: function(){
+            $('#loading').show();
+			$('.form-popup').hide();
+			},
+			
+			success:function(data){
+				$('.form-popup').hide();
+				$('#result_send_form').show();
+				$('#result_send_form').html(data);
+			},
+			
+			complete: function() {
+				 $('#loading').hide();
+			}
+		});
+	}	
+});
+
+function change_val(value_change){
+$('.form-popup').show();
+$('#result_send_form_cat').hide();
+
+	
+		$("#type_commande").val(value_change);
+		
+		if(value_change == "gen"){
+			$("#dynamique-txt-left").html("Recevez par courrier notre très beau catalogue Entreprises et Collectivités");
+			$("#dynamique-img-left").html('<img src="<?= URL ?>ressources/images/modele-visuel-catalogue.jpg" />');
+		}else{
+			$("#dynamique-txt-left").html("Recevez par courrier notre très beau catalogue Industries");
+			$("#dynamique-img-left").html('<img src="<?= URL ?>ressources/images/modele-visuel-industrie.jpg" />');
+		}
+		
+}
+
+
+$( "#btn-send-catalogue" ).click(function() {
+	
+	var type_catalogue = $("#type_commande").val();
+
+	var name = $("#name_form").val();
+	var name_length = $("#name_form").val().length;
+	
+	var prenom = $("#prenom_form").val();
+	var prenom_length = $("#prenom_form").val().length;
+	
+	var email = $("#email_form").val();
+	var regex = /^[a-zA-Z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,4}$/;
+	
+	
+	var tel = $("#tel_form").val();
+	var tel_length = $("#tel_form").val().length;
+	
+	var societe = $("#societe_form").val();
+	var societe_length = $("#societe_form").val().length;	
+	
+	var adresse = $("#adresse_form").val();
+	var adresse_length = $("#adresse_form").val().length;
+	
+	var ville = $("#ville_form").val();
+	var ville_length = $("#ville_form").val().length;
+	
+	
+	var cp = $("#cp_form").val();
+	var cp_length = $("#ville_form").val().length;
+	
+	var valid_form = false;
+	
+	if((name == '') || (name_length < 2)){
+		$("#name_form").css("border", "1px solid red");
+		$(".name_form").css("color", "red");
+		$("#name_form").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;
+	}else{
+		$("#name_form").css("border", "1px solid #75af06");
+		$(".name_form").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if((prenom == '') || (prenom_length < 2)){
+		$("#prenom_form").css("border", "1px solid red");
+		$(".prenom_form").css("color", "red");
+		$("#prenom_form").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}else{
+		$("#prenom_form").css("border", "1px solid #75af06");
+		$(".prenom_form").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if((societe == '') || (societe_length < 2)){
+		$("#societe_form").css("border", "1px solid red");
+		$(".societe_form").css("color", "red");
+		$("#societe_form").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}else{
+		$("#societe_form").css("border", "1px solid #75af06");
+		$(".societe_form").css("color", "#75af06");
+		valid_form = true;
+	}	
+	
+	if(regex.test(email)){
+		$("#email_form").css("border", "1px solid #75af06");
+		$(".email_form").css("color", "#75af06");
+		valid_form = true;
+	}else{
+		$("#email_form").css("border", "1px solid red");
+		$(".email_form").css("color", "red");
+		$("#email_form").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}
+	
+	if((tel == '') || (tel_length < 5)){
+		$("#tel_form").css("border", "1px solid red");
+		$(".tel_form").css("color", "red");
+		$("#tel_form").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;		
+	}else{
+		$("#tel_form").css("border", "1px solid #75af06");
+		$(".tel_form").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	
+	if((adresse == '') || (adresse_length < 5)){
+		$("#adresse_form").css("border", "1px solid red");
+		$(".adresse_form").css("color", "red");
+		$("#adresse_form").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;
+	}else{
+		$("#adresse_form").css("border", "1px solid #75af06");
+		$(".adresse_form").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if((cp == '') || (cp_length < 2)){
+		$("#cp_form").css("border", "1px solid red");
+		$(".cp_form").css("color", "red");
+		$("#cp_form").attr("placeholder", "Merci de remplir ce champ");
+		 valid_form = false;
+	}else{
+		$("#cp_form").css("border", "1px solid #75af06");
+		$(".cp_form").css("color", "#75af06");
+		valid_form = true;
+		
+	}
+	
+	if((ville == '') || (ville_length < 2)){
+		$("#ville_form").css("border", "1px solid red");
+		$(".ville_form").css("color", "red");
+		$("#ville_form").attr("placeholder", "Merci de remplir ce champ");
+		valid_form = false;
+	}else{
+		$("#ville_form").css("border", "1px solid #75af06");
+		$(".ville_form").css("color", "#75af06");
+		valid_form = true;
+	}
+	
+	if(valid_form == true){
+		$.ajax({
+			url: 'ressources/ajax/AJAX_catalogue_mail.php?action=add_form_catalogue&name='+name+'&prenom='+prenom+'&email='+email+'&societe='+societe+'&tel='+tel+'&adresse='+adresse+'&ville='+ville+'&cp='+cp+'&type='+type_catalogue,
+			type: 'GET',
+			
+			beforeSend: function(){
+            $('#loading-form').show();
+			$('.form-popup').hide();
+			},
+			
+			success:function(data){
+				
+				$('.form-popup').hide();
+				$('#result_send_form_cat').show();
+				$('#result_send_form_cat').html(data);
+			},
+			
+			complete: function() {
+				 $('#loading-form').hide();
+			}
+		});
+	}
+	
+});	
+
+</script>
+          
+<?php require(SITE."foot.php"); ?>

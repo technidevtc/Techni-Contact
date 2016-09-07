@@ -1,0 +1,119 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+	header('Location: '.COMPTE_URL.'login.html');
+	exit();
+}
+
+$oc = Doctrine_Query::create()
+  ->select('o.id, o.web_id, o.created, o.validated, o.total_ht, o.total_ttc, o.processing_status, i.web_id AS invoice_web_id')
+  ->from('Order o')
+  ->leftJoin('o.invoice i')
+  ->where('o.client_id = ?', $session->userID)
+  ->orderBy('o.created DESC')
+  ->fetchArray();
+
+foreach ($oc as &$o)
+  $o['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_CMD__, $user->id, $o['id']);
+unset($o);
+
+$current_account_menuitem = "Mes commandes";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes commandes</h1>
+      </div>
+      <div class="font14">Voici le listing des commandes passées sur notre site.Cliquez sur "Voir" pour accéder au détail de la commande.Vous pouvez télécharger directement votre bon de commande ou votre facture.</div>
+      <div class="account-order margin-top-11">
+        <div class="account-order-table">
+          <table class="account-order-list order-list">
+            <thead>
+              <tr>
+                <th class="num"><span class="display-infos">Numéro</span><span class="mobile-infos">Informations</span></th>
+                <th class="datetime">Date et heure</th>
+                <th class="amount">Montant</th>
+                <th class="status">État</th>
+                <th class="documents">Documents</th>
+                <?php //<th>SAV</th> ?>
+                <th class="contact">Contact</th>
+              </tr>
+            </thead>
+            <tbody>
+<?php foreach ($oc as $o) : ?>
+              <tr>
+                <td class="num">
+                  <div class="display-infos">
+                    <?php echo $o['id'] ?><br />
+                    <a class="color-blue" href="order.html?orderID=<?php echo $o['id'] ?>">Voir</a>
+                  </div>
+                  <a class="mobile-infos" href="order.html?orderID=<?php echo $o['id'] ?>">
+                    <ul class="clearfix">
+                      <li><div class="label">Réf :</div><div class="text"><?php echo $o['id'] ?></div></li>
+                      <li><div class="label">Le :</div><div class="text"><?php echo date('d/m/Y à H:i', $o['created']) ?></div></li>
+                      <li><div class="label">Total :</div><div class="text"><?php echo sprintf('%.02f', $o['total_ht']) ?>&nbsp;HT&nbsp;€</div></li>
+                      <li><div class="label">État :</div><div class="text-long"><?php echo to_entities(Order::getGlobalProcessingStatusText($o['processing_status'])." ".$o[Order::getProcessingStatusTextFieldName($o['processing_status'])]) ?></div></li>
+                      <li class="see">Voir le détail</li>
+                    </ul>
+                  </a>
+                </td>
+                <td class="datetime"><?php echo date('d/m/Y à H:i', $o['created']) ?></td>
+                <td class="amount">
+                  <?php echo sprintf('%.02f', $o['total_ht']) ?>&nbsp;HT&nbsp;€
+                </td>
+                <td class="status"><?php echo to_entities(Order::getGlobalProcessingStatusText($o['processing_status'])." ".$o[Order::getProcessingStatusTextFieldName($o['processing_status'])]) ?></td>
+                <td class="documents">
+                  <?php if ($o['validated'] && $o['invoice_web_id']) : ?>
+                    <a class="color-blue padding-2" href="<?php echo PDF_DL_URL."facture/".$o['invoice_web_id'] ?>">Facture</a>
+                  <?php else : ?>
+                   <a class="color-blue padding-2" href="<?php echo PDF_DL_URL."commande/".$o['web_id'] ?>">Bon de commande</a>
+                  <?php endif ?>
+                </td>
+                <td class="contact"><a class="account-contact-btn" href="#account-contact-dialog_1,<?php echo $o['id'] ?>"></a></td>
+              </tr>
+              <?php if (!empty($o['conv'])) : ?>
+    <tr class="conversation">
+      <td colspan="7">
+      <div class="conv-title">Conversation liée à ce devis</div>
+      <ul>
+       <?php foreach ($o['conv'] as $post) : ?>
+        <li>
+          <div class="post-title">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></div>
+         <?php if (!empty($post['attachments'])) : ?>
+          <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+          <div class="post-files" >
+           <?php foreach ($post['attachments'] as $attachment) : ?>
+            <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+           <?php endforeach ?>
+          </div>
+         <?php endif ?>
+          <div class="post-text"><?php echo $post['text'] ?></div>
+        </li>
+       <?php endforeach // post ?>
+      </ul>
+      </td>
+    </tr>
+   <?php endif // conv ?>
+<?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+  $(".account-order")
+  .find("a.icon-conv").click(function(){ $(this).closest('tr').next('tr.conversation').toggle(); }).end()
+    .find("img.post-clip").click(function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+</script>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

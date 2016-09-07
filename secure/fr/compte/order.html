@@ -1,0 +1,442 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+$customerInfos = $user->getCoordFromArray();
+
+if (!$session->logged){
+  header("Location: " . COMPTE_URL . "login.html");
+  exit();
+}
+
+try {
+  $orderID = filter_input(INPUT_GET, 'orderID', FILTER_SANITIZE_NUMBER_INT);
+  
+  if (!$orderID)
+    throw new Exception("Identifiant commande invalide");
+
+  $o = Doctrine_Query::create()
+      ->select('o.id, o.created, o.validated, o.processing_status, o.web_id, o.total_ht, o.total_ttc, o.fdp_ht, o.insurance, o.comment,
+                ol.*, o.*,
+                i.web_id AS invoice_web_id,
+                IF(0,ol.id,olpfr.ref_name) AS pdt_ref_name,
+                IF(0,ol.id,olcat.id) AS cat_id')
+      ->from('Order o')
+      ->leftJoin('o.lines ol')
+      ->leftJoin('ol.product olp')
+      ->leftJoin('olp.product_fr olpfr')
+      ->leftJoin('olp.families olcat')
+      ->leftJoin('o.invoice i')
+      ->where('o.id = ?', $orderID)
+      ->andWhere('o.client_id = ?', $session->userID)
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+  if (empty($o['id']))
+    throw new Exception("Vous ne possédez pas de commande ayant pour identifiant ".$orderID);
+  
+  $o['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_CMD__, $user->id, $o['id'], 'array', 'FO'); 
+
+} catch (Exception $e) {
+  header("Location: ".COMPTE_URL."index.html");
+  exit();
+}
+
+$fdp = 20;
+$fdp_franco = 300;
+$res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco'", __FILE__, __LINE__ );
+while ($rec = $db->fetch($res))
+  $$rec[0] = $rec[1];
+
+$current_account_menuitem = "Mes commandes";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel order-detail">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes commandes</h1>
+      </div>
+                  <div class="blue-title">Ma commande n°<?php echo $o['id'] ?></div>
+                  <div class="font14">Commande passée le <?php echo date('d/m/Y à H:i.s', $o['created']) ?></div>
+                  <br />
+                  <div class="fl">
+                    <div class="green-title">Etat de ma commande <?php echo to_entities(Order::getGlobalProcessingStatusText($o['processing_status'])." ".$o[Order::getProcessingStatusTextFieldName($o['processing_status'])]) ?></div>
+                  </div>
+                  <div class="fr display-infos">
+                    <a href="<?php echo COMPTE_URL."order-list.html" ?>" class="account-order-list-back-link"></a>
+                  </div>
+                  <div class="zero"></div>
+                  
+                  <?php if(!empty($o['conv'])): ?>
+                    <div class="padding-top-20 conversation-block">
+                      <div class="blue-title">Historique de mes échanges</div>
+                      <ul>
+                      <?php foreach ($o['conv'] as $post) : ?>
+                        <li>
+                          <div class="post-title">
+                            <span class="display-infos">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></span>
+                            <span class="mobile-infos"><?php echo $post['sender_name'] ?> le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></span>
+                          </div>
+                        <?php if (!empty($post['attachments'])) : ?>
+                          <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+                          <div class="post-files" >
+                          <?php foreach ($post['attachments'] as $attachment) : ?>
+                            <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+                          <?php endforeach ?>
+                          </div>
+                        <?php endif ?>
+                          <div class="post-text"><?php echo htmlspecialchars($post['text']); ?></div>
+                        </li>
+                      <?php endforeach // post ?>
+                      </ul>
+                    </div>
+                  <?php endif; ?>
+                  
+                  <div class="padding-top-20 account-order-links">
+                    <div class="fl margin-right-10 font11"><a href="#account-contact-dialog_1,<?php echo $o['id'] ?>"><div class="puce puce-8"></div>Nous contacter concernant cette commande</a></div>
+                    <?php if ($o['validated'] && $o['invoice_web_id']) : ?>
+                     <div class="fl margin-right-10 font11"><a href="<?php echo PDF_DL_URL."facture/".$o['invoice_web_id'] ?>"><div class="puce puce-1"></div>Télécharger la facture</a></div>
+                    <?php else : ?>
+                     <div class="fl font11"><a href="javascript:HN.TC.printOrderConfirmed('<?php echo $o['web_id'] ?>')"><div class="puce puce-1"></div>Télécharger bon de commande</a></div>
+                    <?php endif ?>
+                  </div>
+                  
+                  <div class="zero"></div>
+                  <div class="display-infos">
+                    <div class="account-order padding-top-20">
+                      <div class="account-order-table">
+                        <table cellspacing="0" cellpadding="0">
+                          <thead>
+                          <tr>
+                            <th colspan="2">Produit - désignation</th>
+                            <th>Référence</th>
+                            <th>Livraison</th>
+                            <th>Prix HT</th>
+                            <th>Quantité</th>
+                            <th>Prix total HT</th>
+                          </tr>
+                          </thead>
+                          <tbody>
+                          <?php foreach($o['lines'] as $line) : ?>
+                            <tr class="line">
+                              <td>
+                                <img  class="vmaib" src="<?php echo Utils::get_secure_pdt_pic_url($line['pdt_id']) ?>" alt=""/>
+                              </td>
+                              <td class="designation" rowspan="<?php echo (!empty($line['promotion'])+(!empty($line['discount'])))+1 ?>">
+                                <div class="vmaib"><?php echo $line['desc'] ?></div>
+                              </td>
+                              <td><?php echo $line['pdt_ref_id'] ? $line['pdt_ref_id'] : "-" ?></td>
+                              <td class="al"><?php echo $line['delivery_time'] ?></td>
+                              <td class="price">
+                                <?php echo sprintf('%.02f', $line['pu_ht']+$line['et_ht']) ?> €
+                                <?php if ($line["et_ht"] > 0) : ?>
+                                  <small>dont éco part : <?php echo $line["et_ht"] ?> €</small>
+                                <?php endif ?>
+                              </td>
+                              <td><?php echo $line['quantity'] ?></td>
+                              <td class="price">
+                                <?php echo sprintf('%.02f', $line['total_ht_pre']+$line['et_total_ht']) ?> €
+                                <?php if ($line["et_total_ht"] > 0) : ?>
+                                  <small>dont éco part : <?php echo sprintf('%.02f', $line["et_total_ht"]) ?> €</small>
+                                <?php endif ?>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colspan="7" class="al">
+                               <?php if (!empty($line['comment'])) : ?>
+                                <i>Commentaire :</i> <?php echo htmlentities($line['comment']) ?><br />
+                               <?php endif ?>
+                              </td>
+                            </tr>
+                           <?php if (!empty($line['promotion'])) : ?>
+                            <tr>
+                              <td colspan="6">Promotion de <?php echo sprintf('%.02f', $line['promotion'])."%</b>" ?></td>
+                              <td><?php echo sprintf('%.02f', -($line['total_ht_pre']+$line['et_total_ht'])*$line['promotion']/100) ?> €</td>
+                            </tr>
+                           <?php endif ?>
+                           <?php if (!empty($line['discount'])) : ?>
+                            <tr>
+                              <td colspan="6">Remise de <?php echo sprintf('%.02f', $line['discount'])."%</b>" ?></td>
+                              <td><?php echo sprintf('%.02f', -($line['total_ht_pre']+$line['et_total_ht'])*$line['discount']/100) ?> €</td>
+                            </tr>
+                           <?php endif ?>
+                          <?php endforeach //lines ?>
+                           <?php if (!empty($o['comment'])) : ?>
+                            <tr>
+                              <td>&nbsp;</td>
+                              <td colspan="7" class="al">
+                                <i>Note additionnelle :</i><br/>
+                                <?php echo nl2br(htmlentities($o['comment'])) ?>
+                              </td>
+                            </tr>
+                           <?php endif ?>
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      <div class="cart-left padding-top-20">
+                         <?php if ($o['validated'] && $o['invoice_web_id']) : ?>
+                          <a class="btn-print-invoice"  href="<?php echo PDF_DL_URL."facture/".$o['invoice_web_id'] ?>"></a>
+                        <?php else : ?>
+                         <a class="btn-print-order"  href="<?php echo PDF_DL_URL."commande/".$o['web_id'] ?>"></a>
+                        <?php endif ?>
+                         
+                        <div class="padding-top-20">
+                          <div class="blue-small-title">Mon contact :</div>
+                          <br />
+                          Le service commande est à votre disposition pour toute question<br />
+                          <br />
+                          <div class="account-operator-link">
+                            <div class="fl">
+                              <a href="#account-contact-dialog_1,<?php echo $o['id'] ?>" class="operator-contact-btn"></a>
+                            </div>
+                            <br />
+                            <br />
+                            <br />
+                            Ou par téléphone au 01 55 60 29 29
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="cart-right">
+                        <table class="cart-totals" cellspacing="0" cellpadding="0">
+                          <tbody>
+                            <tr class="stotal-ht">
+                              <td></td>
+                              <td class="label">Sous-total HT:</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o['stotal_ht']) ?> €</td>
+                            </tr>
+                            <tr class="fdp">
+                              <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                              <td class="label">Frais de port HT:</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o['fdp_ht']) ?> €</td>
+                            </tr>
+                            <tr class="total-ht">
+                              <td></td>
+                              <td class="label">Total HT:</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o['total_ht']) ?> €</td>
+                            </tr>
+                            <tr class="tva">
+                              <td></td>
+                              <td class="label">TVA (20%):</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o['total_tva']) ?> €</td>
+                            </tr>
+                           <?php if ($o['insurance']) { ?>
+                            <tr class="insurance">
+                              <td></td>
+                                <td class="label">ClicProtect</td>
+                                <td class="amount"><?php echo sprintf('%.02f', $o['insurance']) ?> €</td>
+                            </tr>
+                           <?php } ?>
+                            <tr class="total-ttc">
+                              <td></td>
+                              <td class="label">Total TTC:</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o['total_ttc']) ?> €</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div>
+                          <div class="account-order-delivery fl grey-block">
+                            <div class="blue-title">Adresse de livraison</div>
+                            <?php
+                            if (empty ($o["adresse2"]) && empty ($o["cp2"]) && empty ($o["ville2"])) : ?>
+                              <?php echo CustomerUser::getTitle($o["titre"]); ?> <?php echo $o["prenom"]; ?> <?php echo $o["nom"]; ?><br/>
+                              <?php echo $o["societe"] != "" ? $o["societe"] . "<br/>" : ""; ?>
+                              <?php echo $o["adresse"]; ?><br/>
+                              <?php echo $o["complement"]; ?> <?php echo $o["cp"]; ?> <?php echo $o["ville"]; ?><br/>
+                              <?php echo $o["pays"]; ?>
+                            <?php else: ?>
+                              <?php echo CustomerUser::getTitle($o["titre2"]); ?> <?php echo $o["prenom2"]; ?> <?php echo $o["nom2"]; ?><br/>
+                              <?php echo $o["societe2"] != "" ? $o["societe2"] . "<br/>" : ""; ?>
+                              <?php echo $o["adresse2"]; ?><br/>
+                              <?php echo $o["complement2"]; ?> <?php echo $o["cp2"]; ?> <?php echo $o["ville2"]; ?><br/>
+                              <?php echo $o["pays2"]; ?>
+                            <?php endif; ?>
+                            <div class="bottom-right-arrow"></div>
+                          </div>
+                          <div class="account-order-delivery fr grey-block">
+                            <div class="blue-title">Adresse de facturation</div>
+                              <?php echo CustomerUser::getTitle($o["titre"]); ?> <?php echo $o["prenom"]; ?> <?php echo $o["nom"]; ?><br/>
+                              <?php echo $o["societe"] != "" ? $o["societe"] . "<br/>" : ""; ?>
+                              <?php echo $o["adresse"]; ?><br/>
+                              <?php echo $o["complement"]; ?> <?php echo $o["cp"]; ?> <?php echo $o["ville"]; ?><br/>
+                              <?php echo $o["pays"]; ?>
+                            <div class="bottom-right-arrow"></div>
+                          </div>
+                          <div class="zero"></div>
+                        </div>
+                      </div>
+                      <div class="zero"></div>
+                    </div>
+                  </div>
+                  
+                  <div class="mobile-infos">
+                    <div class="account-order-table">
+                      <table cellspacing="0" cellpadding="0">
+                        <thead>
+                        <tr>
+                          <th>Produit</th>
+                          <th>Qté</th>
+                          <th>Total HT</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach($o['lines'] as $line) : ?>
+                          <tr class="line">
+                            <td class="infos">
+                              <div class="clearfix">
+                                <img src="<?php echo Utils::get_secure_pdt_pic_url($line['pdt_id']) ?>" alt=""/>
+                                <?php echo $line['desc'] ?>
+                              </div>
+                              <ul class="others clearfix">
+                                <li><div class="label">Référence :</div><div class="text"><?php echo $line['pdt_ref_id'] ? $line['pdt_ref_id'] : "-" ?></div></li>
+                                <li><div class="label">Livraison :</div><div class="text"><?php echo $line['delivery_time'] ?></div></li>
+                                <li>
+                                  <div class="label">Prix U. :</div>
+                                  <div class="text">
+                                    <?php echo sprintf('%.02f', $line['pu_ht']+$line['et_ht']) ?> €
+                                    <?php if ($line["et_ht"] > 0) : ?>
+                                      <small>dont éco part : <?php echo $line["et_ht"] ?> €</small>
+                                    <?php endif ?>
+                                  </div>
+                                </li>
+                              </ul>
+                            </td>
+                            <td class="quantity"><?php echo $line['quantity'] ?></td>
+                            <td class="total"><?php echo sprintf('%.02f', $line['total_ht_pre']+$line['et_total_ht']) ?> €</td>
+                          </tr>
+                         <?php if (!empty($line['comment'])) : ?>
+                          <tr>
+                            <td colspan="3" class="al">
+                              <i>Commentaire :</i> <?php echo htmlentities($line['comment']) ?>
+                            </td>
+                          </tr>
+                         <?php endif ?>
+                         <?php if (!empty($line['promotion'])) : ?>
+                          <tr>
+                            <td colspan="2">Promotion de <?php echo sprintf('%.02f', $line['promotion'])."%</b>" ?></td>
+                            <td><?php echo sprintf('%.02f', -($line['total_ht_pre']+$line['et_total_ht'])*$line['promotion']/100) ?> €</td>
+                          </tr>
+                         <?php endif ?>
+                         <?php if (!empty($line['discount'])) : ?>
+                          <tr>
+                            <td colspan="2">Remise de <?php echo sprintf('%.02f', $line['discount'])."%</b>" ?></td>
+                            <td><?php echo sprintf('%.02f', -($line['total_ht_pre']+$line['et_total_ht'])*$line['discount']/100) ?> €</td>
+                          </tr>
+                         <?php endif ?>
+                        <?php endforeach //lines ?>
+                         <?php if (!empty($o['comment'])) : ?>
+                          <tr>
+                            <td colspan="3" class="al">
+                              <i>Note additionnelle :</i><br/>
+                              <?php echo nl2br(htmlentities($o['comment'])) ?>
+                            </td>
+                          </tr>
+                         <?php endif ?>
+                        </tbody>
+                      </table>
+                    </div>
+                    <table class="cart-totals" cellspacing="0" cellpadding="0">
+                      <tbody>
+                        <tr class="stotal-ht">
+                          <td></td>
+                          <td class="label">Sous-total HT:</td>
+                          <td class="amount"><?php echo sprintf('%.02f', $o['stotal_ht']) ?> €</td>
+                        </tr>
+                        <tr class="fdp">
+                          <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                          <td class="label">Frais de port HT:</td>
+                          <td class="amount"><?php echo sprintf('%.02f', $o['fdp_ht']) ?> €</td>
+                        </tr>
+                        <tr class="total-ht">
+                          <td></td>
+                          <td class="label">Total HT:</td>
+                          <td class="amount"><?php echo sprintf('%.02f', $o['total_ht']) ?> €</td>
+                        </tr>
+                        <tr class="tva">
+                          <td></td>
+                          <td class="label">TVA (20%):</td>
+                          <td class="amount"><?php echo sprintf('%.02f', $o['total_tva']) ?> €</td>
+                        </tr>
+                       <?php if ($o['insurance']) { ?>
+                        <tr class="insurance">
+                          <td></td>
+                            <td class="label">ClicProtect</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o['insurance']) ?> €</td>
+                        </tr>
+                       <?php } ?>
+                        <tr class="total-ttc">
+                          <td></td>
+                          <td class="label">Total TTC:</td>
+                          <td class="amount"><?php echo sprintf('%.02f', $o['total_ttc']) ?> €</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                     <?php if ($o['validated'] && $o['invoice_web_id']) : ?>
+                      <a class="btn-print-invoice"  href="<?php echo PDF_DL_URL."facture/".$o['invoice_web_id'] ?>"></a>
+                    <?php else : ?>
+                     <a class="btn-print-order"  href="<?php echo PDF_DL_URL."commande/".$o['web_id'] ?>"></a>
+                    <?php endif ?>
+                     
+                    <div class="padding-top-20">
+                      <div class="blue-small-title">Mon contact :</div>
+                      <br />
+                      Le service commande est à votre disposition pour toute question<br />
+                      <br />
+                      <div class="account-operator-link">
+                        <div class="fl">
+                          <a href="#account-contact-dialog_1,<?php echo $o['id'] ?>" class="operator-contact-btn"></a>
+                        </div>
+                        <br />
+                        <br />
+                        <br />
+                        Ou par téléphone au 01 55 60 29 29
+                      </div>
+                    </div>
+                    <div>
+                      <div class="account-order-delivery fl grey-block">
+                        <div class="blue-title">Adresse de livraison</div>
+                        <?php
+                        if (empty ($o["adresse2"]) && empty ($o["cp2"]) && empty ($o["ville2"])) : ?>
+                          <?php echo CustomerUser::getTitle($o["titre"]); ?> <?php echo $o["prenom"]; ?> <?php echo $o["nom"]; ?><br/>
+                          <?php echo $o["societe"] != "" ? $o["societe"] . "<br/>" : ""; ?>
+                          <?php echo $o["adresse"]; ?><br/>
+                          <?php echo $o["complement"]; ?> <?php echo $o["cp"]; ?> <?php echo $o["ville"]; ?><br/>
+                          <?php echo $o["pays"]; ?>
+                        <?php else: ?>
+                          <?php echo CustomerUser::getTitle($o["titre2"]); ?> <?php echo $o["prenom2"]; ?> <?php echo $o["nom2"]; ?><br/>
+                          <?php echo $o["societe2"] != "" ? $o["societe2"] . "<br/>" : ""; ?>
+                          <?php echo $o["adresse2"]; ?><br/>
+                          <?php echo $o["complement2"]; ?> <?php echo $o["cp2"]; ?> <?php echo $o["ville2"]; ?><br/>
+                          <?php echo $o["pays2"]; ?>
+                        <?php endif; ?>
+                        <div class="bottom-right-arrow"></div>
+                      </div>
+                      <div class="account-order-delivery fr grey-block">
+                        <div class="blue-title">Adresse de facturation</div>
+                          <?php echo CustomerUser::getTitle($o["titre"]); ?> <?php echo $o["prenom"]; ?> <?php echo $o["nom"]; ?><br/>
+                          <?php echo $o["societe"] != "" ? $o["societe"] . "<br/>" : ""; ?>
+                          <?php echo $o["adresse"]; ?><br/>
+                          <?php echo $o["complement"]; ?> <?php echo $o["cp"]; ?> <?php echo $o["ville"]; ?><br/>
+                          <?php echo $o["pays"]; ?>
+                        <div class="bottom-right-arrow"></div>
+                      </div>
+                      <div class="zero"></div>
+                    </div>
+                  </div>
+                  <div class="mobile-infos">
+                    <a href="<?php echo COMPTE_URL."order-list.html" ?>" class="account-order-list-back-link"></a>
+                  </div>
+    </div>
+  <div class="right-account-panel-navig">
+    <div class="account-upper-right-links">
+        <?php /*<a href=""><div class="puce puce-1"></div>Imprimer<div class="zero"></div>
+        <a href="" class="color-blue">Besoin d'aide ?</a> */ ?>
+      </div>
+  </div>
+</div>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

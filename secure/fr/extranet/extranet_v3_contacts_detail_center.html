@@ -1,0 +1,1313 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-user"></i> Contacts</h1>
+    </div>
+	
+	<?php
+		
+		//Show reject options selected by user if he choose to reject this contact !
+		if(!empty($temp_show_reject_options)){
+			echo '
+				<div class="DB-bg-rejet"></div>
+				<div id="reject-info" class="DB_rejet">
+					Votre demande de rejet a bien &eacute;t&eacute; soumise.
+					<br/>
+						Le contact sera inform&eacute; que vous ne pouvez traiter sa demande pour le motif indiqu&eacute; :<br/>
+					<br/>
+					<div id="reject-motive">'.stripslashes($reject_reason).'</div>
+					<br/><br/>
+					<input type="button" id="close-reject-info" value="Fermer" />
+				</div>';
+		}
+	
+		if(!empty($content_get_contact['id'])){
+		
+			switch ($content_get_contact["type"]) {
+			  case 1 : $lead_type = COMMON_CONTACT_TYPE_ASK;
+				break;
+			  case 2 : $lead_type = COMMON_CONTACT_TYPE_TEL;
+				break;
+			  case 3 : $lead_type = COMMON_CONTACT_TYPE_ESTIMATE;
+				break;
+			  case 4 : $lead_type = COMMON_CONTACT_TYPE_APPOINTMENT;
+				break;
+			}
+			
+			function make_charge_link($fieldName) {
+				echo "<a href=\"#facturer\" class=\"invoice-link\">Voir ".$fieldName."</a>";
+			}
+			
+			function make_charge_link_buy($fieldName) {
+				echo "<a href=\"#facturer\" class=\"invoice-link btn btn-primary\" style=\"color: white;\">".$fieldName."</a>";
+			}
+			
+			$companyNameLink = $show_personal_infos ? trim(str_replace(' ', '+', $content_get_contact["societe"])) : '';
+			$timestampM = date('m', $content_get_contact['timestamp']);
+			$timestampY = date('Y', $content_get_contact['timestamp']);
+			$expiryDate = mktime(23,59,59,$timestampM+1,date(5),$timestampY);
+			
+		?>
+		
+		<!-- Start Form -->
+		
+			<script type="text/javascript">
+				$(function(){
+				  $("a.invoice-link").click(function(){
+					$("div.DB-bg").show();
+					$("#CQDB").show();
+					$(window).scrollTop(100);
+					return false;
+				  });
+				  //CQDB = Charge Question Dialog Box
+				  $("#CQDB input[type='button']:first").click(function(){
+					$("form[name='charge-form']").submit();
+				  });
+				  $("#CQDB input[type='button']:last").click(function(){
+					$("div.DB-bg").hide();
+					$("#CQDB").hide();
+				  });
+				  $("form[name='reject-form'] input[type='button']").click(function(){
+					$("form[name='reject-form']").submit();
+				  });
+
+				  $('#close-reject-info').click(function(){
+					$("div.DB-bg-rejet").hide();
+					$('#reject-info').hide();
+				  });
+				  
+				});
+			</script>
+
+			<!-- Dialog Boxes -->
+			<div class="DB-bg"></div>
+			<form name="charge-form" method="post" action="#">
+				<div id="CQDB" class="DB">
+				  <input type="hidden" name="charge" value="1"/>
+				  Le contact que vous consultez n'est pas factur&eacute; car il ne rentre pas dans les crit&egrave;res de facturation que vous avez d&eacute;finis. Vous pouvez n&eacute;anmoins voir le contact qui sera facturable comme un contact classique et pourra &eacute;tre rejet&eacute; normalement.<br/>
+				  <br/>
+				  Souhaitez-vous voir ce contact ?<br/>
+				  <br/>
+				  <input type="button" value="Oui" class="btn-default btn" /> 
+				  &nbsp; &nbsp; 
+				  <input type="button" value="Non" class="btn-default btn" />
+				</div>
+			</form>
+		
+		<!-- End Form -->
+		
+		<div class="row">
+			<div class="col-md-12" style="width:100%;">
+				<div class="panel panel-primary">
+					<div class="panel-heading">
+						<h4>
+							D&eacute;tails de la demande n&deg; <?php echo $content_get_contact['id']; ?>
+						</h4>
+						
+						<?php
+							if(!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers)){
+								if(!in_array($content_get_contact['invoice_status'], $array_contacts_invoice_status)){
+								?>
+								<h4 class="h4-contact-detail-forward">
+									<a id="forward_listner" href="#forward" alt="Transf&eacute;rer" title="Transf&eacute;rer" ><i class="fa fa-mail-forward"></i></a>
+								</h4>
+							<?php
+								}
+							}
+						?>
+						
+						<?php
+							if(strcmp($content_get_contact['archived'],'0')=='0'){
+						?>
+							<h4 id="h4-contact-detail-archive" class="h4-contact-detail-archive">
+								<a href="#" alt="Archiver" title="Archiver" onclick="contact_archive_me('<?php echo $content_get_contact['id']; ?>', 'detail')" ><i class="fa fa-archive"></i></a>&nbsp;
+							</h4>
+						<?php
+							}
+						?>
+						
+						<?php
+							if(!in_array($content_get_contact['invoice_status'], $array_contacts_invoice_status)){
+							?>
+							<h4 class="h4-contact-detail-print">
+								<?php
+								echo('<a href="'.EXTRANET_URL.'extranet-v3-contacts-detail-print.html?id='.$content_get_contact['id'].'&uid='.$_SESSION['extranet_user_webpass'].'" target="_blank"><i class="fa fa-print" title="Imprimer"></i></a> ');
+								?>
+								&nbsp;
+							</h4>
+							
+							<?php
+							}
+						?>
+						
+						
+						
+					</div>
+					
+					
+						
+					<div id="contact_detail_bloc_top" class="panel-body panel-body-contact">
+					
+						<div class="panel-header-contact">
+							<div class="col-md-1">
+								<div class="contact-detail-form-onee-c">
+									<div class="contact-detail-form-onee-l">
+										Date de la demande :
+									</div>
+									<div class="contact-detail-form-onee-r">
+										<?php echo date('d/m/Y H:i:s', $content_get_contact["timestamp"]) ?>
+									</div>
+								</div>
+								
+								<div class="contact-detail-form-onee-c">
+								
+									<?php 
+									
+										//Modification le 29/10/2014 15h34 Demande Tristan
+										//Afficher le lien FrontOffice du produit
+										//Sinon afficher le lien FrontOffice famille N°3
+									/*
+										if (!empty($content_get_contact["pdt_id"])) { ?>
+									
+										<div class="contact-detail-form-onee-l">
+											<?php echo REQUEST_DETAIL_PRODUCT ?> :
+										</div>
+										<div class="contact-detail-form-onee-r">
+											<?php echo $content_get_contact["pdt_name"].''; ?>
+											<?php if(trim($content_get_contact["pdt_fastdesc"])){ echo " - ".$content_get_contact["pdt_fastdesc"]; } ?>
+										</div>
+										
+									<?php } else { ?>
+									
+										<div class="contact-detail-form-onee-l">
+											<?php echo "Votre gamme de produits" ?> :
+										</div>
+										<div class="contact-detail-form-onee-r">
+											<?php echo $content_get_contact["cat_name"]; ?>
+											
+											<?php
+												if($content_get_contact["pdt_id"]){
+													if($content_get_contact["cat_id"]) { ?>
+														<a href="<?php echo URL."produits/".$content_get_contact["cat_id"]."-".$content_get_contact["pdt_id"]."-".$content_get_contact["pdt_ref_name"].".html" ?>" target="_blank" class="btn-default btn"><?php echo REQUEST_DETAIL_SEE_PRODUCT ?></a>
+													<?php
+													}else{
+													?>
+														<?php echo REQUEST_DETAIL_PRODUCT_DELETED ?>
+													<?php
+													}											
+												}else{
+												?>
+													<a href="<?php echo URL."fournisseur/".$content_get_contact["idAdvertiser"].".html" ?>" target="_blank" class="btn-default btn">Voir gamme sur Techni-Contact</a>
+												<?php
+												}
+												?>
+										</div>
+										
+									<?php } ?>
+									*/
+									
+									
+									//Modification le 29/10/2014 15h34 Demande Tristan
+									//Afficher le lien FrontOffice du produit
+									//Sinon afficher le lien FrontOffice famille N°3
+										
+									if (!empty($content_get_contact["pdt_id"])) { ?>
+									
+										<div class="contact-detail-form-onee-l">
+											<?php echo REQUEST_DETAIL_PRODUCT ?> :
+										</div>
+										<div class="contact-detail-form-onee-r">
+											<?php echo $content_get_contact["pdt_name"].''; ?>
+											<?php if(trim($content_get_contact["pdt_fastdesc"])){ echo " - ".$content_get_contact["pdt_fastdesc"]; } ?>
+											
+											<a href="<?php echo URL."produits/".$content_get_contact["cat_id"]."-".$content_get_contact["pdt_id"]."-".$content_get_contact["pdt_ref_name"].".html" ?>" target="_blank" class="btn-default btn"><?php echo REQUEST_DETAIL_SEE_PRODUCT ?></a>
+											
+										</div>
+								<?php 
+									} else {
+								?>
+									
+										<div class="contact-detail-form-onee-l">
+											<?php echo "Votre gamme de produits" ?> :
+										</div>
+										<div class="contact-detail-form-onee-r">
+										<?php 
+											echo $content_get_contact["cat_name"]; 
+											
+											if($content_get_contact["cat_id"]) { 
+											
+												echo('<a href="'.URL.'familles/'.$content_get_contact["reference_name"].'.html" target="_blank" class="btn-default btn">Voir gamme sur Techni-Contact</a>');
+											
+											}else{
+												 echo REQUEST_DETAIL_PRODUCT_DELETED;
+											}
+										?>
+										</div>
+					
+								<?php
+									}//End else !
+								?>
+								</div>
+								
+								<!--
+								<?php //if ($_SESSION['extranet_user_id'] == __ID_TECHNI_CONTACT__ && $content_get_contact["idAdvertiser"] != __ID_TECHNI_CONTACT__) { ?>
+									<div class="contact-detail-form-onee-c">
+										<div class="contact-detail-form-onee-l">
+											<?php //echo COMMON_SUPPLIER ?> :
+										</div>
+										
+										<div class="contact-detail-form-onee-r">
+											<?php //echo $content_get_contact["nom1"]; ?>
+										</div>
+									</div>
+								<?php //} ?>
+								-->
+								
+								<!--
+								<div class="contact-detail-form-onee-c">
+									<div class="contact-detail-form-onee-l">
+										<?php //echo COMMON_CONTACT_TYPE ?> :
+									</div>
+									<div class="contact-detail-form-onee-r">
+										<?php //echo $lead_type ?>
+									</div>
+								</div>
+								-->
+								
+								<div class="contact-detail-form-onee-c">
+									<div class="contact-detail-form-onee-l">
+										<?php echo "Etat de la demande" ?> :
+									</div>
+									<div class="contact-detail-form-onee-r">
+										<?php echo ucwords($lead_invoice_status_list[$content_get_contact["invoice_status"]]); ?>
+										
+										<!-- Achat -->
+										<?php 
+											//It must be arrived (created) in this month
+											//And the category's advertiser must be different than the blocked category
+											//And the invoice_status=0
+											//echo('if(('.date('d/m/Y H:i:s',$time_limit_of_this_month_start).'<'.date('d/m/Y H:i:s',$time_actual_condition).' && '.date('d/m/Y H:i:s',$time_limit_of_this_month_end).'>'.date('d/m/Y H:i:s',$time_actual_condition).') && (!in_array('.$_SESSION['extranet_user_category'].', '.print_r($array_contacts_id_advertisers).')) && ('.$content_get_contact['invoice_status'].'==0) ){ <br />');
+											
+											
+											
+											//The advertiser category 3,4 or 5 Don't have the access for that
+											//Contact reject !
+											if(!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers)){
+			
+												if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers)) && ($content_get_contact['invoice_status']==0) ){
+													make_charge_link_buy('Voir le contact');
+												}
+												
+											}//end category test restriction
+										?>
+										
+									</div>
+								</div>
+								
+								<!--
+										<?php //if($lead_invoice_status_list["reject_timestamp"]){ ?>
+											<div class="contact-detail-form-onee-c">
+												<div class="contact-detail-form-onee-l">
+													<?php //echo "Date de rejet" ?> :
+												</div>
+												<div class="contact-detail-form-onee-r">
+													<?php //echo date('d/m/Y H:i:s', $lead_invoice_status_list["reject_timestamp"]) ?>
+												</div>
+											</div>
+										<?php //} ?>
+										-->
+								
+							</div><!-- end div .col-md-3 col-sm-6 -->
+						</div><!-- end div .panel-header-contact -->
+					</div>
+					
+				</div><!-- end div .panel panel-primary -->
+				
+		
+			</div><!-- end div .col-md-12 -->
+		</div><!-- end div .row -->
+		
+		<div id="contacts_middle_container">
+		
+			<div id="contacts_middle_left">
+				
+				<!-- First Bloc -->
+				<div class="row contact_detail_onee">
+					<div class="contact_detail_lb_picto">
+						<br /><br />
+						&nbsp;&nbsp;&nbsp;&nbsp;
+						&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-building" style="font-size: 400%; padding-top: 5px; padding-left: 8%;"></i>
+					</div>
+					<div class="contact_detail_rb_text">
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Soci&eacute;t&eacute; :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- Société -->
+								<?php 
+									//It must be arrived (created) in this month
+									//And the category's advertiser must be different than the blocked category
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $show_personal_infos ? $content_get_contact["societe"] : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Adresse :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- Adresse -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $show_personal_infos ? ucwords($content_get_contact["adresse"]) : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+							<!-- <div class="contact_detail_one_right">
+								Localiser
+							</div> -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								CP :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- CP / Ville -->
+								<?php echo $content_get_contact["cp"]; ?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Ville :
+							</div>
+							<div class="contact_detail_one_left"  style="width: 50%">
+								<!-- CP / Ville -->
+								<?php echo $content_get_contact["ville"]; ?>
+							</div><!-- end div .contact_detail_one_left -->
+							<div class="contact_detail_one_right">
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $show_personal_infos ? '<a href="http://www.societe.com/cgi-bin/liste?nom='.$companyNameLink.'&dep='.substr($content_get_contact["cp"], 0, 2).'" target="_blank">Voir Bilans</a>' : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_right -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Pays :
+							</div>
+							<div class="contact_detail_one_left" style="text-transform: uppercase;">
+								<!-- Pays -->
+								<?php echo $content_get_contact["pays"]; ?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+					</div><!-- end div .contact_detail_rb_text -->
+				</div><!-- end div .row -->
+				
+				
+				<!-- Second Bloc -->
+				<div class="row contact_detail_onee">
+					<div class="contact_detail_lb_picto" style="text-align:center;">
+						
+						&nbsp;&nbsp;&nbsp;&nbsp;
+						&nbsp;&nbsp;&nbsp;&nbsp;
+						&nbsp;&nbsp;&nbsp;<i class="fa fa-cubes" style="font-size: 400%; padding-top: 5px; padding-left: 14%;"></i>
+					</div>
+					<div class="contact_detail_rb_text">
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Secteur :
+							</div>
+							<div class="contact_detail_one_left" style="text-transform: uppercase;">
+								<!-- Activité -->
+								
+								<?php echo ucwords($content_get_contact["secteur"]); ?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								NAF :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- NAF -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $content_get_contact["naf"] ? ($show_personal_infos ? $content_get_contact["naf"] : ' - ') : "N/C";
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								SIRET :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- SIRET -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $content_get_contact["siret"] ? ($show_personal_infos ? $content_get_contact["siret"] : ' - ') : "N/C";
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+					</div><!-- end div .contact_detail_rb_text -->
+				</div><!-- end div .row -->
+				
+				
+				<!-- Third Bloc -->
+				<div class="row contact_detail_onee">
+					<div class="contact_detail_lb_picto">
+						<br /><br />
+						&nbsp;&nbsp;&nbsp;&nbsp;
+						&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-user" style="font-size: 400%; padding-top: 5px; padding-left: 8%;"></i>
+					</div>
+					<div class="contact_detail_rb_text">
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Nom :
+							</div>
+							<div class="contact_detail_one_left" style="width: 50%;">
+								<!-- Prénom / Nom -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $nom = $show_personal_infos ? $content_get_contact["nom"] : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+							<div class="contact_detail_one_right">
+								<?php
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										if($show_personal_infos){
+										?>
+											<a href="http://www.viadeo.com/v/search/members?keywords=<?php echo trim(strtolower($prenom)).'+'.trim(strtolower($nom)).'+'.$companyNameLink ?>&allKeywords=on&language=fr" target="_blank">Voir profil pro.</a>
+										<?php
+										}									
+									}								
+								?>	
+							</div><!-- end div .contact_detail_one_right -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Pr&eacute;nom :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- Prénom / Nom -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $prenom = $show_personal_infos ? ucwords($content_get_contact["prenom"]) : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Email :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- Email -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $show_personal_infos ? $content_get_contact["email"] : ' - ';
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								T&eacute;l. :
+							</div>
+							<div class="contact_detail_one_left">
+								<!-- Tel -->
+								<?php 
+									//if(($time_limit_of_this_month_start<$time_actual_condition && $time_limit_of_this_month_end>$time_actual_condition) && (!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+									
+									if((!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers))){
+										echo $show_personal_infos ? $content_get_contact["tel"] : ' - ' ;
+									}else{
+										echo(' - ');
+									}
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<div class="row">
+							<div class="contact_detail_one_left_libelle">
+								Fonction :
+							</div>
+							<div class="contact_detail_one_left" style="text-transform: uppercase;">
+								<!-- Fonction -->
+								<?php 
+									//echo ucwords(strtolower(utf8_decode(utf8_encode($content_get_contact["fonction"]))));
+									echo ucwords($content_get_contact["fonction"]);
+								?>
+							</div><!-- end div .contact_detail_one_left -->
+						</div><!-- end div .row -->
+						
+						<!--
+						<div class="row">
+							<div class="contact_detail_one_left">
+								
+							</div><!-- end div .contact_detail_one_left 
+						</div><!-- end div .row 
+						-->
+						
+													
+						
+					</div><!-- end div .contact_detail_rb_text -->
+				</div><!-- end div .row -->
+				
+			
+			</div><!-- end div .contacts_middle_left -->
+			
+			<?php 	
+			
+			//The advertiser category 3,4 or 5 Don't have the access for that
+			//Contact reject !
+			if(!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers)){
+			
+					if($show_personal_infos==true){ ?>
+				<div id="contacts_middle_right">
+					<div id="contact_detail_map">
+						
+					</div>
+					<div id="contact_detail_map_newwindow">
+						<a id="contact_detail_map_newwindow_a" href="#" target="_blank" title="Agrandir la carte"><i class="fa fa-arrows-alt"></i></a>
+					</div>
+					<script type="text/javascript">
+						contact_detail_map_gecode(<?php echo "'".$content_get_contact["adresse"]."'"; ?>, <?php echo "'".$content_get_contact["ville"]."'"; ?>, <?php echo "'".$content_get_contact["pays"]."'"; ?>, <?php echo "'".$content_get_contact["societe"]."'"; ?>)
+						//contact_detail_map_initialize();
+					</script>
+				
+					<div class="row contact_detail_onee">
+				
+						<?php if(!empty($content_get_contact["precisions"])){ ?>
+							<div id="contact_description_project">
+								<center>
+									Description du projet
+								</center>
+								<br />
+								<?php echo $content_get_contact["precisions"]; ?>
+							</div>
+						<?php } ?>
+						
+						
+						<!-- Start Message Send -->
+							<br />
+							<div class="row">
+								<div class="col-md-1">
+									<div class="contact-detail-form-onee-c contacts_messenger" >
+										
+										R&eacute;pondez directement &agrave; vos contacts depuis votre extranet. Saisissez votre message dans le champs ci-dessous.<br />
+										Vous pouvez joindre &agrave; votre message un document.<br />
+										<br />
+										<textarea id="contact-detail-send-area" name="contenu_message"></textarea><br />
+										<input id="copy_to_sender_id" type="checkbox" name="copy_to_sender" DISABLED="TRUE" style="display:none;" /><!--<label for="copy_to_sender_id">M'envoyer une copie de ce message</label>-->
+										
+										<br />
+										<div class="attachments">
+											<button id="add-msn-attachment" type="button" class="btn ui-state-default ui-corner-all">Ajouter une pi&egrave;ce jointe</button>
+											<ul id="attachment-list" class="attachment-list">
+											</ul>
+										</div>
+										
+										<?php
+											if(!in_array($content_get_contact['invoice_status'], $array_contacts_invoice_status)){
+										?>
+											<div class="bloc-preview"><a href="#" onClick="sendMessage();return false;" class="btn-default btn" style="background: #76c4ed;">Envoyer</a></div>
+										<?php
+											}
+										?>
+										
+										<!-- <div id="contact_detail_msg_send_etat"></div> -->
+									</div>						
+									
+								</div><!-- end div .col-md-3 col-sm-6 -->
+							</div><!-- end div .row-->
+						<!-- End Message Send -->
+					
+					</div> <!--end div .row .contact_detail_onee -->
+				
+				</div><!-- end div #contacts_middle_right -->
+		
+			<?php 
+				}//end if if(!empty($show_personal_infos)) => Droit de voir la carte et bloc envoi message 
+				
+			}//end if array advertiser
+			?>
+			
+			
+		</div> <!-- end #contacts_middle_container -->
+		
+		
+		
+		<?php if ($content_get_contact['invoice_status'] & Contacts::STATUS_IS_VISIBLE){ ?>
+			
+			<?php $conv = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_ADVERTISER_LEAD__, $content_get_contact['clt_id'], $content_get_contact['id']); ?>
+			<div class="row">
+				<div class="col-md-6" style="width:100%;">
+					<panel class="ng-isolate-scope" >
+						<div class="panel panel-white">
+							<div class="panel-heading">
+								<h4 class="ng-binding"><?php echo "Conversations avec le contact"; ?></h4>
+								<div class="options">
+									<panel-controls class="ng-scope">
+										<a href="">
+											<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+										</a>
+									</panel-controls>
+								</div>
+							</div>
+							
+							<div class="panel-body" style="display: block;">
+							
+								<div class="row ng-scope">
+								
+									<div class="col-md-1">
+										
+										<div class="contact-detail-form-onee-c contacts_messenger2">
+											<div id="conversation" class="conversation">
+												<div class="conv-title">Conversation li&eacute;e &agrave; ce contact</div>
+												<ul></ul>
+											</div>
+										</div>
+										
+										
+									</div><!-- end div .col-md-3 col-sm-6 -->
+									
+								</div> <!-- end div .row ng-scope -->
+								
+							</div> <!-- end div .panel-body -->
+							
+						</div><!-- end div .panel -->
+					</panel>
+				</div>
+			</div><!-- end div .row -->
+			
+			<?php }//end if ($content_get_contact['invoice_status'] & Contacts::STATUS_IS_VISIBLE) ?>
+			
+	 
+			
+			<?php
+			if( ($show_reject_options && time() < $expiryDate ) || (($show_reject_options && time() > $expiryDate)) ){
+				//A test to show this bloc or not !
+				//Reject this contact options !
+			?>
+			
+			<?php
+							
+			//The advertiser category 3,4 or 5 Don't have the access for that
+			//Contact reject !
+			if(!in_array($_SESSION['extranet_user_category'], $array_contacts_id_advertisers)){
+
+			?>
+			
+			<div class="row">
+				<div class="col-md-6" style="width:100%;">
+					<panel class="ng-isolate-scope" >
+						<div class="panel panel-white">
+							<div class="panel-heading">
+								<h4 class="ng-binding"><?php echo "Rejet contact"; ?></h4>
+								<div class="options">
+									<panel-controls class="ng-scope">
+										<a href="">
+											<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+										</a>
+									</panel-controls>
+								</div>
+							</div>
+							
+							
+							<div class="panel-body" style="display: block;">
+							
+								<div class="row ng-scope">
+								
+									<div class="col-md-1">
+									
+									
+										<?php 
+										
+											//echo($show_reject_options.' && '.date('d/m/Y H:i:s',time()).' < '.date('d/m/Y H:i:s',$expiryDate));
+											
+											if ($show_reject_options && time() < $expiryDate ){ 
+										?>
+									
+										<form name="reject-form" method="post" action="#form_lead_action" id="form_lead_action" onsubmit="return contact_reject_check_form()">
+										
+												
+											<?php if ($content_get_contact["invoice_status"] == __LEAD_INVOICE_STATUS_REJECTED_WAIT__ || $content_get_contact["invoice_status"] ==  __LEAD_INVOICE_STATUS_CHARGEABLE_REJECTED_WAIT__){ ?>
+												<div class="contact-detail-form-onee-c">
+													<strong>Demande de rejet envoy&eacute;e - en attente de validation. Votre demande sera trait&eacute;e dans les 24H.</strong>
+												</div>
+												
+											<?php }else{ ?>
+											
+												<div class="contact-detail-form-onee-c">
+													<input type="checkbox" id="reject-options-cb" name="show_reject_options" <?php if (isset($_POST["show_reject_options"])) { ?>checked="checked"<?php } ?>/> 
+													<label for="reject-options-cb">Je ne souhaite pas valider ce contact.</label>
+													<br />
+													Date limite de rejet de ce contact : <?php echo date('d/m/Y',$expiryDate).' &agrave; '. date('H\hi', $expiryDate) ?><br />
+													<br />
+													<strong>Note importante :</strong><br />
+													<span style="font-weight : normal;">
+														Ce contact peut &ecirc;tre rejet&eacute; jusq'au 5 minuit du mois suivant sa r&eacute;ception.<br />
+														Ce contact, s'il est rejet&eacute;, ne vous sera pas factur&eacute;.<br />
+														Techni-Contact s'autorise &agrave; mettre en oeuvre les moyens humains ou techniques pour d&eacute;tecter tout abus lors des rejets.
+													</span>
+												</div>
+												
+												
+												<div id="reject_option_row_container" class="contact-detail-form-onee-c" style="display: none;">
+													<div class="contact-detail-form-onee-l">
+														<?php echo "Option de rejet" ?> :
+													</div>
+													<div class="contact-detail-form-onee-r">
+														<select name="reject-option" id="reject-option" onchange="contacts_reject_select_litsner()">
+														  <!--<option value="0">Coordonnées inexploitables</option>
+														  <option value="1">Le produit demandé ne correspond pas à ma gamme de produits</option>
+														  -->
+															<option value="0">
+																Nous n'arrivons pas &agrave; joindre le contact
+															</option>
+															<option value="1">
+																Nous ne faisons pas le produit ou le service demand&eacute;
+															</option>
+															<option value="2">
+																Nous n'intervenons pas dans cette zone g&eacute;ographique
+															</option>
+															<option value="3">
+																Nous ne travaillons qu'avec les professionnels
+															</option>
+															<option value="4">
+																Les quantit&eacute;s minimales demand&eacute;es sur la fiche ne sont pas atteintes
+															</option>
+															<option value="5">
+																J'ai d&eacute;j&agrave; fait une offre pour ce projet
+															</option>
+															<option value="6">
+																Autre
+															</option>
+															
+														</select>
+														
+														<input id="reject" type="button" value="Envoyer ma demande" />
+														
+														
+														<div id="reject-reason-container" class="contact-detail-form-onee-c" style="display:none;">
+															<div class="contact-detail-form-onee-l">
+																<?php echo "Justificatif du refus" ?> :
+															</div>
+															<div class="contact-detail-form-onee-r">
+																<input type="text" id="reject-reason" name="reject-reason" size="50" value="" autocomplete="off" /> 
+																
+																<!-- <input type="text" id="reject-reason" name="reject-reason" size="50" value="<?php //if ($error_reject && isset($_POST["reject-reason"])){ echo $_POST["reject-reason"]; } ?>" autocomplete="off" /> -->
+															</div>
+														</div>
+											
+														
+													</div>
+												</div><!-- end div #reject_option_row_container -->
+												
+												
+											<?php }?>
+											
+											<?php 	
+												if ($error_reject){
+													echo('<div id="contact_reject_justificatif_erros" style="color:#b00000; display:block;">');
+												}else{
+													echo('<div id="contact_reject_justificatif_erros" style="color: #b00000; display:none;">');
+												}
+											?>
+												Le justificatif de refus est obligatoire et doit faire au moins 10 lettres.
+												</div>
+											
+										</form>
+										
+										<?php }else if($show_reject_options && time() > $expiryDate){ ?> 
+											<div class="contact-detail-form-onee-c">
+												Date limite de rejet de ce contact d&eacute;pass&eacute;e.
+											</div>
+										<?php } // show reject options or not ?>
+
+										
+										
+									</div><!-- end div .col-md-3 col-sm-6 -->
+									
+								</div> <!-- end div .row ng-scope -->
+								
+							</div> <!-- end div .panel-body -->
+							
+						</div><!-- end div .panel -->
+					</panel>
+				</div>
+			</div><!-- end div .row -->
+			
+			<?php
+			}//end if array advertiser
+			?>
+							
+		<?php
+		}//end if test show Bloc
+		?>
+		
+		
+		<!-- attachment dialog box -->
+			  <div id="upload-msn-attachment-db" title="Ajouter une pi&egrave;ce jointe" class="db">
+				<form name="loadDoc" method="post" action="" enctype="multipart/form-data">
+				<img class="loading-gif" src="<?php echo EXTRANET_URL ?>ressourcesv3/images/lightbox-ico-loading.gif">
+				<input type="hidden" name="action" value="load-doc" />
+				<input type="hidden" name="supplier" value="" />
+				<input type="hidden" name="cmdId" value="<?php echo $o['id'] ?>" />
+				Quel est le titre de votre document (ex :devis, documentation...) ? <input type="text" name="aliasPjMessFileName" value="" /><br />
+				<br />
+				S&eacute;lectionnez le document &agrave; lier au message<br />
+				<br />
+				<input type="file" name="pjMessFile"  id="pjMessFile"  accept="application/pdf, application/msword, image/jpeg" /><br />
+				</form>
+			  </div>
+			  
+			  <script type="text/javascript">
+			//<![CDATA[
+			var client_post = {
+			  sender_name: "<?php echo htmlspecialchars($content_get_contact['societe']) ?>",
+			  timestamp: <?php echo $content_get_contact['timestamp'] ?>,
+			  text: "<?php echo str_replace(array("\r\n","\n"), "\\n", htmlspecialchars($content_get_contact['precisions'])) ?>",
+			  attachments: ''
+			};
+
+			function getConversation(){
+			  $.ajax({
+				url: "EXTRANET_V3_AJAX_conversation.php",
+				data: "idUser=<?php echo $_SESSION['extranet_user_id']; ?>&action=get&lead=<?php echo $content_get_contact['id'] ?>",
+				type: "POST",
+				dataType: "json",
+				error: function (jqXHR, textStatus, errorThrown) {
+				  $("#conversation ul").empty().append("<div class=\"bloc-titre2\">"+HN.TC.getAjaxErrorText(jqXHR, textStatus, errorThrown)+"</div>");
+				  $("#conversation").show();
+				},
+				success: function (data, textStatus, jqXHR) {
+				  if (data.conversations && data.conversations != 'vide') {
+					var html = "";
+					if (client_post.text != ""){
+					  html += getPostHtml(client_post);
+					}
+					for (var i=0; i<data.conversations.length; i++) {
+					  html += getPostHtml(data.conversations[i]);
+					};
+					$("#conversation ul").empty().html(html);
+					$("#conversation").show();
+				  }
+				  else if(data.conversations == 'vide'){
+					var html = "";
+					if (client_post.text != ""){
+					  html += getPostHtml(client_post);
+					  $("#conversation ul").empty().html(html);
+					  $("#conversation").show();
+					}
+				  }
+				  else if (data.result) {
+					var textarea = $("textarea[name='contenu_message']");
+					textarea.val("");
+					$("div.DB-bg").show();
+					$("#CQDB").show()
+				  }
+				}
+			  });
+			}
+			function getPostHtml(post){
+			  var html = "<li>"+
+						   "<div class=\"post-title\">Message de "+post.sender_name+" envoy&eacute; le "+HN.TC.get_formated_datetime(post.timestamp, " &agrave; ")+"</div>";
+			  if (post.attachments.length) {
+				html += "<div class=\"clip icon attach\" title=\"Pi&egrave;ces jointes\"></div>"+
+						"<div class=\"files\">";
+				for (var ai=0; ai<post.attachments.length; ai++) {
+				  var f = post.attachments[ai].file;
+				  html += "<a href=\""+f.url+"\" class=\"_blank\">"+f.shown_name+"</a><br/>";
+				}
+				html += "</div>";
+			  }
+			  html +=   "<div class=\"post-text\">"+post.text+"</div>"+
+					  "</li>";
+			  return html;
+			}
+
+			function sendMessage(){
+			  var contenuMessage = $("textarea[name='contenu_message']").val(),
+				  copyToSender = $("input[name='copy_to_sender']").prop("checked")|0;
+			  $.ajax({
+				url: "EXTRANET_V3_AJAX_conversation.php",
+				data: "idUser=<?php echo $_SESSION['extranet_user_id']; ?>&contenu="+encodeURIComponent(contenuMessage)+"&copyToSender="+copyToSender+"&action=add&lead=<?php echo $content_get_contact['id'] ?>",
+				type: "POST",
+				dataType: "json",
+				error: function (jqXHR, textStatus, errorThrown) {
+				  $("#conversation ul").empty().append("<div class=\"bloc-titre2\">"+HN.TC.getAjaxErrorText(jqXHR, textStatus, errorThrown)+"</div>");
+				},
+				beforeSend: function() {
+					//Flush the messages
+					//document.getElementById('contact_detail_msg_send_etat').innerHTML	= '';
+				},
+				success: function (data, textStatus) {
+				
+					//Clearing the text area message
+					$("textarea[name='contenu_message']").val("");
+					
+					//Clearing the attachment list 
+					document.getElementById('attachment-list').innerHTML 	= '';
+					
+					//Wrinting message send OK !
+					//document.getElementById('contact_detail_msg_send_etat').innerHTML	= 'Votre message a bien &eacute;t&eacute; envoy&eacute; avec succ&egrave;s !';
+					alert('Votre message a bien \351t\351 envoy\351 avec succ\350s !');
+					
+				  getConversation();
+				}
+			  });
+			}
+			$("#conversation").on("click", ".attach", function(){
+			  var $this = $(this);
+			  $this.next().css({ left: $this.position().left+20 }).toggle(300);
+			});
+
+			$(document).ready(function(){
+			 getConversation(); 
+			})
+
+			$("#reject-options-cb").click(function(){
+				if (this.checked){
+					//alert('if');
+					$("#reject_option_row_container").show("slow");
+				}else{
+					//alert('else');
+					$("#reject_option_row_container").hide("slow");
+				}
+			});
+
+
+			// attachments
+			var pjMessFile = new HN.TC.ajaxUploadFile({
+			  itemId: <?php echo $content_get_contact['id'] ?>,
+			  context: "lead-tmppjmess",
+			  fileElementId: "pjMessFile"
+			});
+			function getPjMessFilesList(){
+			  var pjMessFiles = new HN.TC.getUploadedFiles({
+				itemId: pjMessFile.itemId,
+				context: pjMessFile.context
+			  });
+			  pjMessFiles = pjMessFiles.getUploadedFilesList();
+			  
+			  $("#attachment-list").empty();
+			  for (var i=0; i<pjMessFiles.list.length; i++) (function(){
+				var f = pjMessFiles.list[i],
+					fn = f.alias_filename || f.filename;
+				$("<li>")
+				  .append("<span>"+fn+"."+f.extension+"</span>")
+				  .append($("<a>", {
+					"class": "_blank",
+					"title": "Voir",
+					href: pjMessFiles.directory+f.filename+"."+f.extension,
+					html: "<span class=\"icon eye\"></span>"
+				  }))
+				  .append($("<span>", {
+					"class": "icon cross",
+					"title": "Supprimer",
+					click: function(){ deletePjMessFile(f.id, fn+"."+f.extension); }
+				  }))
+				  .appendTo("#attachment-list");
+			  }());
+			};
+			function deletePjMessFile(fileId, filename){
+			  if (confirm("Souhaitez-vous supprimer le fichier "+filename+" ?")) {
+				var deletePjFile = new HN.TC.deleteUploadedFile(fileId);
+				deletePjFile.context = pjMessFile.context;
+				deletePjFile.deleteFileFunction();
+			  }
+			  getPjMessFilesList();
+			};
+			var $uploadMsnAttachmentDb = $("#upload-msn-attachment-db").dialog({
+			  width: 400,
+			  autoOpen: false,
+			  modal: true,
+			  buttons: {
+				"Annuler": function(){
+				  $(this).dialog("close");
+				},
+				"Envoyer": function(){
+				  pjMessFile.aliasFileName = $(this).find("input[name='aliasPjMessFileName']").val();
+				  pjMessFile.loadingImg = $(this).find("img.loading-gif");
+				  pjMessFile.doAjaxFileUpload(function(){
+					$uploadMsnAttachmentDb.dialog("close");
+					getPjMessFilesList();
+				  }); 
+				}
+			  },
+			  open: function() {
+					$('.ui-dialog-buttonpane').find('button:contains("Envoyer")').addClass('contact_file_upload_blue');
+				}
+			});
+			$("#add-msn-attachment").on("click", function(){
+			  $uploadMsnAttachmentDb.dialog("open");
+			});
+
+			getPjMessFilesList();
+			//]]>
+		  </script>
+		
+		
+		
+		<!-- Start Forward Popup-->
+		  
+		  
+			<div id="forwardpopup-db" title="Transf&eacute;rer" class="db">
+				<form name="loadDoc" method="post" action="" enctype="multipart/form-data">
+					<input type="hidden" id="forward_id_contact" value="<?php echo $content_get_contact['id']; ?>" />
+					<div class="contact-detail-form-onee-c">
+						<span>
+						<?php
+							$serialised_mails_contact	= mb_unserialize($content_get_contact['adv_contacts']);
+							
+							/*if(!empty($serialised_mails_contact[1]['email'])){
+								echo('Veuillez saisir une adresse mail ou/et choisir une parmis la liste.');
+							}else{
+								echo('Veuillez saisir une adresse mail.');
+							}*/
+							
+							echo('Veuillez saisir librement une adresse mail et/ou en s&eacute;lectionner une parmi vos contacts param&eacute;tr&eacute;s dans l\'onglet "Coordonn&eacute;es". <br />Cliquez sur "+" pour les ajouter &agrave; la liste des destinataires.');
+						
+						?>
+						</span>
+						<br /><br />
+						<div class="contact-detail-form-popup-onee-l">
+							Email :
+						</div>
+						<div class="contact-detail-form-popup-onee-r">
+							
+							<input type="search" id="transfert_mail_input" name="transfert_mail_input" value="" />
+							<i class="fa fa-plus-circle" onclick="forward_select_me_manual()" title="Ajouter" style="color: #87c337; margin-left: 10px;"></i>
+							
+							<span id="forwardvalidate" /></span>
+						</div>
+					</div>
+					<?php
+						
+						if(!empty($serialised_mails_contact[1]['email'])){
+						
+							echo('<div id="forward_list_mails_source_manager">');
+								echo('<br />');
+									echo('<strong>');
+										echo('Contacts ayant d&eacute;j&agrave; re&ccedil;u ce lead en copie :');
+								echo('</strong>');
+								$local_count_serialised_mails_contact	= 1;
+								while(!empty($serialised_mails_contact[$local_count_serialised_mails_contact]['email'])){
+									echo('<div id="forward_mail_element_man_'.$local_count_serialised_mails_contact.'" class="contact-detail-form-onee-c opa">');
+									
+										echo('<div class="contact-dst_list-popup-onee-l1">');
+											echo('&nbsp;'.$serialised_mails_contact[$local_count_serialised_mails_contact]['prenom']);
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-l2">');
+											echo($serialised_mails_contact[$local_count_serialised_mails_contact]['email']);
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-l3" style="display:none;">');
+											echo('manager');
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-r1">');
+											echo('<i class="fa fa-plus-circle" onclick="forward_select_me(\''.$local_count_serialised_mails_contact.'\', \'man\')" title="Ajouter"></i>');
+										echo('</div>');
+							
+									echo('</div>');
+									
+									$local_count_serialised_mails_contact++;
+								}//end while
+							echo('</div>');
+
+						}//end if !empty serialised
+					?>
+					
+					<?php
+						
+						//Loading List user coodonées 
+						
+						$res_sql_contacts_pers		= "SELECT
+															id, nom,
+															prenom, email
+														FROM
+															extranet_contacts_users
+														WHERE
+															idadvertiser=".$_SESSION['extranet_user_id']."";
+						
+						$res_get_contacts_pers 		= $db->query($res_sql_contacts_pers, __FILE__, __LINE__);
+		
+					
+						if(mysql_num_rows($res_get_contacts_pers)!=0){
+						
+							echo('<div id="forward_list_mails_source_coordonnees">');
+								echo('<br />');
+									echo('<strong>');
+										echo('Vos contacts pour transfert :');
+								echo('</strong>');
+								$local_count_personalised_mails_contact	= 1;
+								while($content_get_contacts_pers	= $db->fetchAssoc($res_get_contacts_pers)){
+									echo('<div id="forward_mail_element_coo_'.$local_count_personalised_mails_contact.'" class="contact-detail-form-onee-c opa">');
+									
+										echo('<div class="contact-dst_list-popup-onee-l1">');
+											echo('&nbsp;'.$content_get_contacts_pers['prenom'].' '.$content_get_contacts_pers['nom']);
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-l2">');
+											echo($content_get_contacts_pers['email']);
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-l3" style="display:none;">');
+											echo('coordonnees');
+										echo('</div>');
+										
+										echo('<div class="contact-dst_list-popup-onee-r1">');
+											echo('<i class="fa fa-plus-circle" onclick="forward_select_me(\''.$local_count_personalised_mails_contact.'\', \'coo\')" title="Ajouter"></i>');
+										echo('</div>');
+							
+									echo('</div>');
+									
+									$local_count_personalised_mails_contact++;
+								}//end while
+							echo('</div>');
+							
+						}//end if(mysql_num_rows($res_get_contacts_pers)!=0)
+						
+						
+						//Liste destinataires container
+						echo('<div id="forward_list_mails_dest" class="contact-detail-form-onee-c">');
+							echo('<br />');
+							echo('<strong>');
+								echo('Liste destinataires :');
+							echo('</strong>');
+							echo('<div id="forward_list_mails">');
+							
+							echo('</div>');
+						echo('</div>');
+					?>
+					
+					<script type="text/javascript">
+						activate_listner_popup_email();
+					</script>
+					
+					<div id="contacts_popup_forward_loader">
+						<img src="<?php echo EXTRANET_URL ?>ressourcesv3/images/lightbox-ico-loading.gif" />
+					</div>
+					<div id="contacts_popup_forward_errors"></div>
+				</form>
+			</div>
+			  
+			  
+			<script type="text/javascript">
+		  
+				var $forwardpopup = $("#forwardpopup-db").dialog({
+				  width: 400,
+				  autoOpen: false,
+				  modal: true,
+				  buttons: {
+					"Fermer": function(){
+					  $(this).dialog("close");
+					},
+					"Envoyer": function(){
+					 
+						contacts_execute_the_forward();
+						
+					}
+				  }
+				});
+				$("#forward_listner").on("click", function(){
+				  $forwardpopup.dialog("open");
+				});
+				
+				if(window.location.hash=='#forward'){
+					$("#forward_listner").click();
+				}
+			
+			</script>
+		  
+		<!-- End Forward Popup-->
+		
+		<?php
+			//Send intern mail when a contact is buy
+			if($flag_send_mail_after_buy_contact){
+			
+				require_once('extranet_v3_contacts_detail_buy_send_mail.php');
+			
+			}//end if($flag_send_mail_after_buy_contact)
+			
+			
+		
+		?>
+		
+		
+		<?php
+		
+		}else{
+		
+			echo('<div class="row">');
+				echo('<div class="col-md-12" style="width:100%;">');
+					echo('<div class="panel panel-primary">');
+						echo('<div class="panel-heading">');
+							echo('<h4>');
+								echo('Demande inexistante. <a href="'.EXTRANET_URL.'/extranet-v3-contacts-all.html">Retour</a>');
+							echo('</h4>');
+						echo('</div>');
+					echo('</div>');
+				echo('</div>');
+			echo('</div>');
+		}
+		
+	?>
+	
+	
+	
+
+</div><!-- end div .za -->

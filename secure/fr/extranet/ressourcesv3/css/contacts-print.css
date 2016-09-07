@@ -1,0 +1,45 @@
+.print_header {
+	height: 50px;
+	width: 100%;
+}
+
+.print_header .bloc {
+	float: left;
+}
+
+.print_header .bloc .bloc-titre {
+	padding-top: 10px;
+	font-weight: bold;
+	margin-left: 25px;
+	font-size: 110%;
+}
+
+.bloc-one .bloc-titre2 {
+	/*color: #7E7E7E;*/
+	font-weight: bold;
+	padding-top: 5px;
+}
+
+.bloc-one .bloc-texte {
+	padding: 5px 2px 5px 10px;
+	border: 1px solid #C3c3c3;
+	border-radius: 8px;
+	margin: 8px 0 5px 8px;
+}
+
+.bloc-one .bloc-onerow {
+	overflow: hidden;
+	padding: 3px;
+}
+
+.bloc-one .bloc-onerow .champ-label {
+	width: 23%;
+	float: left;
+	font-weight: bolder;
+	color: #868585;
+}
+
+.bloc-one .bloc-onerow .champ-form {
+	float: left;
+	width: 74%;
+}

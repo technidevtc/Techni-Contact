@@ -1,0 +1,216 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+
+$session = new UserSession($db);
+// it's an order, directly handle things there
+if (!$session->estimate) {
+  header("Location: ".COMMANDE_URL."order-step3.html");
+  exit();
+}
+
+// not logged in, go to the first step
+if (!$session->logged) {
+  header("Location: ".COMMANDE_URL."estimate-step1.html");
+  exit();
+}
+
+$cart2 = Doctrine_Query::create()
+  ->select('ct.*, ctl.*, c.*, cda.*, cba.*')
+  ->from('Paniers ct')
+  ->innerJoin('ct.lines ctl')
+  ->innerJoin('ct.client c')
+  ->innerJoin('ct.delivery_address cda')
+  ->innerJoin('ct.billing_address cba')
+  ->where('ct.id = ?', $session->getID())
+  ->andWhere('ct.idClient = ?', $session->userID)
+  ->andWhere('ct.locked = ?', 1)
+  ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+
+// cart is not locked/does not belong to the current client/has no address set -> the second step will handle it
+// if the client changed, order-step 2 will also handle the addresses, no need to check here
+if (!$cart2) {
+  header("Location: ".COMMANDE_URL."estimate-step2.html");
+  exit();
+}
+
+// empty cart, nothing to do here
+if (!count($cart2['lines']) || !$cart2['valid']) {
+  header("Location: ".URL."panier.html");
+  exit();
+}
+
+$cda = $cart2['delivery_address'];
+$cba = $cart2['billing_address'];
+
+$cart = new Cart($db, $session->getID());
+$cart->calculateCart();
+
+// eveything's fine, make it a final estimate
+$cart->makeEstimate($session->userID);
+
+$mail = new Email(array(
+  'email' => $cart2['client']['login'],
+  'subject' => "Votre devis Techni-Contact n°".$cart->estimate,
+  'headers' => "From: Service client Techni-Contact <web@techni-contact.com>\nReply-To: Service client Techni-Contact <web@techni-contact.com>\r\n",
+  'template' => "user-fo_estimate-new_estimate",
+  'data' => array(
+    'FO_URL' => URL,
+    'FO_ACCOUNT_URL_INFOS' => COMPTE_URL."infos.html",
+    'CUSTOMER_FIRSTNAME' => $cart2['client']['prenom'],
+    'CUSTOMER_LASTNAME' => $cart2['client']['nom']
+  )
+));
+$mail->send();
+
+require ICLASS.'CStatisticsManager.php';
+$stats = new StatisticsManager($db);
+$cart->completeItemsInfos();
+$stats->SaveCartAsEstimate($cart);
+
+define('SECURE', true);
+define('ORDER_STEP_3', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>
+<script type="text/javascript">
+  HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE['email']) ? $_COOKIE['email'] : "") ?>";
+</script>
+<div class="white-bg">
+  <div class="blocks-left" id="body">
+    
+    <div class="step-title">Paiement</div>
+    
+    <div class="order-steps step3">
+      <div class="fl">
+      
+        <div class="order-step2 cart-resume grey-block">
+          <div class="blue-title">Récapitulatif de votre devis</div>
+          <div class="cart-table">
+            <table cellspacing="0" cellpadding="0">
+              <thead>
+                <tr>
+                  <th>Produit - désignation</th>
+                  <th class="qty">Qté</th>
+                  <th class="price">Prix total ht</th>
+                </tr>
+              </thead>
+              <tbody>
+              <?php foreach ($cart->items as $item) : ?>
+                <tr>
+                  <td class="al"><a href="<?php echo $item['url'] ?>"><?php echo $item['cart_desc'] ?></a></td>
+                  <td><?php echo $item['quantity'] ?></td>
+                  <td class="price">
+                    <?php echo sprintf("%.02f", $item['sum_base']) ?> €
+                    <?php if ($item["sumEcotax"] > 0) : ?>
+                      <small>éco part : <?php echo $item["sumEcotax"] ?> €</small>
+                    <?php endif ?>
+                  </td>
+                </tr>
+              <?php endforeach ?>
+              </tbody>
+            </table>
+          </div>
+          <table class="cart-totals" cellspacing="0" cellpadding="0">
+            <tbody>
+              <tr class="stotal-ht">
+                <td></td>
+                <td class="label">Sous-total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->stotalHT) ?> €</td>
+              </tr>
+              <tr class="fdp">
+                <td><img src="<?php echo $res_url.'images/picto-delivery.png' ?>" alt="logo" /></td>
+                <td class="label">Frais de port HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->fdpHT) ?> €</td>
+              </tr>
+              <tr class="total-ht">
+                <td></td>
+                <td class="label">Total HT:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalHT) ?> €</td>
+              </tr>
+              <tr class="tva">
+                <td></td>
+                <td class="label">TVA (20%):</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalTVA) ?> €</td>
+              </tr>
+              <tr class="total-ttc">
+                <td></td>
+                <td class="label">Total TTC:</td>
+                <td class="amount"><?php echo sprintf("%.02f", $cart->totalTTC) ?> €</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="order-step3-bottom-addresses grey-block order-step2 cart-resume">
+          <div class="blue-title">Récapitulatif adresses</div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de livraison</span><br />
+            <ul>
+              <li><?php echo Clients::getTitleText($cda['titre']) ?> <?php echo $cda['prenom'] ?> <?php echo $cda['nom'] ?></li>
+              <li><?php echo $cda['societe'] ?></li>
+              <li><?php echo $cda['adresse'] ?></li>
+              <li><?php echo $cda['complement'] ?> <?php echo $cda['cp'] ?> <?php echo $cda['ville'] ?></li>
+              <li><?php echo $cda['pays'] ?></li>
+            </ul>
+          </div>
+          <div class="order-step3-address-block">
+            <span class="color-blue">Adresse de facturation</span><br />
+            <ul>
+              <li><?php echo Clients::getTitleText($cba['titre']) ?> <?php echo $cba['prenom'] ?> <?php echo $cba['nom'] ?></li>
+              <li><?php echo $cba['societe'] ?></li>
+              <li><?php echo $cba['adresse'] ?></li>
+              <li><?php echo $cba['complement'] ?> <?php echo $cba['cp'] ?> <?php echo $cba['ville'] ?></li>
+              <li><?php echo $cba['pays'] ?></li>
+            </ul>
+          </div>
+          <div class="zero"></div>
+        </div>
+        
+      </div><!-- fl -->
+      
+      <div class="addresses-block fr">
+        <div class="note btn-estimate-actions">
+          <input type="hidden" name="cartID" value="<?php echo $cart->id ?>"/>
+          Votre devis est maintenant prêt à être imprimé !<br/>
+          Nous vous remercions pour votre confiance.<br/>
+          <br/>
+          Ce document est au format PDF. Si vous ne possédez pas le logiciel Adobe Acrobat, nous vous invitons à le télécharger gratuitement.<br />
+          <br />
+          <div class="btn-estimate-print"></div>
+          <br />
+          Votre devis est disponible dans votre <a href="<?php echo COMPTE_URL ?>index.html" class="color-blue">espace client</a><br />
+          <br />
+          Vous pouvez aussi partager avec un collègue ce devis<br />
+          <br />
+          <div class="btn-estimate-send"></div><br />
+          <br />
+          <h1 class="blue-title">Comment valider votre devis ?</h1><br />
+          <br />
+          Renvoyez-nous votre devis signé et tamponné, accompagné de votre règlement :<br />
+          <br />
+          <b>Par fax :</b><br/>
+          01 83 62 36 12<br/>
+          <br/>
+          <b>Par E-mail :</b><br/>
+          <a href="mailto:info@techni-contact.com">info@techni-contact.com</a>
+          <br/>
+          <br/>
+          <b>Par courrier :</b><br/>
+          Techni-Contact - Comptabilité - Devis<br />
+          253, rue Gallieni<br/>
+          F-92774 BOULOGNE BILLANCOURT<br/>
+          CEDEX FRANCE
+        </div>
+        <div class="zero"></div>
+      </div><!-- fr -->
+      
+    </div><!-- order-steps step3 -->
+  </div><!-- blocks-left -->
+
+<?php require SITE.'blocks-right.php' ?>
+
+</div><!-- white bg -->
+
+<?php require SITE.'foot.php' ?>

@@ -1,0 +1,388 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = $handle = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+//$customerInfos = $user->getCoordFromArray();
+
+if (!$session->logged){
+  header("Location: " . COMPTE_URL . "login.html");
+  exit();
+}
+
+try {
+  $estimateID = filter_input(INPUT_GET, 'estimateID', FILTER_SANITIZE_STRING);
+  $pdfestimateID = filter_input(INPUT_GET, 'pdfestimateID', FILTER_SANITIZE_STRING);
+  if (!($estimateID xor $pdfestimateID))
+    throw new Exception("Identifiant devis invalide");
+  
+  if($pdfestimateID){
+    $isPdfEstimate = true;
+    $o = new Cart($handle, $pdfestimateID);
+    if (!$o->existsInDB)
+      throw new Exception("Vous ne possédez pas de devis ayant pour identifiant ".$estimateID);
+    $o->calculateCart();
+
+    $o->conv = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_DEVIS_PDF__, $user->id, $o->estimate); 
+    
+  }elseif($estimateID){
+    $isPdfEstimate = false; // if is not pdf estimate, is manager estimate
+  
+    $es = Doctrine_Query::create()
+      /*->select('e.*,
+                el.*,
+                IF(0,el.id,elpfr.ref_name) AS pdt_ref_name,
+                IF(0,el.id,elcat.id) AS cat_id')*/
+      ->select('e.*, 
+                e.id as estimate, e.created as create_time, e.total_ttc as totalTTC, e.total_ht as totalHT, e.fdp_ht as fdpHT, (e.total_ttc - e.total_ht) as totalTVA,
+                el.* , el.id as item,
+                IF(0,el.id,elpfr.ref_name) AS pdt_ref_name,
+                IF(0,el.id,elpfr.name) AS name,
+                IF(0,el.id,elp.idTC) AS idTC,
+                IF(0,el.id,elcat.id) AS cat_id,
+                bou.name as bouser_name, bou.phone as bouser_tel')
+      ->from('Estimate e')
+      ->leftJoin('e.lines el')
+      ->leftJoin('el.product elp')
+      ->leftJoin('elp.product_fr elpfr')
+      ->leftJoin('elp.families elcat')
+      ->leftJoin('e.created_user bou')
+      ->where('e.web_id = ?', $estimateID)
+      ->andWhere('e.client_id = ?', $session->userID)
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+    
+    $estimateStatusText = array(
+      '1' => 'Prêt',
+      '2' => 'Prêt',
+      '3' => 'Prêt',
+      '4' => 'Validé',
+      '5' => 'Non validé'
+    );
+    
+    if (empty($es['id']))
+      throw new Exception("Vous ne possédez pas de devis ayant pour identifiant ".$estimateID);
+    
+  }
+} catch (Exception $e) {
+  header("Location: ".COMPTE_URL."index.html");
+}
+
+$es['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_ESTIMATE__, $user->id, $es['estimate'], 'array', 'FO'); 
+
+if (!$es['client_seen']) {
+  $rows = Doctrine_Query::create()
+    ->update('Estimate')
+    ->set('client_seen', '?', time())
+    ->where('id = ?', $es['id'])
+    ->execute();
+}
+if(!$o && $es){ 
+//pp($es['product']);    
+    foreach($es['lines'] as $line){
+      //pp($line);
+      $lines[] = array(
+          "idTC" => $line['idTC'],
+          "quantity" => $line['quantity'],
+          "name" => $line['name'],
+          "fastdesc" => $line['desc'],
+          "discount" => $line['discount'],
+          "pdt_ref_id" => $line['pdt_ref_id'],
+          "delivery_time" => $line['delivery_time'],
+          "priceHT" => $line['pu_ht'],
+          "priceTTC" => $line['total_ttc'],
+          "pdt_id" => $line['pdt_id'],
+          "total_ht_pre" => $line['total_ht_pre']
+      );
+    }
+  $es['items'] = $lines;
+  
+  $o = (object) $es;
+}
+//pp($o);
+//pp($es->id);
+$fdp = 20;
+$fdp_franco = 300;
+$res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco'", __FILE__, __LINE__ );
+while ($rec = $db->fetch($res))
+  $$rec[0] = $rec[1];
+
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes devis</h1>
+      </div>
+                  <div class="blue-title">Mon devis N°<?php echo $o->estimate ?></div>
+                  <div class="font14">Devis passé le <?php echo date('d/m/Y à H:i.s', $o->create_time) ?></div>
+                  <br />
+                  <div class="fl">
+                    <?php if(!$isPdfEstimate): ?>
+                    <div class="green-title">Etat de mon devis : <?php echo to_entities($estimateStatusText[$o->status]); ?></div>
+                    <?php endif; ?>
+                  </div>
+                  
+                  <div class="zero"></div>
+                  
+                  <?php if(!empty($o->conv)): ?>
+                  <div class="padding-top-20 conversation-block">
+                    <div class="blue-title">Historique de mes échanges</div>
+                    <ul>
+                    <?php foreach ($o->conv as $post) : ?>
+                      <li>
+                        <div class="post-title">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></div>
+                      <?php if (!empty($post['attachments'])) : ?>
+                        <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+                        <div class="post-files" >
+                        <?php foreach ($post['attachments'] as $attachment) : ?>
+                          <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+                        <?php endforeach ?>
+                        </div>
+                      <?php endif ?>
+                        <div class="post-text"><?php echo htmlspecialchars($post['text']) ?></div>
+                      </li>
+                    <?php endforeach // post ?>
+                    </ul>
+                  </div>
+                  <?php endif; ?>
+                  
+                  <div class="padding-top-20">
+                    <div class="fl margin-right-10 font11">
+                      <a href="#account-contact-dialog_<?php echo $isPdfEstimate ? 2 : 3; ?>,<?php echo $o->estimate ?>"><div class="puce puce-8"></div>Nous contacter concernant ce devis</a>
+                    </div>
+                    <div class="fl font11">
+                      <?php if($isPdfEstimate): ?>
+                      <div class="order-steps">
+                        <div class="btn-estimate-actions">
+                          <div class="link-estimate-print">
+                            <a href="javascript:return false;" data-cart-id="<?php echo $o->id ?>"><div class="puce puce-1"></div>Télécharger le devis</a>
+                          </div>
+                        </div>
+                      </div>
+                      <?php else: ?>
+                        <a href="<?php echo PDF_DL_URL."devis-commercial/".$o->web_id; ?>"><div class="puce puce-1"></div>Télécharger le devis</a>
+                      <?php endif; ?>
+                    </div>
+                    <div class="zero"></div>
+                  </div>
+                  
+                  <div class="account-order padding-top-20">
+                    <div class="account-order-table">
+                      <table cellspacing="0" cellpadding="0">
+                        <thead>
+                        <tr>
+                          <th colspan="2">Produit - désignation</th>
+                          <th>Référence</th>
+                          <th>Livraison</th>
+                          <th>Prix HT</th>
+                          <th>Quantité</th>
+                          <th colspan="2">Prix total HT</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach($o->items as $line)  :
+                          //$dft_qte_list[$line["idTC"]] = $line["quantity"];
+                          if (!empty($line["customCols"])) {
+                            $itemDesc = $line["label"];
+                            foreach($line["customCols"] as $ccol_header => $ccol_content)
+                              $itemDesc .= " - ".$ccol_header.": ".$ccol_content;
+                          }
+                          else {
+                            $itemDesc = $line["name"].(empty($line["fastdesc"]) ? "" : " - ".$line["fastdesc"]).(empty($line["label"]) ? "" : " - ".$line["label"]);
+                          }?>
+                          <tr class="line<?php echo (!empty($line['promotion'])+(!empty($line['discount'])))?' hasdiscount':'';?>">
+                            <td rowspan="<?php echo (!empty($line['promotion'])+(!empty($line['discount'])+1)) ?>">
+                              <img  class="vmaib" src="<?php echo Utils::get_secure_pdt_pic_url($line['pdt_id']) ?>" alt=""/>
+                            </td>
+                            <td class="designation" rowspan="<?php echo (!empty($line['promotion'])+(!empty($line['discount'])+1)) ?>">
+                              <div class="vmaib"><?php echo $itemDesc ?></div>
+                            </td>
+                            <td><?php echo $line['pdt_ref_id'] ? $line['pdt_ref_id'] : "-" ?></td>
+                            <td class="al"><?php echo $line['delivery_time'] ?></td>
+                            <td><?php echo sprintf('%.02f', $line['priceHT']) ?> €</td>
+                            <td><?php echo $line['quantity'] ?></td>
+                            <td><?php echo sprintf('%.02f', $line['quantity']*$line['priceHT']) ?> €</td>
+                          </tr>
+                          <?php if($line['discount']): ?>
+                          <tr class="discount">
+                            
+                            <td colspan="4"><?php echo 'Remise de '.$line['discount'].' %'; ?></td>
+                            <td><?php echo sprintf('%.02f', -$line['total_ht_pre']*$line['discount']/100) ?> €</td>
+                          </tr>
+                          <?php endif; ?>
+                          
+                          
+                        <?php endforeach //lines  ?>
+
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div class="cart-left padding-top-20">
+                    <?php if($isPdfEstimate): ?>
+                      <div class="order-steps">
+                        <div class="btn-estimate-actions">
+                          <div class="btn-estimate-print"  data-cart-id="<?php echo $o->id ?>"></div>
+                        </div>
+                      </div>
+                    <?php else: ?>
+                     <a href="<?php echo PDF_DL_URL."devis-commercial/".$o->web_id; ?>" class="btn-estimate-print"></a>
+                    <?php endif; ?>
+                     
+                     
+                      <?php if(!$isPdfEstimate):?>
+                      <div class="padding-top-20">
+                        <div class="blue-small-title">Mon contact :</div>
+                        <br />
+                        Votre devis est pris en charge par :<br />
+                        <br />
+                        <div class="account-operator-link">
+                          <div class="fl">
+                            <?php echo $o->bouser_name; ?><br />
+                            <?php echo $o->bouser_tel; ?>
+                          </div>
+                          <br />
+                          <br />
+                          <br />
+                          <div class="fl">
+                            <a href="#account-contact-dialog_<?php echo $isPdfEstimate ? 2 : 3; ?>,<?php echo $o->id; ?>" class="operator-contact-btn"></a>
+                          </div>
+                        </div>
+                      </div>
+                     <?php else : ?>
+                      <div class="padding-top-20">
+                        <div class="blue-small-title">Comment valider ce devis ?</div>
+                        <br />
+                        Renvoyez-nous votre devis signé et tamponné, accompagné de votre règlement :<br />
+                        <br />
+                        <div class="account-operator-link">
+                          <strong>Par fax : </strong><br />
+                          01 83 62 36 12<br />
+                          <br />
+                          <strong>Par E-mail : </strong><br />
+                          info@techni-contact.com<br />
+                          <br />
+                          <strong>Par courrier : </strong><br />
+                          Techni-Contact - Comptabilité - Devis<br />
+                          253, rue Gallieni<br />
+                          F-92774 BOULOGNE BILLANCOURT<br />
+                          CEDEX FRANCE 
+                        </div>
+                      </div>
+                      <?php endif; ?>
+                    </div>
+                    <div class="cart-right">
+                      <table class="cart-totals" cellspacing="0" cellpadding="0">
+                        <tbody>
+                          <tr class="stotal-ht">
+                            <td></td>
+                            <td class="label">Sous-total HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o->stotal_ht) ?> €</td>
+                          </tr>
+                          <tr class="fdp">
+                            <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                            <td class="label">Frais de port HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o->fdpHT) ?> €</td>
+                          </tr>
+                          <tr class="total-ht">
+                            <td></td>
+                            <td class="label">Total HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o->totalHT) ?> €</td>
+                          </tr>
+                          <tr class="tva">
+                            <td></td>
+                            <td class="label">TVA (20%):</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o->totalTVA); ?> €</td>
+                          </tr>
+                         <?php /*if ($o->insurance > 0) { ?>
+                          <tr class="insurance">
+                            <td></td>
+                              <td class="label">ClicProtect</td>
+                              <td class="amount"><?php echo sprintf('%.02f', $o->insurance) ?> €</td>
+                          </tr>
+                         <?php }*/ ?>
+                          <tr class="total-ttc">
+                            <td></td>
+                            <td class="label">Total TTC:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $o->totalTTC) ?> €</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div>
+                        <div class="account-order-delivery fl grey-block">
+                          <?php 
+                          // get estimate manager customer and delivery infos
+                          if($o->delivery_address_id)
+                            $adresseLiv = Doctrine_Query::create()
+                                        ->select()
+                                        ->from('ClientsAdresses')
+                                        ->where('id = ?', $o->delivery_address_id)
+                                        ->fetchOne(array(), doctrine_core::HYDRATE_ARRAY);
+                          if($o->billing_address_id)
+                          $adresseFact = Doctrine_Query::create()
+                                        ->select()
+                                        ->from('ClientsAdresses')
+                                        ->where('id = ?', $o->billing_address_id)
+                                        ->fetchOne(array(), doctrine_core::HYDRATE_ARRAY);
+
+                          foreach($customerInfos as $cle => $valeur){
+                            if(!$isPdfEstimate){
+                              $cleEs = str_replace('_l', '2', $cle);
+                              $customerInfos[$cle] = !empty($es[$cleEs]) ? $es[$cleEs] : $valeur;
+                            }else{
+                              // overload $customerInfos to get pdf estimate billing and shipping addresses
+                              if(strpos($cle, '_l')){
+                                $cleEs = str_replace('_l', '', $cle);
+                                if(!empty($adresseLiv))
+                                  $customerInfos[$cle] = !empty($adresseLiv[$cleEs]) ? $adresseLiv[$cleEs] : $valeur;
+                              }else
+                                if(!empty($adresseFact))
+                                  $customerInfos[$cle] = !empty($adresseFact[$cle]) ? $adresseFact[$cle] : $valeur;
+                            }
+                          }
+                          ?>
+                          <div class="blue-title">Adresse de livraison</div>
+                          <?php if(empty ($customerInfos["adresse_l"]) && empty ($customerInfos["cp_l"]) && empty ($customerInfos["ville_l"])) : ?>
+                            <?php echo CustomerUser::getTitle($customerInfos["titre"]); ?> <?php echo $customerInfos["prenom"]; ?> <?php echo $customerInfos["nom"]; ?><br/>
+                            <?php echo $customerInfos["societe"] != "" ? $customerInfos["societe"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["adresse"]; ?><br/>
+                            <?php echo $customerInfos["complement"] != "" ? $customerInfos["complement"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["cp"]; ?> <?php echo $customerInfos["ville"]; ?>
+                          <?php else: ?>
+                            <?php echo CustomerUser::getTitle($customerInfos["titre_l"]); ?> <?php echo $customerInfos["prenom_l"]; ?> <?php echo $customerInfos["nom_l"]; ?><br/>
+                            <?php echo $customerInfos["societe_l"] != "" ? $customerInfos["societe_l"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["adresse_l"]; ?><br/>
+                            <?php echo $customerInfos["complement_l"] != "" ? $customerInfos["complement_l"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["cp_l"]; ?> <?php echo $customerInfos["ville_l"]; ?>
+                          <?php endif; ?>
+                          <div class="bottom-right-arrow"></div>
+                        </div>
+                        <div class="account-order-delivery fr grey-block">
+                          <div class="blue-title">Adresse de facturation</div>
+                            <?php  echo CustomerUser::getTitle($customerInfos["titre"]); ?> <?php echo $customerInfos["prenom"].' '.$customerInfos["nom"]; ?><br/>
+                            <?php echo $customerInfos["societe"] != "" ? $customerInfos["societe"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["adresse"]; ?><br/>
+                            <?php echo $customerInfos["complement"] != "" ? $customerInfos["complement"] . "<br/>" : ""; ?>
+                            <?php echo $customerInfos["cp"]; ?> <?php echo $customerInfos["ville"]; ?>
+                          <div class="bottom-right-arrow"></div>
+                        </div>
+                        <div class="zero"></div>
+                      </div>
+                    </div>
+                    <div class="zero"></div>
+                  </div>
+    </div>
+    <div class="right-account-panel-navig">
+      <div class="account-upper-right-links">
+        <?php /*<a href=""><div class="puce puce-1"></div>Imprimer<div class="zero"></div>
+        <a href="" class="color-blue">Besoin d'aide ?</a> */ ?>
+      </div>
+    <a href="<?php echo COMPTE_URL."pdfestimate-list.html" ?>" class="account-pdfestimate-list-back-link">
+                  </a>
+  </div>
+</div>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

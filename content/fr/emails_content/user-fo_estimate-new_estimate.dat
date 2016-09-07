@@ -1,0 +1,48 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de générer un devis sur notre site pour la fourniture de votre matériel professionnel. Nous vous en remercions.<br/>
+	Ce devis est archivé et consultable dans votre <a href="FO_ACCOUNT_URL_INFOS?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-devis-pdf">espace client</a>.<br/>
+	<br/>
+	Afin de consulter votre devis en PDF, le programme  Acrobat Reader est n&eacute;cessaire. Si vous le poss&eacute;dez par, nous vous invitons &agrave; <a href="http://get.adobe.com/fr/reader/">l'installer gratuitement</a>.<br/>
+	<br/>
+	<b>Pour valider ce devis</b>, il vous suffit de nous <b>le retourner, revêtu de la mention "Bon pour accord", de votre signature et de votre cachet</b> :<br/>
+	Par fax : 01 83 62 36 12<br/>
+	Par mail : <a href="mailto:info@techni-contact.com">info@techni-contact.com</a><br/>
+	<br/>
+	Par courrier :<br/>
+	Md2i / Techni-Contact / Service devis<br/>
+	253, rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT CEDEX FRANCE<br/>
+	<br/>
+	Notre équipe reste à votre disposition de 9H à 12H30 et de 14H à 18H pour tout complément d’information :<br/>
+	<br/>
+	William DEBAES<br/>
+	01 55 60 29 26<br/>
+	<a href="mailto:w.debaes@techni-contact.com">w.debaes@techni-contact.com</a><br/>
+	<br/>
+	Albert AMSELLEM<br/>
+        01 55 60 29 21<br/>
+	<a href="mailto:a.amsellem@techni-contact.com">a.amsellem@techni-contact.com</a><br/>
+	<br/>
+	Franck BOCCARA<br/>
+	01 55 60 29 20<br/>
+	<a href="mailto:f.boccara@techni-contact.com">f.boccara@techni-contact.com</a><br/>
+	<br/>
+	Merci de votre confiance et à très bientôt sur <a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-devis-pdf">Techni-Contact.com</a>, la galerie marchande des professionnels.
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

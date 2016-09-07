@@ -1,0 +1,307 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 20 décembre 2004
+ 
+ Mises à jour :
+
+       1 juin 2005 : = réécriture avec corrections de bugs
+
+ Fichier : /secure/manager/lost.html
+ Description : Procédure mot de passe perdu
+
+/=================================================================*/
+
+if(strcmp(strtoupper(substr(dirname(__FILE__),0,3)),'C:\\')=='0'){
+	require_once '../../../config.php';
+}else{
+	require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+}
+
+
+
+require(ICLASS . 'ManagerUser.php');
+require(ADMIN  . 'generator.php');
+
+$msgToDisplay = '';
+
+if(isset($_GET['rid']) && preg_match('/^[[:alnum:]]{30}$/', $_GET['rid']))
+{
+    print('<center><b>');
+
+    $handle = DBHandle::get_instance();
+
+    // Effacer les sessions expirées
+    $handle->query('delete from tempPassV2 where death < \'' . time() . '\'', __FILE__, __LINE__);
+
+    if(($result = & $handle->query('select idUser from tempPassV2 where session = \'' . $handle->escape($_GET['rid']) . '\'', __FILE__, __LINE__)) && $handle->numrows($result, __FILE__, __LINE__) == 1)
+    {
+        // Il y a bien une session
+        $record = & $handle->fetch($result);
+
+        if($handle->query('delete from tempPassV2 where session = \'' . $handle->escape($_GET['rid']) . '\'', __FILE__, __LINE__))
+        {
+            $password = & generatePassword();
+
+            if($handle->query('update usersV2 set pass = \'' . md5($password) . '\' where id = \'' . $record[0] . '\'', __FILE__, __LINE__) && $handle->affected(__FILE__, __LINE__) == 1)
+            {
+                $msgToDisplay = 'Opération achevée, votre nouveau mot de passe est : ' . $password;
+                $msgIsError = false;
+            }
+            else
+            {
+                $msgToDisplay = 'Une erreur interne est survenue lors de la procédure.';
+                $msgIsError = true;
+            }
+        }
+        else
+        {
+            $msgToDisplay = 'Une erreur interne est survenue lors de la procédure.';
+            $msgIsError = true;
+        }
+
+    }
+    else
+    {
+        $msgToDisplay = 'Identifiant de session invalide ou expiré.';
+        $msgIsError = true;
+    }
+    
+}
+
+else if(isset($_POST['login']) && isset($_POST['email']))
+{
+    $login = trim(substr($_POST['login'], 0, 15));
+    $email = strtolower(trim(substr($_POST['email'], 0, 50)));
+
+    if($login != '')
+    {   
+        $handle = DBHandle::get_instance();
+        $EOQuery .= 'login = \'' . $handle->escape($login) . '\'';
+    }
+    else if($email != '' && strlen($email) >= 6 && preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $email))
+    {   
+        $handle = DBHandle::get_instance();
+        $EOQuery .= ' email = \'' . $handle->escape($email) . '\'';
+    }
+    else
+    {
+        $msgToDisplay = 'Merci de saisir un identifiant ou une adresse email valide.';
+        $msgIsError = true;
+    }
+
+
+    if(isset($EOQuery))
+    {
+        // Effacer les sessions expirées
+        $handle->query('delete from tempPassV2 where death < \'' . time() . '\'', __FILE__, __LINE__);
+
+        if(($result = & $handle->query('select id, email from usersV2 where ' . $EOQuery, __FILE__, __LINE__)) && $handle->numrows($result, __FILE__, __LINE__) == 1)
+        {
+            $record = & $handle->fetch($result);
+
+            if($session = & generateSession(30, 'session', 'tempPassV2', $handle))
+            {
+                $death = time() + 3600;    // 1 heure pour valider
+
+
+                if(($idTempPass = generateID(1, 65535, 'id', 'tempPassV2', $handle)) &&
+                   $handle->query('insert into tempPassV2 (id, idUser, session, death) values(\'' . $idTempPass . '\', \'' . $record[0] . '\', \'' . $session . '\', \'' . $death . '\')', __FILE__, __LINE__))
+                {
+                    if($login != '')
+                    {
+                        $sentence = 'associée à l\'identifiant <b>' . to_entities($login) . '</b>';
+                    }
+                    else
+                    {
+                        $sentence = '<b>' . to_entities($email) . '</b>';
+                    }
+
+                    $nobject = NULL; // objet fictif pour créer uner instance de ManagerUser
+                    $user = & new ManagerUser($nobject);
+                    $ip   = & $user->getIP();
+
+                    $subject = 'Techni Contact - Mot de passe oublié';
+
+                    $content  = 'Bonjour,<br><br>Une procédure de récupération du mot de passe associé à votre compte web du manager Techni-Contact vient d\'être lancée. Si vous n\'avez pas effectué cette demande vous pouvez ignorer la suite de ce message et le supprimer. Sinon, <a href="' . ADMIN_URL . 'lost.html?rid=' . $session . '" target="_blank">cliquez sur le lien suivant</a> pour obtenir un nouveau mot de passe.<br><br>';
+                    $content .= 'Adresse IP à l\'origine de la demande : ' . $ip . '<br><br>Note : vous <b>disposez d\'un délai d\'une heure</b> si vous souhaitez confirmer la procédure. Ce délai écoulé, vous devrez effectuer une nouvelle demande.';
+
+                    $headers  = 'From: ' . SEND_MAIL_NAME . ' <' . SEND_MAIL . '>' . "\n";
+                    $headers .= 'MIME-Version: 1.0' . "\n";
+                    $headers .= 'Content-type: text/html' . "\n";
+
+                    if(mail($record[1], $subject, $content, $headers))
+                    {
+                        $msgToDisplay = 'Un e-mail vient d\'être envoyé à l\'adresse email ' . $sentence . '.';
+                        $msgIsError = false;
+                    }
+                    else
+                    {
+                        $msgToDisplay = 'Une erreur interne est survenue lors de la procédure.';
+                        $msgIsError = true;
+                    }
+                }
+                else
+                {
+                    $msgToDisplay = 'Une erreur interne est survenue lors de la procédure.';
+                    $msgIsError = true;
+                }
+            }
+            else
+            {
+                $msgToDisplay = 'Une erreur interne est survenue lors de la procédure.';
+                $msgIsError = true;
+            }
+
+        }
+        else
+        {
+            $msgToDisplay = 'Aucun compte utilisateur ne correspond aux données entrées.';
+            $msgIsError = true;
+        }
+
+    }   // fin EOQuery
+
+}
+
+
+if(!isset($_GET['rid']))
+{
+    $loginString = isset($login) ? ' value="' . to_entities($login) . '"' : '';
+    $emailString = isset($email) ? ' value="' . to_entities($email) . '"' : '';
+}
+
+?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>Manager Techni-Contact</title>
+<!--
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+-->
+
+	<script type="text/javascript" src="<?php echo ADMIN_URL ?>ressources/js/jquery/jquery_1.7.2.min.js"></script>
+	
+	<script type="text/javascript" src="js/ui/ui.core.js"></script>
+	<script type="text/javascript" src="js/superfish.js"></script>
+	<script type="text/javascript" src="js/live_search.js"></script>
+	<script type="text/javascript" src="js/sidebar_menu.js"></script>
+	<script type="text/javascript" src="js/tooltip.js"></script>
+	<script type="text/javascript" src="js/cookie.js"></script>
+	<script type="text/javascript" src="js/ui/ui.sortable.js"></script>
+	<script type="text/javascript" src="js/ui/ui.draggable.js"></script>
+	<script type="text/javascript" src="js/ui/ui.resizable.js"></script>
+	<script type="text/javascript" src="js/ui/ui.dialog.js"></script>
+	<script type="text/javascript" src="js/custom.js"></script>
+
+	<link href="css/ui/ui.base.css" rel="stylesheet" media="all" />
+
+	<link href="css/ui/ui.login.css" rel="stylesheet" media="all" />
+
+	<link href="css/themes/apple_pie/ui.css" rel="stylesheet" media="all" />
+
+	<link href="css/themes/apple_pie/ui.css" rel="stylesheet" title="style" media="all" />
+
+	<!--[if IE 6]>
+	<link href="css/ie6.css" rel="stylesheet" media="all" />
+
+	<script src="js/pngfix.js"></script>
+	<script>
+	  /* Fix IE6 Transparent PNG */
+	  DD_belatedPNG.fix('.logo, .other ul#dashboard-buttons li a');
+
+	</script>
+	<![endif]-->
+	<!--[if IE 7]>
+	<link href="css/ie7.css" rel="stylesheet" media="all" />
+	<![endif]-->
+</head>
+<body>
+	<div id="page_wrapper">
+    <div id="page-header">
+			<div id="page-header-wrapper">
+				<div id="top">
+          <h1 style="font-size: 20px; color: #FFFFFF; padding-top: 10px;"><a href="#" title="Manager Techni-Contact" style="font-size: 20px; color: #FFFFFF;">Manager Techni-Contact</a></h1>
+				</div>
+			</div>
+		</div>
+    <!-- End #page-header -->
+    <script type="text/javascript" src="js/ui/ui.tabs.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        // Tabs
+        $('#tabs, #tabs2, #tabs5').tabs();
+      });
+    </script>
+    <div id="sub-nav">
+      <div class="page-title">
+        <h1>Mot de passe oublié</h1>
+        <span>Veuillez renseigner les informations nécessaires.</span>
+      </div>
+      
+      <div id="dialog" title="Dialog Title">
+        <p>Entrez les informations afin de retrouver votre mot de passe.</p>
+      </div>
+    </div>
+    <div class="clear"></div>
+    <div id="page-layout">
+      <div id="page-content">
+        <div id="page-content-wrapper">
+
+          <div id="tabs">
+            <ul>
+              <li><a href="#login">Mot de passe oublié</a></li>
+            </ul>
+
+            <div id="login">
+
+              <?php if (!empty($msgToDisplay)) { ?>
+                <div class="response-msg <?php echo ($msgIsError == true) ? 'error' : 'success' ?> ui-corner-all">
+                  <?php echo $msgToDisplay ?>
+                </div>
+              <?php } ?>
+
+
+              <form method="post" action="lost.html">
+                <ul>
+                  <li>
+                    Identifiant : <input type="text" name="login" class="field text full" <?php echo $loginString ?> />
+                  </li>
+                  <li>
+                    Ou email : <input type="text" name="email" class="field text full" <?php echo $emailString ?> />
+                  </li>
+                  <li class="buttons" style="float: right; clear: none;">
+                    <div>
+                      <button class="ui-state-default ui-corner-all float-right ui-button" type="submit">Valider</button>
+                    </div>
+                  </li>
+                  <li class="buttons" style="float: right; clear: none;">
+                    <div>
+                      <a href="login.html"><button class="ui-state-default ui-corner-all float-right ui-button">Accès au manager</button></a>
+                    </div>
+                  </li>
+                </ul>
+              </form>
+              <div class="clear"></div>
+            </div>
+
+
+          </div>
+
+
+
+        </div>
+        <div class="clear"></div>
+      </div>
+    </div>
+  </div>
+  <!-- End #page_wrapper -->
+</body>
+</html>

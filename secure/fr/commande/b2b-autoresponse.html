@@ -1,0 +1,75 @@
+<?php
+//require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require_once '/data/technico-test/config.php';
+
+/* Response example
+    [IDENTIFIER] => TECHNI CONTACT
+    [OPERATIONTYPE] => payment
+    [TRANSACTIONID] => A120840
+    [CLIENTIDENT] => 848450241
+    [CLIENTEMAIL] => frederic.morange@free.fr
+    [ORDERID] => 3731099492
+    [AMOUNT] => 96732
+    [VERSION] => 2.0
+    [LANGUAGE] => FR
+    [CURRENCY] => EUR
+    [EXTRADATA] => 
+    [CARDCODE] => ************4001
+    [CARDTYPE] => MASTERCARD
+    [CARDVALIDITYDATE] => 01-13
+    [CARDFULLNAME] => John Doe
+    [CARDCOUNTRY] => 
+    [EXECCODE] => 4001
+    [MESSAGE] => The bank refused the transaction.
+    [DESCRIPTOR] => RENTABILITEST
+    [ALIAS] => 
+    [3DSECURE] => NO
+    [HASH] => 61d9323afc860c2f05a900dec00acfd062148b75f906975c06aca3ca71621f7d
+*/
+
+$hash = $_GET['HASH'];
+unset($_GET['HASH']);
+if ($hash == Utils::be2bill_signature(BE2BILL_PASSWORD, $_GET)) {
+  
+  $text = "TIME : ".date('d/m/Y H:i:s')."\n";
+  $_GET['HASH'] = $hash;
+  foreach ($_GET as $k => $v)
+    $text .= $k." : ".$v."\n";
+  
+  if ($_GET['EXECCODE'] == 0) {
+    $order = Doctrine_Query::create()
+        ->select("*")
+        ->from("Order")
+        ->where("id = ?", $_GET['ORDERID'])
+        ->fetchOne();
+    if (!empty($order->id)) {
+      switch ($_GET['CARDTYPE']) {
+        case 'CB' :         $type_paiement = 1; break; // Carte Bleue
+        case 'VISA' :       $type_paiement = 2; break; // Visa
+        case 'MASTERCARD' : $type_paiement = 3; break; // Mastercard
+        case 'AMEX' :       $type_paiement = 4; break; // American Express
+        case 'PAYPAL' :     $type_paiement = 5; break; // Paypal
+        default :           $type_paiement = 1;
+      }
+      $order->transaction_id = $_GET['TRANSACTIONID'];
+      $order->payment_status = Order::PAYMENT_STATUS_PAID;
+      $order->processing_status = Order::GLOBAL_PROCESSING_STATUS_WAITING_PROCESSING;
+      $order->payment_mean = $type_paiement;
+      $order->save();
+      
+      $text .= "=> ORDER SUCCESSFULLY PAID\n";
+    
+    } else {
+      $text .= "=> ERROR LOADING ORDER\n";
+    }
+  } else {
+    $text .= "=> PAYMENT ERROR: ".$_GET['MESSAGE']."\n";
+  }
+  $text .= "----------------------------------------";
+  
+  flog($text, "b2b-autoresponse.log");
+}
+
+// response for b2b server
+?>
+OK

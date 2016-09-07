@@ -1,0 +1,346 @@
+<?php
+require substr(dirname(__FILE__),0,strpos(dirname(__FILE__),"/",stripos(dirname(__FILE__),"technico")+1)+1)."config.php";
+
+include_once(LANG_LOCAL_INC."meta-titles-".DB_LANGUAGE."_local.php");
+
+$msList = Doctrine_Query::create()
+  ->select(id)
+  ->from('MiniStores')
+  ->where('active = 1')
+  ->andWhere('espace_thematique = 1')
+  ->fetchArray();
+
+list($title, $meta_desc, $meta_keys) = str_replace(
+  array("%MB_NAME%"),
+  array('Espace Thématique'),
+  array(MB_TITLE, MB_META_DESC, MB_META_KEYS)
+);
+
+require(SITE."head.php");
+?>
+<div class="white-bg">
+  <div class="blocks-left">
+  <h1 class="bigger-blue-title">Espace Thématique</h1>
+  <div class="espace-thematique-top-info-block fl">
+    Afin de faciliter vos achats, nous avons regroupé en espaces métier nos offres dédiés à certains secteurs d'activité.<br />
+Ciquez sur le titre de chaque boutique pour accéder à votre espace dédié.
+  </div>
+<?php
+if (!empty($msList)) {
+  // Loading XML
+  $dom = new DomDocument();
+  $dom->validateOnParse = true;
+  $dom->load(XML_CATEGORIES_ALL);
+  $xPath = new DOMXPath($dom);
+  
+  // Globals stats
+  $cat0 = $xPath->query("parent::categories",$dom->getElementById(XML_KEY_PREFIX."0"))->item(0);
+  $stats_key = explode("|",$xPath->query("child::stats_key",$cat0)->item(0)->nodeValue);
+  $stats = explode("|",$xPath->query("child::stats",$cat0)->item(0)->nodeValue);
+  for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+    $global[$stats_key[$sk]] = $stats[$sk];
+  
+  $res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ );
+  while ($rec = $db->fetch($res))
+    $$rec[0] = $rec[1];
+  
+  foreach ($msList as $ms) {
+    $ms = new MiniStore($ms["id"]);
+    if (!$ms->existsInDB)
+      continue;
+
+    // --------------------------------------------------------------------------------
+    // SELECTION/FAVOURITE/MOST VIEWED/LATEST PDT
+    // Getting the products ID from xml and/or from the DB
+    // --------------------------------------------------------------------------------
+    // Shipping fee
+
+    $pdt_infos = array();
+    if ($ms->type == "cat") {
+      $mts["TOTAL TIME"]["start"] = microtime(true);
+      $mts["TOTAL TIME"]["end"] = microtime(true);
+      //foreach($mts as $mtn => $mt) print $mtn." = <b>".($mt["end"]-$mt["start"])*1000."ms</b><br/>\n";
+    }
+    elseif ($ms->type == "pdt") {
+      
+      $results = array("data" => array(), "count" => 0);
+      
+      foreach($ms->items as $item)
+      $pdt_infos[$item['productID']] = array("catID" => $item["categoryID"], "order" => $item["order"]);
+      
+      $res = $db->query("
+        SELECT
+          p.id, p.price AS pdt_price, p.timestamp, p.shipping_fee,
+          pfr.name, pfr.ref_name, pfr.fastdesc, pfr.delai_livraison AS delivery_time,
+          pf.idFamily AS catID,
+          ps.hits, ps.orders, ps.leads, (".mktime(0,0,0)."- ps.first_hit_time) as age,
+          a.id AS adv_id, a.nom1 AS adv_name, a.category AS adv_cat, a.delai_livraison AS adv_delivery_time,
+          rc.id AS ref_idtc, rc.refSupplier AS ref_refSupplier, rc.price+rc.ecotax AS ref_price,
+          (p.as_estimate + a.as_estimate) as product_as_estimate
+        FROM products p
+        INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1
+        INNER JOIN products_families pf ON p.id = pf.idProduct
+        INNER JOIN products_stats ps ON p.id = ps.id
+        INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+        LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1
+        WHERE p.id in (".implode(",", array_keys($pdt_infos)).")
+        GROUP BY p.id LIMIT 0,4", __FILE__, __LINE__);
+      
+      // Fetching results
+      while ($pdt = $db->fetchAssoc($res)) {
+        $catID = $pdt_infos[$pdt["id"]]["catID"];
+      $order = $pdt_infos[$pdt["id"]]["order"];
+        $pdt_infos[$pdt["id"]] = $pdt;
+        $pdt_infos[$pdt["id"]]["catID"] = $catID;
+      $pdt_infos[$pdt["id"]]["order"] = $order;
+        $results["data"][] = &$pdt_infos[$pdt["id"]];
+        $results["count"]++;
+      }
+      
+      if ($results["count"] > 0) {
+        
+        define("NB", 50);
+        define("GLOBAL_AVERAGE_PRICE", 700);
+        define("TYPICAL_DATA_SET_SIZE", 10);
+        
+        // GET's
+        $page   = isset($_GET["page"])   ? (int)(trim($_GET["page"])) : 1;
+        $sort   = isset($_GET["sort"])   ? trim($_GET["sort"]) : "";
+        $filter = isset($_GET["filter"]) ? trim($_GET["filter"]) : "";
+        $range  = isset($_GET["range"])  ? (preg_match("/^[0-9]+-[0-9]+$/", $_GET["range"]) ? $_GET["range"] : "") : "";
+        switch ($filter) {
+          case "all" : break;
+          case "saleable" : break;
+          case "partner" : break;
+          case "price" : if (!empty($range)) list($minPrice, $maxPrice) = explode("-", $range); break;
+          default : $filter = "";
+        }
+        $urlOpt = array();
+        if (!empty($filter)) $urlOpt["filter"] = "filter=".$filter;
+        if (!empty($range)) $urlOpt["filter"] .= "&range=".$range;
+        
+        // Loop for price calculation and filtering
+        $pdtList = array(
+          "data" => array(),
+          "count" => 0,
+          "totalCount" => 0,
+          "saleableCount" => 0,
+          "advCatCount" => array(),
+          "advCatCountShowed" => array(),
+          "priceSum" => 0,
+          "priceCount" => 0,
+          "priceCountShowed" => 0,
+          "priceMax" => 0,
+          "priceMin" => 0x7fffffff);
+        
+        foreach ($results["data"] as $k => &$pdt) {
+          
+          // Determing price
+          $pdt["saleable"] = $pdt["hasPrice"] = false;
+          $pdt["price"] = $pdt["pdt_price"];
+          if ($pdt["price"] == "ref") {
+            $pdt["price"] = $pdt["ref_price"];
+          }
+          if (empty($pdt["price"])) {
+            $pdt["price"] = "sur devis";
+          }
+          elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+            $pdt["hasPrice"] = true;
+            $pdtList["priceCount"]++;
+            $pdtList["priceSum"] += $pdt["price"];
+            $pdtList["priceMax"] = max($pdt["price"], $pdtList["priceMax"]);
+            $pdtList["priceMin"] = min($pdt["price"], $pdtList["priceMin"]);
+            if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) {
+              $pdt["saleable"] = true;
+              $pdtList["saleableCount"]++;
+            }
+          }
+          else {
+            $pdt["price"] = "sur devis";
+          }
+          
+          // Filtering
+          $show = true;
+          switch ($filter) {
+            case "saleable" : if (!$pdt["saleable"]) $show = false; break;
+            case "partner"  : if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) $show = false; break;
+            case "price" : if (!$pdt["hasPrice"] || $pdt["price"] < $minPrice || $pdt["price"] >= $maxPrice) $show = false; break;
+            default : break;
+          }
+          
+          if (!isset($pdtList["advCatCount"][$pdt["adv_cat"]])) $pdtList["advCatCount"][$pdt["adv_cat"]] = 0;
+          $pdtList["advCatCount"][$pdt["adv_cat"]]++;
+          
+          if ($show) {
+            if (!isset($pdtList["advCatCountShowed"][$pdt["adv_cat"]])) $pdtList["advCatCountShowed"][$pdt["adv_cat"]] = 0;
+            $pdtList["advCatCountShowed"][$pdt["adv_cat"]]++;
+            
+            $pdt["hpd"] = ($pdt["hits"] / $pdt["age"] * 86400);
+            if ($pdt["hits"] > 0) {
+              $pdt["hits2orders"] = $pdt["orders"] / $pdt["hits"] * 100;
+              $pdt["hits2leads"] = $pdt["leads"] / $pdt["hits"] * 100;
+            }
+            else {
+              $pdt["hits2orders"] = $pdt["hits2leads"] = 0;
+            }
+            $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." � HT") : "N/D") : $pdt["shipping_fee"]." � HT";
+            if (empty($pdt["delivery_time"])) $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+            $pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+            $pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+            $pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif";;
+            $pdtList["data"][] = &$pdt;
+            if ($pdt["hasPrice"]) $pdtList["priceCountShowed"]++;
+            $pdtList["count"]++;
+          }
+          $pdtList["totalCount"]++;
+          
+        }
+        unset($pdt);
+        
+        // Determining if we show some blocks
+        $showPdtTypeBlock = true;
+        if ($pdtList["saleableCount"] == 0 || $pdtList["totalCount"] == $pdtList["saleableCount"]
+          || $pdtList["advCatCount"][__ADV_CAT_SUPPLIER__] == 0 || $pdtList["totalCount"] == $pdtList["advCatCount"][__ADV_CAT_SUPPLIER__])
+        $showPdtTypeBlock = false;
+        
+        $showPriceSortBlock = $pdtList["priceCountShowed"] > 1;
+        
+      
+      // Page calculations
+        if ($page < 1) $page = 1;
+        $maxpage = floor((($pdtList["count"]-1) - ($pdtList["count"]-1)%NB) / NB) + 1;
+        if ($page > $maxpage) $page = $maxpage;
+        if ($page > 1) $urlOpt["page"] = $page;
+        
+      // Items to show
+        $startItemIndex = ($page-1) * NB;
+        $endItemIndex = min($page * NB, $pdtList["count"]) - 1;
+        $DisplayedItemCount = $endItemIndex - $startItemIndex + 1;
+        
+      // Bayesian average of every products
+        $bayesianAvg = (GLOBAL_AVERAGE_PRICE * TYPICAL_DATA_SET_SIZE + $pdtList["priceSum"]) / ($pdtList["priceCount"] + TYPICAL_DATA_SET_SIZE);
+        
+      // Sorting
+        switch ($sort) {
+          case "updated"  : Utils::sortDbInPlace($pdtList["data"], "timestamp", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+          case "view"   : Utils::sortDbInPlace($pdtList["data"], "hits", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+          case "lead"   : Utils::sortDbInPlace($pdtList["data"], "leads", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+          case "price-asc"  : Utils::sortDbInPlace($pdtList["data"], "price", SORT_ASC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+          case "price-desc" : Utils::sortDbInPlace($pdtList["data"], "price", SORT_DESC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING); break;
+          case "relevant"   :
+          default :
+            $sort = "";
+            Utils::sortDbInPlace($pdtList["data"], "order", SORT_ASC, SORT_NUMERIC, "name", SORT_ASC, SORT_STRING);
+            break;
+        }
+        if (!empty($sort)) $urlOpt["sort"] = "sort=".$sort;
+        
+        $urlOpt["pageFS"] = empty($urlOpt["filter"]) && empty($urlOpt["sort"]) ? "" : "/".$urlOpt["filter"].$urlOpt["sort"];
+        if (!empty($urlOpt["page"])) $urlOpt["page"] = ",".$urlOpt["page"];
+        if (!empty($urlOpt["sort"])) $urlOpt["sort"] = "&".$urlOpt["sort"];
+        if (!empty($urlOpt["filter"])) $urlOpt["filter"] = "&".$urlOpt["filter"];
+      }
+    }
+
+    if ($ms->type == "cat") {
+      $mts["MINI-STORE CAT SHOW INIT"]["start"] = microtime(true);
+      $cat3List = array();
+      $cat3ListCount = 0;
+      foreach ($ms->items as $item) {
+        
+        $xpq = $xPath->query("parent::category",$dom->getElementById(XML_KEY_PREFIX.$item['categoryID']));
+        if (!$xpq->length)
+          continue;
+        $ccat3 = $xpq->item(0);
+
+        // Getting a fixed picture for the cat3
+        $ccat3_pic_id = "";
+        $xpq = $xPath->query("child::pdt_pic", $ccat3);
+        if ($xpq->length)
+          list($ccat3_pic_id) = explode("|",$xpq->item(0)->nodeValue);
+        
+        // Setting cat2 usefull infos
+        $cat3List[] = array(
+          "id" => $ccat3->getAttribute("id"),
+          "name" => $ccat3->getAttribute("name"),
+          "ref_name" => $ccat3->getAttribute("ref_name"),
+          "url" => URL."familles/".$ccat3->getAttribute("ref_name").".html",
+          "pic_url" => Utils::get_pdt_pic_url($ccat3_pic_id)
+        );
+        if (++$cat3ListCount >= 4)
+          break;
+      }
+      
+      $mts["MINI-STORE CAT SHOW INIT"]["end"] = microtime(true);
+      //foreach($mts as $mtn => $mt) print $mtn." = <b>".($mt["end"]-$mt["start"])*1000."ms</b><br/>\n";
+      
+      //$OAS_query = "?category2=".utf8_decode($cat2->getAttribute("ref_name"));
+      //$OAS_sitepage = utf8_decode($cat1->getAttribute("ref_name"));
+?>
+  <div class="categories mini-stores grey-block">
+    <div class="fl espace-thematique-pic">
+      <div class="picture fl">
+        <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html' ?>"><img src="<?php echo URL_MSPP_ESPA.$ms->id.'.jpg'; ?>" alt="" /></a>
+      </div>
+      <div class="fr espace-thematique-infos">
+        <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html' ?>"><h2 class="blue-title" ><?php echo $ms->name ?></h2></a>
+        <?php echo $ms->desc_listing ?>
+      </div>
+    </div>
+    <div class="fr espace-thematique-relations">
+      <ul class="sous-cat-examples">
+        <?php foreach ($cat3List as $cat) : ?>
+        <li><a href="<?php echo $cat["url"]; ?>"><?php echo $cat["name"]; ?></a></li>
+        <?php endforeach ?>
+      </ul>
+      <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html'; ?>" class="grey-btn-like bottom-right">Voir <?php echo $ms->name ?></a>
+    </div>
+    <div class="zero"></div>
+  </div>
+<?php
+    } elseif ($ms->type == "pdt") {
+      //$motto = htmlentities("Le plus large choix de ").htmlentities(utf8_decode($cat3->getAttribute("name")));
+      
+      //$OAS_query = "?category2=".utf8_decode($cat2->getAttribute("ref_name")).";category3=".utf8_decode($cat3->getAttribute("ref_name"));
+      //$OAS_sitepage = utf8_decode($cat1->getAttribute("ref_name"));
+      if ($pdtList["advCatCountShowed"][__ADV_CAT_SUPPLIER__] == 0) {
+        define("NO_SUPPLIER_PRODUCT", true);
+        if ($pdtList["advCatCountShowed"][__ADV_CAT_ADVERTISER__] < $pdtList["count"])
+          define("NOR_ADVERTISER_PRODUCT", true);
+      }
+?>
+  <div class="categories mini-stores grey-block">
+    <div class="fl espace-thematique-pic">
+      <div class="picture fl">
+        <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html' ?>"><img src="<?php echo URL_MSPP_ESPA.$ms->id.'.jpg'; ?>" alt="" /></a>
+      </div>
+      <div class="fr espace-thematique-infos">
+        <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html' ?>"><h2 class="blue-title" ><?php echo $ms->name ?></h2></a>
+        <?php echo $ms->desc_listing ?>
+      </div>
+    </div>
+    <div class="fr espace-thematique-relations">
+      <ul class="sous-cat-examples">
+        <?php foreach($pdtList["data"] as $pdt){?>
+        <li><a href="<?php echo $pdt["url"]; ?>"><?php echo $pdt["name"]; ?></a></li>
+        <?php } ?>
+      </ul>
+      <a href="<?php echo URL.'miniboutiques/'.$ms->id.'-'.$ms->ref_name.'.html'; ?>" class="grey-btn-like bottom-right">Voir <?php echo $ms->name ?></a>
+    </div>
+    <div class="zero"></div>
+  </div>
+<?php
+    }
+  } // foreach msList
+} else {
+?>
+  Liste boutiques vide
+<?php
+}
+
+
+?>
+  </div>
+  <?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require_once(SITE."foot.php"); ?>

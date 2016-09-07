@@ -1,0 +1,108 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V3 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 15 juillet 2005
+ Mise à jour le : 29 mai 2005
+ *  Mise à jour le : 04 février 2011 - OD
+ 
+ Fichier : /secure/extranet/index.html
+ Description : Fichier accueil extranet
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = "Liste de vos factures et avoirs Techni-Contact";
+
+define('WHERE', WHERE_INVOICES);
+require(EXTRANET.'head.php');
+
+require(DOCTRINE_MODEL_PATH.'Invoice.php');
+require(EXTRANET.'head2.php');
+?>
+<div class="barre">
+  <a href="index.html?<?php echo $sid ?>"><?php echo HEAD_HOMEPAGE ?></a>
+  &#x00bb; Liste de vos factures et avoirs Techni-Contact
+</div>
+<?php require(EXTRANET.'alertmdp.php'); ?>
+<div class="centre">
+  <div class="bloc">
+    <div class="bloc-titre2">Liste de vos factures et avoirs Techni-Contact</div>
+    <div id="invoice-list" class="bloc-texte">
+    </div>
+    <div class="miseAZero"></div>
+  </div>
+  <br />
+  <br />
+  <br />
+  <br />
+</div>
+<script type="text/javascript">
+//<![CDATA[
+  window.sil = new HN.TC.ItemList({
+    domHandle: "#invoice-list",
+    columns: [
+      { name: "rid", label: "Numéro", type: "int", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      },
+      { name: "type", label: "Type", type: "const", constStrings: HN.TC.Invoice.typeList, sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      },
+      { name: "issued", label: "Date", type: "date", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      },
+      { name: "due_date", label: "Echéance", type: "date", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        }
+      },
+      { name: "total_ttc", label: "Montant T.T.C.", type: "float", sortable: false,
+        onHeaderEvent: {
+          click: function(col, e){ col.sort("toggle"); }
+        },
+        onCellWrite: function(rowData, colName){
+          return sprintf("%0.2f", parseFloat(rowData[colName]))+" €";
+        }
+      }
+    ],
+    source: {
+      fields: "i.rid,"+
+              "i.type,"+
+              "i.issued,"+
+              "i.due_date,"+
+              "i.total_ttc",
+      tables: [
+        ["from", "Invoice i"],
+        ["innerJoin", "i.client c"],
+        ["innerJoin", "c.advertiser a"]
+      ],
+      filters: [
+        ["where", ["a.id = ?", <?php echo $user->id ?>]]
+      ]
+    },
+    onRowInsert: function(rowData){
+    },
+    onRowEvent: {
+      "click": function(rowData){
+        document.location.href = "invoice-detail.html?rid="+rowData.rid;
+      }
+    },
+    itemsPerPage: 20
+  });
+  sil.colsByName["rid"].sort("DESC");
+//]]>
+</script>
+</body>
+</html>

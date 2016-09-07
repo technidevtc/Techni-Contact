@@ -1,0 +1,11 @@
+.bg.cancelled { background: #ffcccc }
+#item-cart.cancelled { background: #ffcccc }
+#item-cart-cancel-db textarea { width: 99%; height: 90px; margin: 0; padding: 2px }
+#item-cart-cancel { position: absolute; left: 30%; top: -11px }
+#item-cart-save { position: absolute; left: 61%; top: -11px}
+#item-cart-system-msg { height: 14px; font-weight: bold; font-size: 11px }
+#item-cart-error-msg { display: none; width: 49%; color: #b00000; text-align: center }
+#item-cart-success-msg { display: none; width: 49%; color: #164183; text-align: center }
+#item-cart-infos .col-1 { width: 48% }
+#item-cart-infos .col-1 label { width: 195px }
+#item-cart-forecast_shipping_texts { display: none }

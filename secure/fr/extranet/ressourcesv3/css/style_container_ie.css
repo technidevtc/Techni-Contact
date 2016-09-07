@@ -1,0 +1,12 @@
+
+/* Declaration Global vars */
+
+@import "variables_ie.css";
+
+@import "forms_ie.css";
+
+@import "style_global_ie.css";
+//@media only screen and  (max-width: 360px){
+@media only screen and  (max-width: 640px){
+	@import "style_m640_ie.css";
+}

@@ -1,0 +1,41 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de demander un devis gratuit sur notre site et nous vous en remercions.<br/>
+	<br/>
+	Afin de faciliter votre navigation sur notre site &agrave; l'avenir, <strong>nous vous avons attribu&eacute; un compte client</strong> dont voici les identifiants :
+	<br/>
+	<br/>
+	Adresse e-mail : CUSTOMER_EMAIL<br/>
+	Mot de passe : CUSTOMER_PASSWORD<br/>
+	Numéro de client : CUSTOMER_ID<br/>
+	<br/>
+	Vous pouvez changer votre mot de passe &agrave; tout moment  depuis votre espace mon <a href="SITE_ACCOUNT_URL_LOGIN?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client-lead">compte</a>.<br/>
+	<br/>
+	<strong>Votre espace client vous permet : </strong><br/>
+	<ol style="font-family: Verdana,Arial,Helvetica,sans-serif; font-size: 12px;">
+		<li>De  commander des produits sur notre site ou de cr&eacute;er un devis PDF sans avoir &agrave; ressaisir vos coordonn&eacute;es.</li>
+		<li>De  consulter ou g&eacute;rer vos commandes et devis PDF. </li>
+		<li>De  nous contacter directement par mail concernant un devis ou une commande.</li>
+		<li>De  g&eacute;rer vos coordonn&eacute;es personnelles</li>
+	</ol>
+	Pour toute question concernant l&rsquo;utilisation de notre  site internet, nous vous invitons &agrave; consulter notre <a href="SITE_HELP_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client-lead">rubrique aide</a>.<br/>
+	<br/>
+	A tr&egrave;s bient&ocirc;t sur <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client-lead">Techni-Contact.com</a>
+</p>
+
+<p>
+	<strong>Techni-Contact  est &eacute;dit&eacute; par</strong><br/>
+	Md2i<br/>
+	253 rue Gallieni <br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 72 08 01 18<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 &euro;<br/>
+	SIRET : 392 772 497 000 39<br/>
+	NAF : 4791B<br/>
+	TVA n&deg; FR12 392 772&nbsp;497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

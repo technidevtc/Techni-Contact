@@ -1,0 +1,705 @@
+<?php
+require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos(dirname(__FILE__), "technico")+1) + 1) . "config.php";
+
+$db = DBHandle::get_instance();
+
+$pdtID = isset($_GET['pdtID']) ? (int)$_GET['pdtID'] : 0;
+$catID = isset($_GET['catID']) ? (int)$_GET['catID'] : 0;
+
+// Loading Product
+$res = $db->query("
+	select
+		p.id, p.idTC, p.refSupplier, p.price as pdt_price, p.price2 as pdt_price2, p.unite, p.idTVA, p.contrainteProduit, p.ean, p.warranty, p.shipping_fee, p.cat3_si, p.adv_si,
+		pfr.name, pfr.ref_name, pfr.alias, pfr.fastdesc, pfr.descc, pfr.descd, pfr.delai_livraison as delivery_time,
+		pf.idFamily as catID,
+		a.id as advID, a.category as adv_cat, a.help_show as adv_help_show, a.help_msg as adv_help_msg, a.delai_livraison as adv_delivery_time, a.warranty as adv_warranty, a.shipping_fee as adv_shipping_fee, a.contraintePrix as adv_min_amount,
+		rc.id as ref_idtc, rc.refSupplier as ref_refSupplier, rc.price as ref_price, rc.price2 as ref_price2
+	from products p
+	inner join products_fr pfr on p.id = pfr.id
+	inner join products_families pf on p.id = pf.idProduct and pf.idFamily = ".$catID."
+	inner join advertisers a on p.idAdvertiser = a.id and a.actif = 1
+	left join
+		references_content rc on p.id = rc.idProduct and rc.classement = 1
+	where
+		pfr.id = ".$pdtID."", __FILE__, __LINE__);
+	
+/*if ($db->numrows($res) == 0) {
+	header("Location: " . URL."404.html");
+	exit();
+}*/
+
+if ($db->numrows($res) == 0) { header("Location: " . URL); exit(); }
+$pdt = $db->fetchAssoc($res);
+
+// Comments
+$pdt["comments"] = array();
+$res = $db->query("
+	SELECT text
+	FROM products_comments
+	WHERE productID = " . $pdt["id"] . " AND `show` = 1
+	ORDER BY timestamp DESC LIMIT 0,30", __FILE__, __LINE__);
+while ($row = $db->fetchAssoc($res)) {
+	$pdt["comments"][] = $row["text"];
+}
+$pdt["comments_count"] = count($pdt["comments"]);
+
+if ($pdt["delivery_time"] == "") $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+if ($pdt["warranty"] == "") $pdt["warranty"] = $pdt["adv_warranty"];
+
+// Building some URL's
+$pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+$pdt["print_url"] = URL."produits/imprimer/".$pdt["catID"]."-".$pdt["id"];
+$pdt["cart_add_url"] = URL."panier/ajouter/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+
+// Loading Images
+define("MAX_PDT_PIC_COUNT", 3);
+$i = 1;
+while (is_file(PRODUCTS_IMAGE_INC."zoom/".$pdt["id"]."-".$i.".jpg") && $i <= MAX_PDT_PIC_COUNT) {
+	$pdt["pic_url"][$i-1]["zoom"] = PRODUCTS_IMAGE_URL."zoom/".$pdt["id"]."-".$i.".jpg";
+	$pdt["pic_url"][$i-1]["card"] = PRODUCTS_IMAGE_URL."card/".$pdt["id"]."-".$i.".jpg";
+	$pdt["pic_url"][$i-1]["thumb_small"] = PRODUCTS_IMAGE_URL."thumb_small/".$pdt["id"]."-".$i.".jpg";
+	$i++;
+}
+if (count($pdt["pic_url"]) == 0) {
+	$pdt["pic_url"][0]["zoom"] = PRODUCTS_IMAGE_URL."no-pic-zoom.gif";
+	$pdt["pic_url"][0]["card"] = PRODUCTS_IMAGE_URL."no-pic-card.gif";
+	$pdt["pic_url"][0]["thumb_small"] = PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+}
+$pdt["pic_url_count"] = count($pdt["pic_url"]);
+
+// Loading docs
+define("MAX_PDT_DOC_COUNT", 3);
+$i = 1;
+while (is_file(PRODUCTS_FILES_INC.$pdt["id"]."-".$i.".pdf") && $i <= MAX_PDT_DOC_COUNT) {
+	$pdt["doc_url"][$i-1] = PRODUCTS_FILES_URL.$pdt["id"]."-".$i.".pdf";
+	$i++;
+}
+$pdt["doc_url_count"] = count($pdt["doc_url"]);
+
+//$pdt["doc_url"][$i-1] = is_file(PRODUCTS_FILES_INC.$pdt["id"]."-".$i.".doc") ? PRODUCTS_FILES_URL.$pdt["id"]."-".$i.".doc" : (is_file(PRODUCTS_FILES_INC.$pdt["id"]."-".$i.".pdf") ? PRODUCTS_FILES_URL.$pdt["id"]."-".$i.".pdf" : "");
+
+
+// Determing main price and loading references if they exist
+$pdt["refs"] = array();
+$pdt["hasPrice"] = false;
+$max_margin = 0;
+if ($pdt["pdt_price"] == "ref") {
+	$pdt["price"] = $pdt["ref_price"];
+	$pdt["price2"] = $pdt["ref_price2"];
+	
+	$res = $db->query("
+		select content
+		from references_cols
+		where idProduct = '" . $db->escape($pdt["id"]) . "'", __FILE__, __LINE__);
+	$row = $db->fetch($res);
+	$content_cols = unserialize($row[0]);
+	if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__)
+		$custom_cols = array_slice(unserialize($row[0]), 3, -5);
+	else
+		$custom_cols = array_slice(unserialize($row[0]), 2, -1);
+	
+
+	$res = $db->query("
+		select id, label, content, refSupplier, price, price2, idTVA, unite
+		from references_content
+		where idProduct = '" . $db->escape($pdt["id"]) . "' order by classement", __FILE__, __LINE__);
+	while($row = $db->fetchAssoc($res)) {
+		$row["content"] = unserialize($row["content"]);
+		$row["cart_add_url"] = URL."panier/ajouter/".$pdt["catID"]."-".$pdt["id"]."-".$row["id"];
+		if (!empty($row["price2"]) && $max_margin < $row["price"]/$row["price2"])
+			$max_margin = $row["price"]/$row["price2"];
+		$pdt["refs"][] = $row;
+		if ((float)$row["price"] < $fdp_franco)
+			$pdt["shipping_fee"] = $fdp."€";
+	}
+}
+else {
+	$pdt["price"] = $pdt["pdt_price"];
+	$pdt["price2"] = $pdt["pdt_price2"];
+	if (!empty($pdt["price2"]))
+		$max_margin = $row["price"]/$row["price2"];
+}
+
+if (empty($pdt["price"])) {
+	$pdt["price"] = "sur devis";
+}
+elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+	$pdt["hasPrice"] = true;
+	if ((float)$pdt["price"] < $fdp_franco)
+		$pdt["shipping_fee"] = $fdp."€";
+	
+	// Calculating the real minimum public amount
+	if (!empty($pdt["adv_min_amount"]) && preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price2"]))
+		$pdt["adv_min_amount"] = $pdt["adv_min_amount"] * $max_margin;
+}
+else {
+	$pdt["price"] = "sur devis";
+}
+
+$pdt["saleable"] = $pdt["hasPrice"] && $pdt["adv_cat"] == __ADV_CAT_SUPPLIER__;
+$pdt["ref_count"] = count($pdt["refs"]);
+	
+// Loading Shipping Fee
+if ($res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ )) {
+	while ($rec = $db->fetch($res)) {
+		$$rec[0] = $rec[1];
+	}
+}
+
+$pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offerts" : $fdp." € HT") : "N/D") : $pdt["shipping_fee"]." € HT";
+
+// Loading Category Tree
+$dom = new DomDocument();
+$dom->validateOnParse = true;
+$dom->load(XML_CATEGORIES_ALL);
+$xPath = new DOMXPath($dom);
+
+$catTree = $xPath->query("ancestor-or-self::category",$dom->getElementById(XML_KEY_PREFIX.$catID));
+$cat1 = $catTree->item(0);
+$cat2 = $catTree->item(1);
+$cat3 = $catTree->item(2);
+
+
+/* Similar products from the same category
+********************************************************************************/
+define("__CAT3_SIMILAR_ITEMS_COUNT__", 10);
+define("__CAT3_SIMILAR_ITEMS_DURATION__", 60*60*24);
+
+// similar_items var initialisation
+if (empty($pdt["cat3_si"])) $cat3_si = array();
+else $cat3_si = unserialize($pdt["cat3_si"]);
+$cat3_si_ids = array();			// Chosen Similar items ids list (product id + family id) to avoid multiple links having the same products
+$cat3_si_pdtlist = array();		// Possible Chosen Similar items products list
+$cat3_si_pdtcount = 0;			// Possible Chosen Similar items products count
+$cat3_si_to_update = false;		// Boolean used to tell us if we have to update the DB (similar items list for this product has changed).
+
+$cat3_si_ids[$pdt["catID"]."-".$pdt["id"]] = true;	// To avoid the product linking to itself
+
+for ($i = 0; $i < __CAT3_SIMILAR_ITEMS_COUNT__; $i++) {
+	// If no similar product present or if to old
+	if ( !isset($cat3_si[$i]) || $cat3_si[$i]["timestamp"] < (time() - __CAT3_SIMILAR_ITEMS_DURATION__) ) {
+		// Initialisation of products list if not already done
+		if (empty($cat3_si_pdtlist)) {
+			$res = $db->query("
+				SELECT p.id, p.idTC, pfr.name, pfr.ref_name, pfr.fastdesc
+				FROM products p, products_fr pfr, products_families pf
+				WHERE p.id = pfr.id and p.id = pf.idProduct and pf.idFamily = " . $pdt["catID"], __FILE__, __LINE__);
+			
+			while ($row = $db->fetchAssoc($res))
+				$cat3_si_pdtlist[] = $row;
+			$cat3_si_pdtcount = count($cat3_si_pdtlist)-1;
+		}
+		
+		// Not enough products, stopping the loop (>= instead of > because the product itself is contained in the count)
+		if ($i >= ($cat3_si_pdtcount)) break;
+		
+		do {
+			$cat3_si_pdtnum = mt_rand(0, $cat3_si_pdtcount-1);
+			$cat3_si_key = $cat3_si_pdtlist[$cat3_si_pdtnum]["id"];
+		}
+		while (isset( $cat3_si_ids[$cat3_si_key] ));
+		
+		$cat3_si_ids[$cat3_si_key] = true;
+		$cat3_si[$i] = $cat3_si_pdtlist[$cat3_si_pdtnum];
+		$cat3_si[$i]["timestamp"] = time();
+		
+		$cat3_si_to_update = true;
+	}
+	else {
+		$cat3_si_ids[$cat3_si[$i]["id"]] = true;
+	}
+}
+$cat3_si_count = $i;
+
+if ($cat3_si_to_update) {
+	$cat3_si_s = serialize($cat3_si);
+	$db->query("
+		UPDATE products
+		SET cat3_si = '" . $db->escape($cat3_si_s) . "'
+		WHERE id = ". $pdt["id"], __FILE__, __LINE__);
+}
+
+/* Similar products from the same advertiser
+********************************************************************************/
+define("__ADV_SIMILAR_ITEMS_COUNT__", 4);
+define("__ADV_SIMILAR_ITEMS_DURATION__", 60*60*24);
+
+// similar_items var initialisation
+if (empty($pdt["adv_si"])) $adv_si = array();
+else $adv_si = unserialize($pdt["adv_si"]);
+$adv_si_ids = array();			// Chosen Similar items ids list (product id + family id) to avoid multiple links having the same products
+$adv_si_pdtlist = array();		// Possible Chosen Similar items products list
+$adv_si_pdtcount = 0;			// Possible Chosen Similar items products count
+$adv_si_to_update = array();	// List of similar items to update
+
+$adv_si_ids[$pdt["id"]] = true;	// To avoid the product linking to itself
+
+for ($i = 0; $i < __ADV_SIMILAR_ITEMS_COUNT__; $i++) {
+	// If no similar product present or if to old
+	if ( !isset($adv_si[$i]) || $adv_si[$i]["timestamp"] < (time() - __ADV_SIMILAR_ITEMS_DURATION__) ) {
+		// Initialisation of products list if not already done
+		if (empty($adv_si_pdtlist)) {
+			$res = $db->query("
+				SELECT p.id
+				FROM products p
+				WHERE p.idAdvertiser = ".$pdt["advID"], __FILE__, __LINE__);
+			
+			while ($row = $db->fetchAssoc($res))
+				$adv_si_pdtlist[] = $row;
+			$adv_si_pdtcount = count($adv_si_pdtlist);
+		}
+		
+		// Not enough products, stopping the loop
+		if ($i >= ($adv_si_pdtcount-1)) break;
+		
+		do $adv_si_key = $adv_si_pdtlist[mt_rand(0, $adv_si_pdtcount-1)]["id"];
+		while (isset($adv_si_ids[$adv_si_key]));
+		
+		$adv_si_ids[$adv_si_key] = true;
+		$adv_si_to_update[$adv_si_key] = $i;
+		
+	}
+	else {
+		$adv_si_ids[$adv_si[$i]["id"]] = true;
+	}
+}
+$adv_si_count = $i;
+if (!empty($adv_si_to_update)) {
+	$ids_to_update = implode(",", array_keys($adv_si_to_update));
+	$res = $db->query("
+		SELECT
+			p.id, p.price AS pdt_price,
+			pfr.name, pfr.ref_name, pfr.fastdesc,
+			pf.idFamily AS catID,
+			a.category AS adv_cat,
+			rc.id AS ref_idtc, rc.price AS ref_price
+		FROM products p
+		INNER JOIN products_fr pfr ON p.id = pfr.id
+		INNER JOIN products_families pf ON p.id = pf.idProduct
+		INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+		LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1
+		WHERE p.id in (".$ids_to_update.")
+		GROUP BY p.id", __FILE__, __LINE__);
+	
+	while ($row = $db->fetchAssoc($res)) {
+		$row["timestamp"] = time();
+		
+		$row["hasPrice"] = false;
+		$row["price"] = $row["pdt_price"];
+		if ($row["price"] == "ref") {
+			$row["price"] = $row["ref_price"];
+		}
+		if (empty($pdt["price"])) {
+			$row["price"] = "sur devis";
+		}
+		elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $row["price"])) { // real price
+			$row["hasPrice"] = true;
+		}
+		else {
+			$row["price"] = "sur devis";
+		}
+		$row["saleable"] = $row["hasPrice"] && $row["adv_cat"] == __ADV_CAT_SUPPLIER__;
+		
+		$adv_si[$adv_si_to_update[$row["id"]]] = $row;
+	}
+	
+	$adv_si_s = serialize($adv_si);
+	$db->query("
+		UPDATE products
+		SET adv_si = '" . $db->escape($adv_si_s) . "'
+		WHERE id = ". $pdt["id"], __FILE__, __LINE__);
+}
+
+for ($i = 0; $i < $adv_si_count; $i++) {
+	$p = &$adv_si[$i];
+	$p["url"] = URL."produits/".$p["catID"]."-".$p["id"]."-".$p["ref_name"].".html";
+	$p["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_small/".$p["id"]."-1.jpg") ? PRODUCTS_IMAGE_URL."thumb_small/".$p["id"]."-1.jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+	$p["cart_add_url"] = URL."panier/ajouter/".$p["catID"]."-".$p["id"]."-".$p["ref_idtc"];
+}
+
+$cat3IDs = array($catID);
+// Mini Stores
+$msl = MiniStore::getMiniStoresByCatIDs($cat3IDs);
+
+// Criteo Alternate Item Ids String
+$caiis = array();
+if ($pdt["saleable"] && $pdt["ref_count"] > 0) {
+	foreach($pdt["refs"] as &$ref)
+		$caiis[] = $ref["id"];
+	unset($ref);
+}
+
+// Local Includes
+include_once(LANG_LOCAL_INC . "meta-titles-" . DB_LANGUAGE . "_local.php");
+
+// Building meta's
+if(!empty($pdt["fastdesc"])) {
+    $m_k = htmlentities(" " . WWW_COMMON_META_DESC_SUPPLIER_3 . " " . str_replace("|", ", ", $pdt["fastdesc"]));
+    $k_k = htmlentities(", " . str_replace("|", ", ", $pdt["fastdesc"]));
+}
+
+// Add product id to title if there is multiple product with the same name
+$res = $db->query("select count(id) from products_fr where ref_name = '" . $db->escape($pdt["ref_name"]) . "'", __FILE__, __LINE__, false);
+list($pwsnc) = $db->fetch($res); // Products With Same Name Count
+
+//$motto = "Le plus large choix de <br/>".utf8_decode($cat3->getAttribute("name"));
+
+if ($pwsnc > 1)
+	$title = $pdt["name"]." (".$pdt["id"].") - ".utf8_decode($cat3->getAttribute("name"));
+else {
+	$res = $db->query("select count(idFamily) from products_families where idProduct = ". $pdt["id"] ." group by idProduct");
+	list($pfc) = $db->fetch($res); // Product's Families Count
+	if (str_word_count($pdt["name"]) < 3 || $pfc > 1)
+		$title = $pdt["name"]." - ".utf8_decode($cat3->getAttribute("name"));
+	else
+		$title = $pdt["name"];
+}
+
+list($meta_desc, $meta_keys) = str_replace(
+	array("%PDT_NAME%", "%PDT_FASTDESC%", "%CAT3_NAME%"),
+	array($pdt["name"], $pdt["fastdesc"], utf8_decode($cat3->getAttribute("name"))),
+	array(PDT_META_DESC, PDT_META_KEYS));
+
+define("PRODUCT_PAGE", true);
+if ($pdt["adv_cat"] != __ADV_CAT_SUPPLIER__) {
+	define("NO_SUPPLIER_PRODUCT", true);
+	if ($pdt["adv_cat"] != __ADV_CAT_ADVERTISER__)
+		define("NOR_ADVERTISER_PRODUCT", true);
+}
+require(SITE . "head.php");
+?>
+				<script type="text/javascript">
+					HN.TC.GVars.pdtID = <?php echo $pdtID; ?>;
+					HN.TC.GVars.catID = <?php echo $catID; ?>;
+					HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE["email"]) ? $_COOKIE["email"] : ""); ?>";
+				</script>
+				<div class="product">
+					<div class="blocks-left">
+							
+						<div class="breadcrumb">
+							<a href="<?php echo URL."familles/".utf8_decode($cat1->getAttribute("ref_name")).".html"; ?>"><?php echo utf8_decode($cat1->getAttribute("name")); ?></a> &raquo;
+							<a href="<?php echo URL."familles/".utf8_decode($cat2->getAttribute("ref_name")).".html"; ?>"><?php echo utf8_decode($cat2->getAttribute("name")); ?></a> &raquo;
+							<a href="<?php echo URL."familles/".utf8_decode($cat3->getAttribute("ref_name")).".html"; ?>"><?php echo utf8_decode($cat3->getAttribute("name")); ?></a>
+						</div>
+						<div id="product-sheet" class="grey-block pdt-sheet">
+							
+							<input type="hidden" name="pdtID" value="<?php echo $pdt["id"]; ?>"/>
+							
+							<a href="javascript: history.back();" class="back-link">
+								<div class="in">Retour</div>
+								<div class="bl"></div>
+								<div class="br"></div>
+							</a>
+							<div class="zero"></div>
+							<div class="titles">
+								<h1><?php echo htmlentities($pdt["name"]); ?></h1>
+								<h1 class="fastdesc"><?php echo htmlentities($pdt["fastdesc"]); ?></h1>
+								ID fiche produit : <?php echo $pdt["id"]; ?>
+							</div>
+							<div class="zero"></div>
+							
+							<div class="picture-block">
+								<div class="picture">
+									<img src="<?php echo $pdt["pic_url"][0]["card"]; ?>" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"]; ?>" class="vmaib"><div class="vsma"></div>
+								</div>
+								<div class="actions">
+									<div class="zoom">Zoom</div>
+								<?php if ($pdt["pic_url_count"] > 1) { ?>
+									<div class="list">
+									<?php for($i=1; $i <= $pdt["pic_url_count"]; $i++) { ?>
+										<a href="<?php echo $pdt["pic_url"][$i-1]["card"]; ?>" title="Image n°<?php echo $i; ?> du produit <?php echo $pdt["name"]; ?>">Photo <?php echo $i; ?></a>
+									<?php } ?>
+									</div>
+								<?php } ?>
+								</div>
+							</div>
+							
+							<div class="infos">
+								<div class="actions">
+									<?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+									<span class="ask-estimate">Demander un devis</span>
+									<?php } else { ?>
+									<span class="ask-is-partner-pdt"></span>
+									<?php } ?>
+									<span class="ask-callback">Demande de rappel</span>
+									<span class="make-appointment">Prendre un rendez-vous</span>
+									<span class="get-infos">Obtenir des informations</span>
+								</div>
+							
+							<?php if ($pdt["saleable"]) { ?>
+								<?php if ($pdt["ref_count"] > 1) {?>
+								<div class="price">
+									à partir de<br/>
+									<strong><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?></strong>
+								</div>
+								<div class="btn-action">
+									<a href="#product-refs" class="cart-add-green-3d vmaib"></a>
+								</div>
+								<?php } else { ?>
+								<div class="price">
+									<strong><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?></strong>
+								</div>
+								<div class="btn-action">
+									<a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"]) { ?>btn-cart-add-green-3d<? } else { ?>btn-esti-ask-red-3d<?php } ?> vmaib"></a>
+								</div>
+								<?php } ?>
+							<?php } else { ?>
+								<div class="price">
+									<?php if ($pdt["hasPrice"]) { ?>
+									<b>Prix indicatif:</b><br/><?php echo sprintf("%.2f",$pdt["price"])."€ HT"; ?>
+									<?php } else { ?>
+									<b>Prix:</b> sur devis
+									<?php } ?>
+								</div>
+								<div class="btn-action">
+									<a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"]) { ?>btn-cart-add-green-3d<? } else { ?>btn-esti-ask-red-3d<?php } ?> vmaib"></a>
+								</div>
+							<?php } ?>
+							
+								<div class="zero"></div>
+								<div class="features">
+									<div class="title">Description rapide:</div>
+									<?php echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,110))."..."; ?>
+								</div>
+								<?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+								<div class="others">
+									<div class="info"><strong>Frais de port:</strong> <?php echo $pdt["shipping_fee"]; ?></div>
+									<div class="info"><strong>Commande minimum:</strong> <?php echo ($pdt["adv_min_amount"] > 0 ? sprintf("%.0f", $pdt["adv_min_amount"])."€" : "non"); ?></div>
+									<div class="info"><strong>Livraison:</strong> <?php echo htmlentities($pdt["delivery_time"]); ?></div>
+									<div class="info"><strong>Garantie:</strong> <?php echo htmlentities($pdt["warranty"]); ?></div>
+									<div class="zero"></div>
+								</div>
+								<?php } ?>
+								<br/>
+								<div class="links">
+									<a href="#product-desc"><img src="<?php echo $res_url; ?>images/see-product-sheet.png" alt=""/></a>
+								</div>
+							</div>
+							<div class="zero"></div>
+							
+							<div class="options">
+								<?php /* <a href="" class="option option-save">Sauvegarder le produit</a> */ ?>
+								<a href="<?php echo $pdt["print_url"]; ?>" class="option option-print">Imprimer</a>
+								<a href="" class="option option-send-friend">Envoyer à un collègue</a>
+								<?php /* <a href="" class="option option-report-error">Signaler une erreur</a> */ ?>
+								<div class="zero"></div>
+							</div>
+						</div>
+						
+					<?php if ($cat3_si_count > 0) { ?>
+						<a href="<?php echo URL."familles/".utf8_decode($cat3->getAttribute("ref_name")).".html"; ?>" class="right-all-link">Voir tous les <?php echo utf8_decode($cat3->getAttribute("name")); ?> &raquo;</a>
+						<h2>Autres <?php echo utf8_decode($cat3->getAttribute("name")); ?></h2>
+						<div id="same-products" class="grey-block pdt-same">
+						<?php for ($i = 0; $i < $cat3_si_count; $i++) { $p = &$cat3_si[$i]; ?>
+							<?php echo ($i > 0 ? "- " : ""); ?>
+							<a href="<?php echo URL."produits/".$pdt["catID"]."-".$p["id"]."-".$p["ref_name"].".html"; ?>"><?php echo htmlentities($p["name"]); ?></a>
+						<?php } ?>
+						</div>
+					<?php } ?>
+						
+					<?php if ($adv_si_count > 0) { ?>
+						<a href="<?php echo URL."fournisseur/".$pdt["advID"].".html"; ?>" class="right-all-link">Voir tous les produits du fournisseur &raquo;</a>
+						<div class="block-pdt-title">Produits du même fournisseur</div>
+						<table id="same-supplier-products" class="pdt-vb-list grey-block" cellspacing="7" cellpadding="0">
+							<tbody>
+							<tr>
+						<?php for ($i = 0; $i < $adv_si_count; $i++) { $p = &$adv_si[$i]; ?>
+								<?php if(!$i) { ?><td>&nbsp;</td><?php } ?>
+								<td class="pdt-vb">
+									<div class="picture">
+										<img src="<?php echo $p["pic_url"]; ?>" alt="" class="vmaib"/><div class="vsma"></div>
+									</div>
+									<div class="infos">
+										<a href="<?php echo $p["url"]; ?>"><strong><?php echo htmlentities($p["name"]); ?></strong></a><br/>
+										<span class="see-link u">Voir la fiche produit</span>
+										<div class="price"><?php echo ($p["hasPrice"] ? sprintf("%.02f",$p["price"])."€" : $p["price"]); ?></div>
+										<?php /*<a href="<?php echo $p["cart_add_url"]; ?>" class="<?php if ($p["saleable"]) { ?>btn-cart-add-green<? } else { ?>btn-esti-ask-red<?php } ?>" rel="nofollow"></a>*/ ?>
+									</div>
+								</td>
+								<td>&nbsp;</td>
+						<?php } ?>
+							</tr>
+							</tbody>
+						</table>
+					<?php } ?>
+						
+					<?php if(!empty($msl)) { ?>
+					<div class="block-pdt-title">Espaces thématiques</div>
+					<div class="mini-stores-carrousel grey-block">
+						<div class="mask">
+							<ul class="items">
+							<?php foreach($msl as $ms) { ?>
+								<li><a href="<?php echo URL."miniboutiques/".$ms['id']."-".$ms['ref_name'].".html"; ?>"><img src="<?php echo $ms['imageURL']; ?>" alt="<?php echo $ms['imageURL']; ?>"/></a></li>
+							<?php } ?>
+							</ul>
+						</div>
+						<div class="scroll-l"></div>
+						<div class="scroll-r"></div>
+					</div>
+					<?php } ?>
+						
+					<?php if (CRITEO_TAGS) { ?>
+						<div class="block-pdt-title">Autres produits recommandés</div>
+							<div id="cto_ctg_2381_ac" style="display:none">
+								<div class="ctoWidgetServer">http://widget.criteo.com/psu/</div>
+								<div class="ctoDataType">catalog</div>
+								<div class="ctoParams">wi=2381&i=<? echo $pdt["id"]; ?></div>
+								<div class="ctoData">
+									<div id="ctoName"><?php echo htmlentities($pdt["name"]); ?></div>
+									<div id="ctoProductUrl"><?php echo $pdt["url"]; ?></div>
+									<div id="ctoSmallImage"><?php echo $pdt["pic_url"][0]["thumb_small"]; ?></div>
+									<div id="ctoBigImage"><?php echo $pdt["pic_url"][0]["zoom"]; ?></div>
+									<div id="ctoDescription"><?php echo htmlentities($pdt["fastdesc"]); ?></div>
+								<?php if (!empty($caiis)) { ?>
+									<div id="ctoAlternateItemIds"><?php echo implode(";", $caiis); ?></div>
+								<?php } ?>
+									<div id="ctoPrice"></div>
+									<div id="ctoCategoryId1"><? echo $cat1->getAttribute("id"); ?></div>
+									<div id="ctoCategoryId2"><? echo $cat2->getAttribute("id"); ?></div>
+									<div id="ctoCategoryId3"><? echo $cat3->getAttribute("id"); ?></div>
+								</div>
+							</div>
+							
+							<?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+							<div id="cto_gsi_2976_ac" style="display: none">
+								<div class="ctoWidgetServer">http://widget.criteo.com/psu/</div>
+								<div class="ctoWidgetType">getsimilaritems</div>
+								<div class="ctoParams">wi=2976&i=<?php echo $pdt["id"]; ?></div>
+							</div>
+							<?php } else { ?>
+							<div id="cto_gsi_2380_ac" style="display: none">
+								<div class="ctoWidgetServer">http://widget.criteo.com/psu/</div>
+								<div class="ctoWidgetType">getsimilaritems</div>
+								<div class="ctoParams">wi=2380&i=<?php echo $pdt["id"]; ?></div>
+							</div>
+							<?php } ?>
+					<?php } ?>
+						
+						
+						<!--<div class="block-pdt-title">Produits liés</div>
+						<table id="linked-products" class="pdt-vb-list grey-block" cellspacing="0" cellpadding="0">
+							<tbody>
+							<tr>
+							<?php for($i=0;$i<4;$i++) { ?>
+								<td>
+									<div class="pdt-vb">
+										<div class="picture">
+											<img src="ressources/images/pdt-v-sample-01.jpg" alt="" class="vmaib"/><div class="vsma"></div>
+										</div>
+										<div class="infos">
+											<a href=""><strong>Ecran de projection sur cadre</strong></a><br/>
+											<span class="see-link">Voir la fiche produit</span>
+											<div class="price">149,00€</div>
+											<a href="" class="btn-cart-add-green"></a>
+										</div>
+									</div>
+								</td>
+							<?php } ?>
+							</tr>
+							</tbody>
+						</table>
+						-->
+					</div>
+					
+<?php require(SITE . "blocks-right.php"); ?>
+					<div class="zero"></div>
+					
+					<div class="blocks-bottom">
+					
+						<div id="product-desc" class="grey-block pdt-desc">
+							<div class="block-pdt-title">Fiche du produit <strong><?php echo htmlentities($pdt["name"]); ?></strong>:</div>
+							<?php echo $pdt["descc"]; ?>
+							<br/>
+							<br/>
+							<?php echo $pdt["descd"]; ?>
+						<?php if ($pdt["doc_url_count"] > 0) { ?>
+							<br/>
+							<br/>
+							<div class="block-pdt-title">Documentation complèmentaire</div>
+							<?php for($i = 0; $i < $pdt["doc_url_count"]; $i++) { ?>
+							<a href="<?php echo $pdt["doc_url"][$i]; ?>" target="_blank"><img src="<?php echo $res_url; ?>images/pictos/picto-pdf.png"/></a>
+							<?php } ?>
+						<?php } ?>
+						<?php if ($pdt["ref_count"] > 0) { ?>
+							<br/>
+							<br/>
+							<div class="block-pdt-title">Modèle(s) disponible(s)</div>
+						<?php } ?>
+						</div>
+						
+					<?php /* ?>
+						<div id="product-discounts" class="red-outer-block discounts">
+							<div class="red-inner-block">
+								<div class="title">Promotions:</div>
+									Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+									exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+									Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+								</div>
+						</div>
+					<?php */ ?>
+						
+					<?php if ($pdt["ref_count"] > 0) { ?>
+						<div class="zero"></div>
+						<div id="product-refs" class="cart-table">
+							<table cellspacing="0" cellpadding="0">
+								<thead>
+								<tr>
+									<th>Réf. TC</th>
+									<th>Libellé</th>
+								<?php foreach($custom_cols as $colName) { ?>
+									<th><?php echo htmlentities($colName); ?></th>
+								<?php } ?>
+									<th>Prix HT</th>
+									<th>Quantité</th>
+									<th>Ajouter au panier</th>
+								</tr>
+								</thead>
+								<tbody>
+								<?php foreach($pdt["refs"] as $ref) {?>
+									<tr>
+										<td class="first"><?php echo $ref["id"]; ?></td>
+										<td><?php echo htmlentities($ref["label"]); ?></td>
+									<?php foreach($ref["content"] as $colValue) { ?>
+										<td><?php echo htmlentities($colValue); ?></td>
+									<?php } ?>
+										<td><?php echo sprintf("%.2f",$ref["price"]); ?>€</td>
+										<td class="quantity"><div class="vmaib"><input type="text" name="qty" value="1"/><div class="add"></div><div class="sub"></div></div></td>
+										<td class="cart-add"><a href="<?php echo $ref["cart_add_url"]; ?>" class="btn-cart-add-ref-green-3d vmaib" title="Ajouter au panier"></a></td>
+									</tr>
+								<?php } ?>
+								</tbody>
+							</table>
+							<div class="zero"></div>
+						</div>
+					<?php } ?>
+						
+					<?php if ($pdt["comments_count"] > 0) { ?>
+						<div id="product-comments" class="comments">
+							<h2>Demandes pour &laquo;<strong><?php echo $pdt["name"]; ?></strong>&raquo;</h2>
+							<div class="zero"></div>
+							<ul class="list grey">
+							<?php for($i = 0; $i < $pdt["comments_count"]; $i++) { ?>
+								<li class="comment<?php if ($i == 0) { ?> first<? } elseif($i == $pdt["comments_count"]) { ?> last<?php } ?>">
+									<?php echo htmlentities($pdt["comments"][$i]); ?>
+								</li>
+							<?php } ?>
+							</ul>
+						</div>
+					<?php } ?>
+					
+					</div>
+					
+				<?php if (CRITEO_TAGS) { ?>
+					<!-- Criteo "Page View" Widget -->
+					<div id="cto_se_2379_ac" style="display:none">
+						<div class="ctoWidgetServer">http://widget.criteo.com/psu/</div>
+						<div class="ctoDataType">sendevent</div>
+						<div class="ctoParams">wi=2379&i=<?php echo $pdt["id"]; ?></div>
+					</div>
+				<?php } ?>
+				
+				<?php if (SHOW_TAGS) { ?>
+					<img src="<?php echo STATS_URL."?".$pdt["id"]."-".time()."-".$pdt["advID"]."-".$pdt["catID"]."-".$pdt["idTC"]; ?>" width="0" height="0" style="display: none" />
+				<?php } ?>
+				</div>
+<?php require(SITE . "foot.php"); ?>

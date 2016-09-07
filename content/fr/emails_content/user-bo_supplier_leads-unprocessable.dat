@@ -1,0 +1,35 @@
+<p>
+  Bonjour,<br/>
+  <br/>
+  Vous avez demandé le SLEAD_DATE un devis sur notre site concernant le produit <a href="PRODUCT_URL">PRODUCT_NAME</a>.<br/>
+  <br/>
+  Nous avons bien reçu votre demande et nous vous en remercions.<br/>
+  <br/>
+  Malheureusement, nous ne pourrons vous proposer de devis pour le motif suivant :<br/>
+  <br/>
+  <em>UNPROCESSABLE_REASON</em><br/>
+  <em>UNPROCESSABLE_COMMENT</em><br/>
+  <br/>
+  Notre équipe commerciale reste à votre disposition pour tout renseignement complémentaire :<br/>
+  <br/>
+  OPERATOR_NAME<br/>
+  OPERATOR_TEL<br/>
+  OPERATOR_EMAIL<br/>
+  <br/>
+  Cordialement.<br/>
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

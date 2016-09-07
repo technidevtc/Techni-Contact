@@ -1,0 +1,34 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+require(SITE . "head.php");
+$session->avail_saveSearch = $q; // Avail
+?>
+<div class="search-results white-bg">
+
+  <div class="summary blocks-left">
+
+      <br/>
+      <?php include_once('form-demande-recherche-produit.html'); // Formulaire demande de recherche produit moteur de recherche 06/05/2011 OD ?>
+      <br />
+
+
+
+    <br/>
+    Vous n'avez pas trouvé ce que vous cherchiez ? <a href="<?php echo URL;?>contact.html">Contactez nous</a>
+  </div>
+
+  <?php require(SITE . "blocks-right.php"); ?>
+</div>
+
+<?php	if (SHOW_TAGS) { ?>
+<script type="text/javascript">
+xt_mtcl = "<?php echo htmlentities($q, ENT_COMPAT) ?>";    //keyword value
+//do not modify below
+if (window.xtparam!=null){window.xtparam+="&mc="+xt_mtcl;}
+else{window.xtparam ="&mc="+xt_mtcl;};
+</script>
+<?php	} ?>
+
+<?php require(SITE . "foot.php") ?>
+

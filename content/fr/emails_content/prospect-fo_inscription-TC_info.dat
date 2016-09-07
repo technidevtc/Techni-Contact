@@ -1,0 +1,24 @@
+<p>La société PROSPECT_NAME souhaite des informations sur le contrat RSI</p>
+
+<p>Date : EXP_DATE</p>
+
+<p>Objet : Demande infos contrat lead<br />
+<p>Description activité : PROSPECT_ACTIVICYDESC</p>
+
+<p>Société : PROSPECT_NAME<br />
+Nom : PROSPECT_LASTNAME<br />
+Prénom : PROSPECT_FIRSTNAME<br />
+Fonction : PROSPECT_POSITION<br />
+Activité : PROSPECT_ACTIVITY<br />
+Tel : PROSPECT_TEL<br />
+Email: PROSPECT_MAIL<br />
+Taille salariale : PROSPECT_SIZE<br />
+Adresse : PROSPECT_ADRESS<br />
+Complément d'adresse : PROSPECT_ADRESS2<br />
+Code postal : PROSPECT_ZIPCODE<br />
+Ville : PROSPECT_CITY<br />
+Pays : PROSPECT_COUNTRY<br />
+Fax : PROSPECT_FAX<br />
+NAF : PROSPECT_NAF<br />
+Siret : PROSPECT_SIRET
+</p>

@@ -1,0 +1,12 @@
+ErrorDocument 403 http://test.techni-contact.com
+ErrorDocument 404 http://test.techni-contact.com
+<Limit DELETE HEAD PUT>
+order allow,deny
+deny from all
+</Limit>
+<Limit GET POST>
+order deny,allow
+allow from all
+</Limit>
+AddType application/x-httpd-php .php4
+AddType application/x-httpd-php .html

@@ -1,0 +1,546 @@
+﻿<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+$db = DBHandle::get_instance();
+
+$title = "Présentez votre société sur Techni-Contact – Techni-Contact - ".$_GET['client_id'];
+$meta_desc = "Vous êtes un utilisateur de Techni-Contact ? Présentez gratuitement votre société sur notre site et parlez du projet que vous avez réalisé grâce à nos produits ";
+$breadcrumb_label = 'Présentez gratuitement votre activité sur Techni-Contact ';
+require(SITE . "head.php");
+?>
+<script src="ressources/scripts/script_upload.js"></script>
+
+
+<div class="white-bg padding-top-20">
+		<div class="blocks-left">
+		<?php
+			if(isset($_GET['client_id'])) {
+				$action_type = $_GET['action_type'];
+				$client_id = $_GET['client_id'];
+				$id_contact= $_GET['lead_id'];
+				$sql_query = "SELECT id FROM annuaire_client WHERE client_id='".$client_id."' ";
+				$req_query = mysql_query($sql_query);
+				$rows_quer = mysql_fetch_object($req_query);
+				
+				if($action_type == 'order'){
+				$action_type_sql = 'order';
+				$order_id		 = $_GET['order_id'];
+				$lead_id   		 = 0;
+				}else {
+				$action_type_sql = 'lead';
+				$order_id		 = 0;
+				$lead_id		 = $_GET['lead_id'];
+				}
+				
+				if($rows_quer == 0){
+					$sql_get_client  = "SELECT 
+											nom,prenom,societe,secteur_activite,
+											email,tel1,cp,ville,pays,adresse
+										FROM clients
+										WHERE id='".$client_id."' ";
+					$req_get_client  =  mysql_query($sql_get_client);
+					$data_get_client =  mysql_fetch_object($req_get_client);
+					$tel 			 =  $data_get_client->tel1;
+					$secteur		 =  $data_get_client->secteur_activite;
+					
+					
+					echo '<input type="hidden" value="1" id="type_send" />';
+					echo '<input type="hidden" value="'.$order_id.'" id="order_id" />';
+					echo '<input type="hidden" value="'.$lead_id.'" id="lead_id" />'; 
+					echo '<input type="hidden" value="'.$action_type_sql.'" id="action_type_sql" />';
+					
+					$sql_max_id = "SELECT MAX(id) as total FROM annuaire_client ";
+					$req_max_id = mysql_query($sql_max_id);
+					$data_max_id= mysql_fetch_object($req_max_id);
+				}else {
+					
+					$sql_get_client  = "SELECT 
+											societe,secteur,nom,prenom,email,tel,cp,ville,pays,
+										    logo,question_activite,site_web,lead_id,adresse
+										FROM   annuaire_client 
+										WHERE  client_id ='".$client_id."' ";
+					$req_get_client  =  mysql_query($sql_get_client);
+					$data_get_client =  mysql_fetch_object($req_get_client);
+					$tel 			 =  $data_get_client->tel;
+					$secteur		 =  $data_get_client->secteur;
+					
+					echo '<input type="hidden" value="0" id="type_send" />';
+					echo '<input type="hidden" value="'.$order_id.'" id="order_id" />';
+					echo '<input type="hidden" value="'.$lead_id.'" id="lead_id" />'; 
+					echo '<input type="hidden" value="'.$action_type_sql.'" id="action_type_sql" />';
+					
+				}
+			
+		?>
+		
+			<div class="blue-title">Présentez gratuitement votre activité sur Techni-Contact </div>
+			<div class="zero"></div>
+			<div id="help">
+				<div id="text-presentation">
+					<p>Nous tenons sincèrement à vous remercier pour la confiance que vous nous avez accordé. </p>
+					<p>Parce que le business est aussi une question d’échange de bons procédés, nous vous offrons la possibilité de présenter votre activité sur Techni-Contact.</p>
+					<p>Parlez de votre société, et a quoi servira le produit pour lequel vous avez demandé un devis ou passé commande.</p>
+					<p>Postez des photos de votre équipement ou de votre installation en action, bref, mettez- vous en avant ! </p>
+					<p>Toutes ces informations pourront être gérées depuis votre espace client. </p>
+				</div>
+			
+			<?php
+				
+			?>
+			
+				<div style="overflow: hidden;">
+					<div id="coordonnees">
+						<div style="padding: 10px;">
+							<div class="blue-title_fiche">Vos coordonnées</div>
+							<div class="forms_societe">
+							
+							<div id="result_forms">
+								<div class="epace_bottom">
+									<label><strong>Société : </strong></label>
+									<span class="margin-form"><?= $data_get_client->societe ?></span>
+									<span id="update_forms_societe" class="margin-form">
+									<input type="text" id="societe" value="<?= $data_get_client->societe ?>" class="width-input" />
+									</span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Secteur : </strong></label>
+									<span class="margin-form"><?= $secteur ?></span>
+									<span id="update_forms_secteur" class="margin-form">
+									<select id="secteur"  class="width-input">
+										<?php
+											$sql_sector = "SELECT sector FROM activity_sector";
+											$req_sector = mysql_query($sql_sector);
+											while($data_sector = mysql_fetch_object($req_sector)){
+												if($data_sector->sector == $secteur) $selected=" selected='true' ";
+												else $selected=" ";
+												echo '<option value="'.$secteur.'" '.$selected.' >'.$data_sector->sector.'</option>';
+											}
+										?>
+									</select>
+									
+									</span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Nom     : </strong></label>
+									<span class="margin-form"><?= $data_get_client->nom ?></span>
+									<span id="update_forms_nom" class="margin-form">
+									<input type="text" id="nom" value="<?= $data_get_client->nom ?>" class="width-input" /></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Prénom  : </strong></label>
+									<span class="margin-form"><?= $data_get_client->prenom ?></span>
+									<span id="update_forms_prenom" class="margin-form">
+									<input type="text" id="prenom" value="<?= $data_get_client->prenom ?>" class="width-input" /></span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Email   : </strong></label>
+									<span class="margin-form"><?= $data_get_client->email ?></span>
+									<span id="update_forms_email" class="margin-form">
+									<input type="text" id="email" value="<?= $data_get_client->email ?>" class="width-input" />
+									</span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Tel     : </strong></label>
+									<span class="margin-form"><?= $tel ?></span>
+									<span id="update_forms_tel" class="margin-form">
+									<input type="text" id="tel" value="<?= $tel ?>" class="width-input" />
+									</span>
+								</div>
+								
+								
+								<div class="epace_bottom">
+									<label><strong>Adresse  : </strong></label>
+									<span class="margin-form"><?= $data_get_client->adresse ?></span>
+									<span id="update_forms_adresse" class="margin-form">
+									<input type="text" id="adresse" value="<?= $data_get_client->adresse ?>" class="width-input" />
+									</span>
+								</div>
+								
+								
+								<div class="epace_bottom">
+									<label><strong>Code Postal : </strong></label>
+									<span class="margin-form"><?= $data_get_client->cp ?></span>
+									<span id="update_forms_cp" class="margin-form">
+									<input type="text" id="cp" value="<?= $data_get_client->cp ?>" class="width-input" />
+									</span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Ville   : </strong></label>
+									<span class="margin-form"><?= $data_get_client->ville ?></span>
+									<span id="update_forms_ville" class="margin-form">
+										<input type="text" id="ville" value="<?= $data_get_client->ville ?>" class="width-input" />
+									</span>
+								</div>
+								
+								<div class="epace_bottom">
+									<label><strong>Pays    : </strong></label>
+									<span class="margin-form"><?= $data_get_client->pays ?></span>
+									<span id="update_forms_pays" class="margin-form">
+									<input type="text" id="pays" value="<?= $data_get_client->pays ?>" class="width-input" />
+									</span>
+								</div>
+							</div>
+
+							
+								<div class="btn-update" id="change_text">[ Modifier ]  </div>
+								<div class="btn-update" id="valider" style="display:none">[ Valider ]  </div>
+								<div class="btn-update" id="btn-annuler" style="display:none">  [ Annuler ]</div>
+								<br />
+							</div>
+						</div>
+					</div>
+					
+					
+					<form action="validation_questionnaire.html" method="post" enctype="multipart/form-data">
+					<?php
+						if($rows_quer == 0){
+							echo '<input type="hidden" value="1" name="type_send" />';
+							echo '<input type="hidden" value="'.$order_id.'" name="order_id" />';
+							echo '<input type="hidden" value="'.$lead_id.'" name="lead_id" />'; 
+							echo '<input type="hidden" value="'.$action_type_sql.'" name="action_type_sql" />';
+						?>
+						<input type="hidden" name="societe" value="<?= $data_get_client->societe ?>"  />
+						<input type="hidden" name="secteur" value="<?= $secteur ?>" id="secteur_ajax"  />
+						<input type="hidden" name="nom"     value="<?= $data_get_client->nom ?>" />
+						<input type="hidden" name="prenom"  value="<?= $data_get_client->prenom ?>" />
+						<input type="hidden" name="email"   value="<?= $data_get_client->email ?>" />
+						<input type="hidden" name="tel"     value="<?= $tel ?>" />
+						<input type="hidden" name="adresse" value="<?= $data_get_client->adresse ?>" />
+						<input type="hidden" name="cp"      value="<?= $data_get_client->cp ?>" />
+						<input type="hidden" name="ville"   value="<?= $data_get_client->ville ?>" />
+						<input type="hidden" name="pays"    value="<?= $data_get_client->pays ?>" />
+						<?php
+						}else{
+							echo '<input type="hidden" value="0" name="type_send" />';
+						}
+						
+					echo '<input type="hidden" value="'.$order_id.'" id="order_id" />';
+					echo '<input type="hidden" value="'.$lead_id.'" id="lead_id" />'; 	
+					?>
+					
+					
+					<div id="form_activite_produit">
+						<input type="hidden" id="client_id" name="client_id" value="<?= $client_id ?>" />
+						<div class="forms_activite" style="margin-top:0px;">
+							<div class="div_bottom">
+								<div class="div_bottom">Quelle est votre activité ? <span> * </span></div>
+								<textarea name="activite" cols="45" rows="5" required><?= $data_get_client->question_activite ?></textarea>
+							</div>
+								
+							<div>
+							
+								<div style="float: left; margin-right: -75px;">
+									<div>Votre logo </div>
+									<div id="id_photo_facade">
+										<?php
+											if(!empty($data_get_client->logo)){
+												echo '<img id="preview_facade" src="'.$data_get_client->logo.'" /><br />';
+											}else {
+												echo '<img id="preview_facade" src="ressources/images/logo.jpg" style="width: 165px;" /><br />';
+											}
+										?>
+									<input type="file" name="adress_picture" id="photo_facade" onChange="fileSelected(this.id);" data-buttonText="Your label here." />
+									</div>
+								</div>
+								
+								<div  style="overflow: hidden;">
+								<div class="div_bottom">Votre site internet </div>
+								<input type="text" name="site_web" value="<?= $data_get_client->site_web ?>" style="width: 205px;" />
+								</div>
+								
+							</div>
+							
+						</div>
+					</div>
+					
+					
+				</div>
+				
+				<div style="overflow: hidden;">
+					<p>Donnez encore plus de visibilité à <strong><?= $data_get_client->societe ?></strong> en présentant l’utilisation que vous faites de l’équipement dont vous aviez besoin (usage interne, projet réalisé…). <br />
+					Vous pouvez même  transmettre à Techni-Contact une photo de votre équipement en action ou du projet réalisé !<br />
+					Ces données seront présentées sur la fiche produit correspondante de notre site.</p>
+				</div>
+				
+				
+				
+				<?php
+				echo '<input type="hidden"  name="type_action" value="order" />';
+				echo '<input type="hidden"  name="id_order" value="'.$order_id.'" />';
+				
+				if($action_type == 'order'){
+				
+				if(!empty($_GET['bo'])){
+						$sql_and_order = " pdt_id='".$_GET['id_produit']."' ";
+				}else $sql_and_order   = " order_id='".$order_id."' ";
+				
+				
+						$sql_order = "SELECT DISTINCT(pdt_id) 
+									  FROM order_line 
+									  WHERE $sql_and_order
+									  ";
+						$req_order = mysql_query($sql_order);
+						
+						$i=0;
+						while($data_order= mysql_fetch_object($req_order)){
+						
+						$sql_product = "SELECT pp.ref_name,pp.id,pp.name ,pf.idFamily
+										FROM products_fr pp ,products_families pf
+										WHERE pp.id = pf.idProduct
+										AND pp.id= '".$data_order->pdt_id."' ";
+						$req_product = mysql_query($sql_product);
+						$data_product= mysql_fetch_assoc($req_product);
+				
+				
+				
+				
+				$sql_champ_get  = "SELECT id,txt_equipement,photo_equipement,date_create
+								   FROM annuaire_questionnaire 
+								   WHERE  id_client=$client_id 
+								   AND id_produit='".$data_order->pdt_id."'  ";
+				
+				
+				$req_champ_get  =  mysql_query($sql_champ_get); 
+				$data_champ_get =  mysql_fetch_object($req_champ_get);
+				$rows_champ_get =  mysql_num_rows($req_champ_get);
+				
+				if($rows_champ_get > 0 ) {
+					  echo '<input type="hidden"  name="update_send" value="1" />';
+					  echo '<input type="hidden"  name="id_quest'.$i.'" value="'.$data_champ_get->id.'" />';
+				}else echo '<input type="hidden"  name="update_send" value="0" />';
+				
+				
+				?>
+					<div class="froms_bottom">	
+					<?php
+					$product_img = PRODUCTS_IMAGE_URL."thumb_small/".$data_product["ref_name"]."-".$data_product["id"]."-1.jpg";
+					?>
+					
+					<div id="pdt_photo">
+						<a href="<?php echo URL.'produits/'.$data_product["idFamily"].'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html' ?>" target="_blink">
+						<div style="padding: 15px; overflow: hidden;   margin-bottom: -10px;">
+							<center><img src="<?= $product_img ?>" style="float: none;" /></center>
+						</div>
+						<div style="width: 135px;text-align: center;"><center><?= $data_product["name"] ?></center></div>
+						</a>
+					</div>
+					
+					
+					<input type="hidden" name="id_produit<?= $i ?>" value="<?= $data_order->pdt_id ?>" />
+					<div class="forms_question">
+						<div style="margin-bottom: 15px;"> 
+						
+							<div class="div_bottom"><strong>Quel est l'usage de votre équipement ? (optionnel)</strong></div>
+							<textarea name="txt_equipement<?= $i ?>" cols="45" rows="5"><?= $data_champ_get->txt_equipement ?></textarea>
+						</div>
+						
+						<div>
+							<div class="div_bottom"><strong>Photo de votre équipement (optionnel)</strong></div>
+								<div id="id_photo_facade">
+								<?php
+								if(!empty($data_champ_get->photo_equipement)){
+									echo '<img id="preview_facade_produit'.$i.'" src="'.$data_champ_get->photo_equipement.'" /><br />';
+								}else {
+									echo '<img id="preview_facade_produit'.$i.'" src="ressources/images/544876.jpg" style="width: 165px;" /><br />';
+								}
+								?>
+                                <input type="file" name="adress_picture_produit<?= $i ?>" id="photo_facade_produit<?= $i ?>" onChange="fileSelected<?= $i ?>(this.id);" />
+							</div>
+						</div>
+					</div>
+				</div>
+				<?php 
+					$i++;
+					}   
+					echo '<input type="hidden"  name="order_total" value="'.$i.'" />';
+					}else{
+					
+				$sql_product_link_contact = "SELECT idProduct 
+											FROM contacts 
+											WHERE id='".$_GET['lead_id']."' ";
+			
+				$req_product_link_contact = mysql_query($sql_product_link_contact);
+				
+				
+				
+				$i = 0;
+				while($data_product_link_contact= mysql_fetch_object($req_product_link_contact)){
+				
+					if(!empty($_GET['bo'])){
+						$sql_and = " id='".$_GET['bo']."'";
+					}else $sql_and =" id_client=$client_id AND id_produit='".$data_product_link_contact->idProduct."' ";
+				
+				$sql_champ_get  = "SELECT id,txt_equipement,photo_equipement,date_create,id_produit
+								   FROM annuaire_questionnaire 
+								   WHERE $sql_and ";
+				
+				
+				$req_champ_get  =  mysql_query($sql_champ_get);
+				$rows_champ_get =  mysql_num_rows($req_champ_get);
+				$data_champ_get =  mysql_fetch_object($req_champ_get);
+				
+				/*$sql_ann_client = "SELECT lead_id,client_id 
+								   FROM   annuaire_client 
+								   WHERE ";
+
+				*/
+				if(!empty($_GET['bo'])){
+						  $sql_and_ques = " AND pp.id= '".$data_champ_get->id_produit."'";
+					}else $sql_and_ques =" AND pp.id= '".$data_product_link_contact->idProduct."' ";
+					
+				
+				$sql_product = "SELECT pp.ref_name,pp.id,pp.name ,pf.idFamily
+								FROM products_fr pp ,products_families pf
+								WHERE pp.id = pf.idProduct
+								$sql_and_ques ";
+				
+				$req_product = mysql_query($sql_product);
+				$data_product= mysql_fetch_assoc($req_product);
+				
+				echo '<input type="hidden"  name="type_action" value="lead" />';
+				echo '<input type="hidden"  name="lead_id"  value="'.$_GET['lead_id'].'" />';
+				
+				/*$sql_champ_get  = "SELECT id,txt_equipement,photo_equipement,date_create
+								   FROM annuaire_questionnaire 
+								   WHERE id_client=$client_id 
+								   AND id_produit='".$data_product_link_contact->idProduct."' ";
+				*/		
+				
+				if($rows_champ_get > 0 ) {
+					  echo '<input type="hidden"  name="update_send" value="1" />';
+					  echo '<input type="hidden"  name="id_quest'.$i.'" value="'.$data_champ_get->id.'" />';
+				}else echo '<input type="hidden"  name="update_send" value="0" />';
+				?>
+				<div class="froms_bottom">	
+					<?php
+					
+		$product_img = PRODUCTS_IMAGE_URL."thumb_small/".$data_product["ref_name"]."-".$data_product["id"]."-1.jpg";
+					?>
+					
+					
+					<div id="pdt_photo">
+						<a href="<?php echo URL.'produits/'.$data_product["idFamily"].'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html' ?>" target="_blink">
+						<div style="padding: 15px; overflow: hidden;   margin-bottom: -10px;">
+							<center><img src="<?= $product_img ?>" style="float: none;" /></center>
+						</div>
+						<div style="width: 135px;text-align: center;"><center><?= $data_product["name"] ?></center></div>
+						</a>
+					</div>
+					
+					
+					<input type="hidden" name="id_produit<?= $i ?>" value="<?= $data_product["id"] ?>" />
+					<div class="forms_question">
+						<div style="margin-bottom: 15px;">
+							<div class="div_bottom"><strong>Quel est l'usage de votre équipement ? (optionnel) </strong></div>
+							<textarea name="txt_equipement<?= $i ?>" cols="45" rows="5" ><?= $data_champ_get->txt_equipement ?></textarea>
+						</div>
+						
+						<div>
+							<div class="div_bottom"><strong>Photo de votre équipement (optionnel)</strong> </div>
+								<div id="id_photo_facade">
+								<?php
+								if(!empty($data_champ_get->photo_equipement)){
+									echo '<img id="preview_facade_produit'.$i.'" src="'.$data_champ_get->photo_equipement.'" /><br />';
+								}else {
+									echo '<img id="preview_facade_produit'.$i.'" src="ressources/images/544876.jpg" style="width: 165px;" /><br />';
+								}
+								?>
+                                <input type="file" name="adress_picture_produit<?= $i ?>" id="adress_picture_produit<?= $i ?>" onChange="fileSelected_produit<?= $i ?>(this.id);" />
+							</div>
+						</div>
+					</div>
+				</div>
+				<?php 
+				$i++;
+				
+				} 
+				}
+				echo '<input type="hidden"  name="lead_total" value="'.$i.'" />';
+				?>
+				
+				
+				
+		</div>	
+		
+		<div>
+		<center><input class="myButton" type="submit" value="Validez votre fiche" /></center>
+		</div>
+		</form>
+		<?php  } ?>
+		</div>
+<script>
+	$( ".btn-update" ).click(function() {
+		$(".margin-form").hide();
+		$("#update_forms_societe").show();
+		$("#update_forms_secteur").show();
+		$("#update_forms_nom").show();
+		$("#update_forms_prenom").show();
+		$("#update_forms_email").show();
+		$("#update_forms_adresse").show();
+		$("#update_forms_tel").show();
+		$("#update_forms_cp").show();
+		$("#update_forms_ville").show();
+		$("#update_forms_pays").show();
+		$("#btn-annuler").show();
+		$("#change_text").hide();
+		$("#valider").show();
+	});
+	
+	$( "#btn-annuler" ).click(function() {
+		$(".margin-form").show();
+		$("#update_forms_societe").hide();
+		$("#update_forms_secteur").hide();
+		$("#update_forms_nom").hide();
+		$("#update_forms_prenom").hide();
+		$("#update_forms_email").hide();
+		$("#update_forms_adresse").hide();
+		$("#update_forms_tel").hide();
+		$("#update_forms_cp").hide();
+		$("#update_forms_ville").hide();
+		$("#update_forms_pays").hide();
+		$("#btn-annuler").hide();
+		$("#valider").hide();
+		$("#change_text").show();
+	});
+	
+	$( "#valider" ).click(function() {
+		var client_id = $("#client_id").val();
+		var societe   = $("#societe").val();
+		var secteur   = $("#secteur").val();
+		var nom       = $("#nom").val();
+		var prenom    = $("#prenom").val();
+		var adresse   = $("#adresse").val();
+		var email     = $("#email").val();
+		var tel       = $("#tel").val();
+		var cp        = $("#cp").val();
+		var ville     = $("#ville").val();
+		var pays      = $("#pays").val();
+		var action_type_sql = $("#action_type_sql").val();
+		var type_send = $("#type_send").val();
+		var order_id  = $("#order_id").val();
+		var lead_id   = $("#lead_id").val();
+		
+		  
+		$.ajax({
+				url: '../annuaires_ajax/ajax_update.php?client_id='+client_id+'&societe='+societe+"&secteur="+secteur+"&nom="+nom+"&prenom="+prenom+"&email="+email+"&tel="+tel+"&cp="+cp+"&ville="+ville+"&pays="+pays+"&adresse="+adresse+"&type_send="+type_send+"&action_type_sql="+action_type_sql+"&order_id="+order_id+"&lead_id="+lead_id,
+				type: 'GET',
+				success:function(data){
+					$("#btn-annuler").hide();
+					$("#change_text").show();
+					$("#valider").hide();
+					$('#result_forms').html(data);
+					$('#type_send').val('0');
+					$('#secteur_ajax').val(secteur);
+				}
+		});
+	});
+</script>
+				
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

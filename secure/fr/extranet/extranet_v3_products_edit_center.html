@@ -1,0 +1,509 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-shopping-cart"></i> Produits</h1>
+    </div>
+	
+	<?php
+	
+		$id_product		= mysql_escape_string($_GET['id']);
+		
+		
+		//Detect if the user has clicked on deleted "Document" it concerns the 3 documents
+		
+		$eo_new_req  = '';
+		//$eo_new_req .= isset($_GET['noimg'])  ? '&noimg'  : '';
+		$eo_new_req .= isset($_GET['nodoc1']) ? '&nodoc1=yes' : '';
+		$eo_new_req .= isset($_GET['nodoc2']) ? '&nodoc2=yes' : '';
+		$eo_new_req .= isset($_GET['nodoc3']) ? '&nodoc3=yes' : '';
+		
+	?>
+	
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h4>
+						Modifier un produit
+					</h4>
+					
+					<div id="">
+						<a href="javascript:void(0);<?php //echo EXTRANET_URL.'extranet_v3_product_preview.html?id='.$id_product; ?>" onclick="preview_edit_product();" id="products_btn_lst_create" class="btn btn-primary">Pr&eacute;visualiser</a>
+						<form id="formpreview" name="formpreview" action="extranet_v3_product_preview.html" method="GET" style="display:none;" target="_blank">
+							<input type="hidden" id="formpreviewid" name="id" value="" />
+							<input type="hidden" id="formpreviewtype" name="t" value="e" />
+						</form>
+						
+					</div>
+					
+				</div>
+				
+				<?php
+				
+					//Search for the product from it's ID
+					$sql_get_product_detail	= "SELECT
+													p.id,
+													p.timestamp,
+													p.price,
+													p.video_code,
+													p.docs,
+													
+													pfr.name,
+													pfr.fastdesc,
+													pfr.keywords,
+													pfr.descc
+
+												FROM
+													products p
+														LEFT JOIN products_fr pfr ON p.id=pfr.id
+												WHERE
+													p.id=".$id_product."
+												AND
+													p.idAdvertiser=".$_SESSION['extranet_user_id']."";
+					
+					$res_get_product_detail = $db->query($sql_get_product_detail, __FILE__, __LINE__);
+					
+					if(mysql_num_rows($res_get_product_detail)==1 && !empty($id_product)){
+					
+					$content_get_product_detail	= $db->fetchAssoc($res_get_product_detail);
+					
+					
+					//Looking for the First Category of this product
+					$sql_get_product_families	= "	SELECT
+														famfr.id,
+														famfr.name
+													
+												FROM
+													products_families pfam
+														LEFT JOIN families_fr famfr ON famfr.id=pfam.idFamily
+												WHERE
+													pfam.idProduct=".$content_get_product_detail['id']."
+												AND
+													pfam.orderFamily<2
+												ORDER BY pfam.orderFamily ASC";
+							
+					$res_get_product_families 	= $db->query($sql_get_product_families, __FILE__, __LINE__);
+					$content_product_families	= $db->fetchAssoc($res_get_product_families);
+					
+												
+				?>
+					<div class="panel-body">
+						
+						<div id="product_add_container">
+						
+							<form method="post" action="#" onsubmit="return product_add_verification()">
+								<input type="hidden" name="product_hidden_newid" id="product_hidden_newid" value="<?php echo $content_get_product_detail['id']; ?>" /> 
+								<div id="product_add_container_content">
+									<div id="product_add_container_left">
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label for="product_titre">
+													Titre <span class="srequired">*</span>
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<input type="text" id="product_titre" name="product_titre" value="<?php echo $content_get_product_detail['name']; ?>" />
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label for="product_desc_rapide">
+													Description rapide <span class="srequired">*</span>
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<input type="text" id="product_desc_rapide" name="product_desc_rapide" value="<?php echo $content_get_product_detail['fastdesc']; ?>" />
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label for="product_category_search">
+													Cat&eacute;gorie <span class="srequired">*</span>
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<input type="hidden" name="product_category_hidden" id="product_category_hidden" value="<?php echo $content_product_families['id']; ?>" />
+												<input type="text" name="product_category_search" id="product_category_search" style="float:left;" placeholder="Tapez le nom de la cat&eacute;gorie d&eacute;sir&eacute;e" />
+												<div id="product_category_selected_cat_text">
+													<?php echo $content_product_families['name']; ?>
+												</div>
+												<img id="product_picto_edit_category" src="ressourcesv3/icons/page_white_edit.png" onclick="javascript:product_edit_category()" alt="Changer" title="Changer" />
+												<img id="product_picto_cancel_edit_category" src="ressourcesv3/icons/cross.png" onclick="javascript:product_edit_cancel_category();" alt="Annuler" title="Annuler" />
+												
+												<div id="product_search_category_autocomplete">
+													<div id="product_search_category_loader">
+														<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+													</div>
+													<div id="product_search_category_result">
+														
+													</div>
+												</div><!-- end div #product_search_category_autocomplete -->
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label for="product_desc">
+													Description <span class="srequired">*</span>
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<textarea id="product_desc" name="product_desc" class="ckeditor" cols="40" rows="5" style="width:200px;"><?php echo $content_get_product_detail['descc']; ?></textarea>
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label>
+													Prix <span class="srequired">*</span>
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+											
+												<?php
+													if(strcmp(strtolower($content_get_product_detail['price']),'sur devis')==0){
+														$test_prix_devis	= true;
+													}else{
+														$test_prix_devis	= false;
+													}
+												?>
+												
+												<input type="radio" id="product_price0" name="product_price" 
+												<?php
+												
+													if($test_prix_devis){
+														echo('checked="true"');
+													}
+												?> 
+												onchange="javascript:product_set_price_radio('0');" style="float:left;" />
+												<label for="product_price0" style="float:left;">Sur devis</label>
+												
+												
+												<input type="radio" id="product_price1" name="product_price" value="" onchange="javascript:product_set_price_radio('1');" style="float:left;"
+												<?php
+												
+													if(!$test_prix_devis){
+														echo('checked="true"');
+													}
+												?> 												/>
+												<label for="product_price1" style="float:left;" >Prix simple</label>
+												
+												<div id="product_price_simple" <?php
+												
+													if(!$test_prix_devis){
+														echo('style="display:block;"');
+													}
+												?>>
+													<input type="number" id="product_price_simpleval" name="product_price_simpleval" value="<?php
+													
+													if(!$test_prix_devis){
+														echo($content_get_product_detail['price']);
+													}else{
+														echo('0');
+													}
+													?>" style="float:left;" /> 
+													&euro; HT
+												</div>
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label for="product_keyword">
+													Mots cl&eacute;s
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<?php
+													$keywords_new	= str_replace('|', '/', $content_get_product_detail['keywords']);
+												?>
+												<input type="text" name="product_keyword" id="product_keyword" value="<?php echo $keywords_new; ?>" />
+												<br />
+												- S&eacute;parez chaque mot-cl&eacute; par le caract&egrave;re "<b>/</b>"
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label>
+													Documentations 1
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<div id="product_doc1_name" style="width: 200px; float: left;"></div>
+												<!-- <input type="button" id="product_doc1_name_btn" onclick="javascript:products_add_documentation_listner_popup('1');" class="btn-default btn" value="Ajouter" /> -->
+												<input type="file" id="product_doc1_name_btn" name="product_doc1_name_btn" class="btn-default btn" value="Ajouter" />
+												
+												
+												<?php 
+												
+												//Start document file test
+												
+												//If the user has clicked on "deleted" we hide this row
+												if(!isset($_GET['nodoc1'])){
+													if(is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-1.pdf') || is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-1.pdf')){ 
+													
+													$ext = is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-1.doc') ? 'doc' : 'pdf'; 
+													
+													print('<br />[<a href="' . PRODUCTS_FILES_URL . $_GET['id'] . '-1.' . $ext . '" target="_blank">Voir</a>] [<a href="extranet-v3-products-edit.php?' . session_name() . '=' . session_id() . '&id=' . $_GET['id'] . $eo_new_req . '&nodoc1=yes">Supprimer</a>]'); 
+													
+													} 
+												}//end if(!isset($_GET['nodoc1'])) 
+												
+												?>
+												
+												
+												
+											</div>
+										</div><!-- div .row -->
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label>
+													Documentations 2
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<div id="product_doc1_name" style="width: 200px; float: left;"></div>
+												<!-- <input type="button" id="product_doc2_name_btn" onclick="javascript:products_add_documentation_listner_popup('2');" class="btn-default btn" value="Ajouter" /> -->
+												<input type="file" id="product_doc2_name_btn" name="product_doc2_name_btn" class="btn-default btn" value="Ajouter" />
+												
+												<?php 
+												
+												//Start document file test
+												
+												//If the user has clicked on "deleted" we hide this row
+												if(!isset($_GET['nodoc2'])){
+													if(is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-2.pdf') || is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-2.pdf')){ 
+													
+													$ext = is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-2.doc') ? 'doc' : 'pdf'; 
+													
+													print('<br />[<a href="' . PRODUCTS_FILES_URL . $_GET['id'] . '-2.' . $ext . '" target="_blank">Voir</a>] [<a href="extranet-v3-products-edit.php?' . session_name() . '=' . session_id() . '&id=' . $_GET['id'] . $eo_new_req . '&nodoc2=yes">Supprimer</a>]'); 
+													
+													} 
+												
+												}//end if(!isset($_GET['nodoc2']))
+												
+												?>
+												
+											</div>
+										</div><!-- div .row -->
+										
+										
+										<br />
+										<div class="row">
+											<div class="p_one_e_leftleft">
+												<label>
+													Documentations 3
+												</label>
+											</div>
+											<div class="p_one_e_leftright">
+												<div id="product_doc1_name" style="width: 200px; float: left;"></div>
+												<!-- <input type="button" id="product_doc3_name_btn" onclick="javascript:products_add_documentation_listner_popup('3');" class="btn-default btn" value="Ajouter" /> -->
+												<input type="file" id="product_doc3_name_btn" name="product_doc3_name_btn" class="btn-default btn" value="Ajouter" />
+												
+												<?php 
+												
+												//Start document file test
+												
+												//If the user has clicked on "deleted" we hide this row
+												if(!isset($_GET['nodoc3'])){
+													if(is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-3.pdf') || is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-3.pdf')){ 
+													
+													$ext = is_file(PRODUCTS_FILES_INC . $_GET['id'] . '-3.doc') ? 'doc' : 'pdf'; 
+													
+													print('<br />[<a href="' . PRODUCTS_FILES_URL . $_GET['id'] . '-3.' . $ext . '" target="_blank">Voir</a>] [<a href="extranet-v3-products-edit.php?' . session_name() . '=' . session_id() . '&id=' . $_GET['id'] . $eo_new_req . '&nodoc3=yes">Supprimer</a>]'); 
+													
+													} 
+												
+												}//end if(!isset($_GET['nodoc2']))
+												
+												?>
+												
+											</div>
+										</div><!-- div .row -->
+										
+									</div><!-- end div #product_add_container_left -->
+									
+									
+									
+									<div id="product_add_container_right">
+									
+										<div>
+											<!--
+											<div onclick="javascript:products_add_reload_pictures();" style="cursor:pointer;">
+												Load pictures Manually !
+											</div> -->
+											<div id="product_pictures_uploaded">
+												Ins&eacute;rer une photo produit  
+											</div><!-- end div #product_pictures_uploaded -->
+											<input type="button" id="product_add_pictures_btn" onclick="javascript:products_add_pictures_listner_popup();" class="btn-default btn" value="Ajouter une photo" />
+										</div>
+										
+										
+										<br />
+										<div>
+											<div>
+												Code vid&eacute;o
+												<br />
+												<span class="products_video_code_help">
+													Collez ici le code HTML de votre vid&eacute;o sur Youtube, Dailymotion ou Vimeo par exemple.
+												</span>
+											</div>
+											<textarea id="product_video" name="product_video" rows="5"><?php echo($content_get_product_detail['video_code']); ?></textarea>
+											<input type="button" id="product_add_pictures_btn" onclick="javascript:products_video_preview();" class="btn-default btn" value="Visualiser la vid&eacute;o" />
+										</div>
+										
+									</div><!-- end div #product_add_container_right -->
+								
+								</div><!-- end div #product_add_container_content -->
+								
+								<div id="product_add_container_footer">
+									<input type="button" id="product_add_save_draft" value="Enregistrer comme brouillon" class="btn btn-primary" onclick="javascript:product_edit_save_call('draft');" />
+									&nbsp;&nbsp;&nbsp;
+									<input type="button" id="product_add_send" value="Soumettre &agrave; Techni-Contact" class="btn btn-primary" onclick="javascript:product_edit_save_call('send');" />
+								
+								</div> <!-- end div #product_add_container_footer -->
+								
+								<div id="product_add_form_validation_error">
+								</div>
+								<p id="product-dialog-add-loading_save_draft_send">
+									<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+								</p>
+								
+							</form>
+							
+							
+						</div><!-- end div #product_add_container -->
+
+						<script type="text/javascript">
+							product_category_autocomplete();
+							
+							//Hide the field of the category like it was selected
+							product_get_this_category_step2();
+							
+							
+							//Load Pictures
+							products_edit_reload_pictures('new');
+							
+							//Load Docs
+						</script>
+						
+						
+						
+						
+					</div><!-- end div .panel-body -->
+				
+				<?php
+				
+					}else{
+					
+						echo('Fiche produit in&eacute;xistante. <a href="extranet-v3-products.html">Retour</a>');
+						
+					}//end else if search product from id
+				
+				?>
+			</div><!-- end div .panel panel-primary -->
+			
+			
+			<!-- Start Product Add pictures -->
+			
+				<div id="product-dialog-add-picture-popup" title="Ajout photo">
+					<div id="product-dialog-add-picture-response">
+						<form name="product_form_add_picture" id="product_form_add_picture" method="POST" action="#" enctype="multipart/form-data">
+							<div>
+								<br />
+								<input type="file" id="product_picture_file" name="product_picture_file" size="40" style="float: left; width: 100%;" />
+								<input type="button" id="product_add_picture_btn" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" value="Charger la photo" style="float: right;  margin-top: 15px;" onclick="javascript:check_edit_form_upload_picture();" />
+							</div>
+						</form>
+						<pictureprogress></pictureprogress>
+						<div id="product-dialog-add-picture-response-msg"><?php echo $message ?></div>
+					</div>
+					<p id="product-dialog-add-picture-loader">
+							<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				
+				
+			<!-- End Product Add pictures -->
+			
+			<!-- Start Product Add Documentations1 -->
+				<!--
+				<div id="product-dialog-add-documentation1-popup" title="Ajout documentations 1">
+					<div id="product-dialog-add-documentation1-response">
+						<form name="product_form_add_documentation1" id="product_form_add_documentation1" method="POST" action="#" enctype="multipart/form-data">
+							<div>
+								<div>
+									Nom : 
+									&nbsp;&nbsp;&nbsp;
+									<input type="text" name="product_add_documentation_name1" id="" />
+								</div>
+								<br />
+								<input type="file" id="product_documentation1_file" name="product_documentation1_file" size="40" style="float: left; width: 100%;" />
+								<input type="button" id="product_add_documentation1_btn" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" value="Charger la photo" style="float: right;  margin-top: 15px;" onclick="javascript:check_form_upload_documentation('1');" />
+							</div>
+						</form>
+						<pictureprogress></pictureprogress>
+						<div id="product-dialog-add-documentation1-response-msg"><?php //echo $message ?></div>
+					</div>
+					<p id="product-dialog-add-documentation1-loader">
+							<img src="<?php //echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				-->
+			<!-- End Product Add Documentations1 -->
+			
+			<!-- Start Product Add Documentations2 -->
+				<!--
+				<div id="product-dialog-add-documentation2-popup" title="Ajout documentations 2">
+					<div id="product-dialog-add-documentation2-response">
+						<form name="product_form_add_documentation2" id="product_form_add_documentation2" method="POST" action="#" enctype="multipart/form-data">
+							<div>
+								<div>
+									Nom : 
+									&nbsp;&nbsp;&nbsp;
+									<input type="text" name="product_add_documentation_name2" id="" />
+								</div>
+								<br />
+								<input type="file" id="product_documentation2_file" name="product_documentation2_file" size="40" style="float: left; width: 100%;" />
+								<input type="button" id="product_add_documentation2_btn" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" value="Charger la photo" style="float: right;  margin-top: 15px;" onclick="javascript:check_form_upload_documentation('2');" />
+							</div>
+						</form>
+						<pictureprogress></pictureprogress>
+						<div id="product-dialog-add-documentation2-response-msg"><?php //echo $message ?></div>
+					</div>
+					<p id="product-dialog-add-documentation2-loader">
+							<img src="<?php //echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				-->
+			<!-- End Product Add Documentations2 -->
+			
+			
+			<!-- Start Code Vid&o preview -->
+				
+				<div id="product-dialog-video-preview-popup" title="Pr&eacute;visualiser la vid&eacute;o">
+					<div id="product-dialog-video-preview-response">
+ 						<div id="product-dialog-video-preview-response-msg">&nbsp;</div>
+					</div>
+				</div>
+				
+				
+			<!-- End Product Add pictures -->
+
+			
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	
+
+</div><!-- end div .za -->

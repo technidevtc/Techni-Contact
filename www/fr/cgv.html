@@ -1,0 +1,24 @@
+<?php
+if(!defined('PREVIEW'))
+  require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$title = "Conditions Générales de Vente de Techni-Contact";
+$meta_desc = "notre_societe";
+$breadcrumb_label = "Conditions Générales de Vente";
+require(SITE . "head.php");
+?>
+<div class="white-bg padding-top-20">
+					<div class="blocks-left">
+						<div class="blue-title">Conditions générales de vente</div>
+						<div class="zero"></div>
+						<div id="legal-info">
+<?php
+if (defined('PREVIEW')) echo $_POST['content'];
+else echo file_get_contents(MISC_INC."cgv.dat");
+?>
+						</div>
+					</div>
+					
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

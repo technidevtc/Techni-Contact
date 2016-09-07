@@ -1,0 +1,101 @@
+
+	<meta name="author" content="Techni-contact.com">
+	<link rel="icon" type="image/png" href="favicon.png">
+
+	
+<?php 
+
+	//JS
+	echo('
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/jquery.min.js"></script>');
+	
+	//FONTS
+	echo('
+	<link href="'.EXTRANET_URL.'ressourcesv3/fonts/open_sans.css" rel="stylesheet" type="text/css" />');
+
+	echo('
+	<link href="'.EXTRANET_URL.'ressourcesv3/css/font-awesome.min.css" rel="stylesheet" type="text/css" />');
+	
+	//CSS
+	echo('
+	<!--[if IE]><!-->
+		<!--[if lt IE 10]><!-->
+			<link href="'.EXTRANET_URL.'ressourcesv3/css/style_container_ie.css" rel="stylesheet" type="text/css" />
+		<!--<![endif]-->
+	<!--<![endif]-->');
+	
+	
+	echo('
+	<link href="'.EXTRANET_URL.'ressourcesv3/css/font-awesome.css" rel="stylesheet" type="text/css" />');
+	
+	//Start less after the call of the first file css
+	//To force the less for the new navigators !
+	echo('
+	<!--[if !IE]><!-->
+	<link href="'.EXTRANET_URL.'ressourcesv3/css/less/style_container.less" rel="stylesheet/less" media="all" /><!--<![endif]-->'); 
+	
+	echo('
+	<!--[if !IE]><!-->
+	<script type="text/javascript">less = {}; less.env = \'development\';</script><!--<![endif]-->');
+	echo('
+	<!--[if !IE]><!-->
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/css/less.js"></script><!--<![endif]-->');
+	
+	
+	
+	
+	//JS
+	
+	//Load that for not IE
+	echo('
+	<!--[if !IE]><!--><script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/angular.min.js"></script><!--<![endif]-->');
+	
+	echo('
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/scripts.js"></script>');
+	
+	//Angular Application 
+	echo('
+	<!--[if !IE]><!--><script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/app.js"></script><!--<![endif]-->');	
+	echo('
+	<!--[if !IE]><!--><script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/directives.js"></script><!--<![endif]-->');
+	
+
+	//Date Picker
+	echo('
+	<link rel="stylesheet" href="'.EXTRANET_URL.'ressourcesv3/css/datepicker/themes/smoothness/jquery-ui.css" />');
+	echo('
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/datepicker/ui/jquery-ui.min.js"></script>');
+
+	
+	
+	//Fancybox
+	//Zoom in the pictures of a product
+	
+	echo('
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/fancybox/jquery.fancybox.js?v=2.1.5"></script>');
+	echo('
+	<script type="text/javascript" src="'.EXTRANET_URL.'ressourcesv3/js/fancybox/jquery.fancybox.pack.js?v=2.1.5"></script>');
+	
+	echo('
+	<link rel="stylesheet" href="'.EXTRANET_URL.'ressourcesv3/css/fancybox/jquery.fancybox.css" />');
+
+	
+	//Analytics Tags !
+	require_once('extranet_v3_google_analytics_tags.html');
+	
+	
+	
+
+?>
+
+	<script type="text/javascript" src="<?php echo EXTRANET_URL ?>ressourcesv3/js/HN.TC.js?_=<?php echo time() ?>"></script>
+	<script type="text/javascript">
+	  $.extend(HN.TC, {
+		URL: "<?php echo URL ?>",
+		SECURE_URL: "<?php echo SECURE_URL ?>",
+		EXTRANET_URL: "<?php echo EXTRANET_URL ?>",
+		PDF_URL: "<?php echo PDF_URL ?>",
+		PDF_URL_ARC: '<?php echo PDF_URL_ARC ?>',
+		PRODUCTS_IMAGE_SECURE_URL: "<?php echo PRODUCTS_IMAGE_SECURE_URL ?>"
+	  });
+	</script>

@@ -1,0 +1,137 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged) {
+  header('Location: '.COMPTE_URL.'login.html');
+  exit();
+}
+
+$estimates = Cart::getEstimates($session->userID, 'create_time', 'desc');
+$estiCount = count($estimates);
+
+$ec = Doctrine_Query::create()
+  ->select('id, web_id, created, total_ht, total_ttc')
+  ->from('Estimate')
+  ->where('client_id = ?', $session->userID)
+  ->orderBy('created DESC')
+  ->fetchArray();
+
+foreach ($ec as &$e)
+  $e['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_ESTIMATE__, $user->id, $e['id']);
+unset($e);
+
+$current_account_menuitem = "Mes devis";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<script type="text/javascript">
+  HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE['email']) ? $_COOKIE['email'] : "") ?>";
+</script>
+<div class="title">Mes devis commerciaux</div>
+<div class="desc">
+  Retrouvez ici tous vos devis commerciaux.<br/>
+  <br/>
+  Une fois validés, <strong>renvoyez-nous vos devis par fax au 01 83 62 36 12</strong> avec la mention &laquo; bon pour accord &raquo;, votre signature et votre tampon.<br/>
+  <br/>
+  Ces devis sont générés au format PDF. Vous devez pour les consulter disposer du programme gratuit Adobe Reader. Si vous le possédez pas, nous vous invitons à le <a href="http://get.adobe.com/fr/reader/">télécharger</a>
+</div>
+<div id="bo-estimates">
+ <?php foreach($ec as $e) : ?>
+  <div class="box account-order-box order-box estimate-box fl">
+    <div class="btl"></div><div class="btr"></div>
+    <div class="bbl"></div><div class="bbr"></div>
+    <div class="box-out">
+      <div class="box-in">
+        <div class="legend">Devis n°<strong><?php echo $e['id']?></strong></div>
+        <div class="infos">
+          <em>Date et heure:</em> <?php echo date('d/m/Y à H:i', $e['created']) ?><br/>
+          <em>Total HT:</em> <?php echo sprintf('%.02f', $e['total_ht']) ?>€<br/>
+          <em>Total TTC:</em> <?php echo sprintf('%.02f', $e['total_ttc']) ?>€
+        </div>
+        <div class="vbar"></div>
+        <div class="links">
+          <a href="<?php echo PDF_DL_URL."devis-commercial/".$e['web_id'] ?>">Télécharger le devis <img class="vmaib" src="<?php echo $res_url ?>icons/pdf_21x21.png" alt=""/></a><br/>
+          <a href="<?php echo COMPTE_URL."bo_estimate.html?id=".$e['id'] ?>">Voir détail du devis</a><br/>
+          <a href="<?php echo COMPTE_URL."contact-form.html?type=3&id=".$e['id'] ?>">Nous contacter concernant ce devis</a><br/>
+          <!--<a href="cartID::<?php echo $e['id'] ?>" class="estimate-send">Envoyer à un collègue</a>-->
+        </div>
+        <div class="zero"></div>
+      </div>
+    </div>
+  </div>
+   <?php if (!empty($e['conv'])) : ?>
+    <img class="icon-conv" src="<?php echo $res_url ?>images/bouton-voir-conversation-sav.jpg" alt="Conversation" />
+    <div class="conversation">
+      <div class="conv-title">Conversation liée à ce devis</div>
+      <ul>
+       <?php foreach ($e['conv'] as $post) : ?>
+        <li>
+          <div class="post-title">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></div>
+         <?php if (!empty($post['attachments'])) : ?>
+          <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+          <div class="post-files" >
+           <?php foreach ($post['attachments'] as $attachment) : ?>
+            <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+           <?php endforeach ?>
+          </div>
+         <?php endif ?>
+          <div class="post-text"><?php echo htmlentities($post['text']) ?></div>
+        </li>
+       <?php endforeach // post ?>
+      </ul>
+    </div>
+   <?php endif // conv ?>
+  <div class="zero"></div>
+ <?php endforeach // estimate collection ?>
+</div>
+<div id="pdf-estimates">
+  <div class="title">Mes devis générés</div>
+  <div class="desc">
+    Retrouvez ici tous les devis que vous avez créés au format PDF.<br/>
+    <br/>
+    Une fois validés, <strong>renvoyez-nous vos devis par fax au 01 83 62 36 12</strong> avec la mention &laquo; bon pour accord &raquo;, votre signature et votre tampon.<br/>
+    <br/>
+    Ces devis sont générés au format PDF. Vous devez pour les consulter disposer du programme gratuit Adobe Reader. Si vous le possédez pas, nous vous invitons à le <a href="http://get.adobe.com/fr/reader/">télécharger</a>
+   <?php if ($estiCount == 0) { ?>
+    <br/>
+    <br/>
+    <i>Vous n'avez aucun devis d'enregistré</i>
+   <?php } ?>
+  </div>
+ <?php foreach ($estimates as &$estimate) { $estimate['locked'] = 1 ?>
+  <div class="box account-order-box order-box estimate-box">
+    <div class="btl"></div><div class="btr"></div>
+    <div class="bbl"></div><div class="bbr"></div>
+    <div class="box-out">
+      <div class="box-in">
+        <div class="legend">Devis n°<strong><?php echo $estimate["estimate"]?></strong></div>
+        <div class="infos">
+          <em>Date et heure:</em> <?php echo date('d/m/Y à H:i', $estimate['create_time']) ?><br/>
+          <em>Total HT:</em> <?php echo sprintf('%.02f', $estimate['totalHT']) ?>€<br/>
+          <em>Total TTC:</em> <?php echo sprintf('%.02f', $estimate['totalTTC']) ?>€
+        </div>
+        <div class="vbar"></div>
+        <div class="links">
+          <a href="<?php echo PDF_URL."devis_generate.php?cartID=".$estimate['id'] ?>" onclick="window.open(this.href,'_blank'); return false">Télécharger le devis <img class="vmaib" src="<?php echo $res_url ?>icons/pdf_21x21.png" alt=""/></a><br/>
+          <a href="<?php echo COMPTE_URL . "estimate.html?cartID=".$estimate['id'] ?>">Voir détail du devis</a><br/>
+          <a href="<?php echo COMPTE_URL."contact-form.html?type=2&id=".$estimate['estimate'] ?>">Nous contacter concernant ce devis</a><br/>
+          <a href="cartID::<?php echo $estimate['id'] ?>" class="estimate-send">Envoyer à un collègue</a>
+        </div>
+        <div class="zero"></div>
+      </div>
+    </div>
+  </div>
+ <?php } ?>
+</div>
+<script type="text/javascript">
+  $("#bo-estimates")
+    .find("img.icon-conv").click(function(){ $(this).next().toggle(); }).end()
+    .find("img.post-clip").click(function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+</script>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

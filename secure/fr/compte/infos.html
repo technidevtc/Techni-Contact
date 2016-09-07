@@ -1,0 +1,140 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$user = new CustomerUser($handle, $session->userID);
+
+if (!$session->logged){
+	header("Location: " . COMPTE_URL . "login.html");
+	exit();
+}
+
+// Country list
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC . "list_country.csv","r")) {
+	while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+	$cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+	fclose($fh);
+}
+
+$al = Doctrine_Query::create()
+  ->select('*')
+  ->from('ClientsAdresses')
+  ->where('client_id = ?', $user->id)
+  ->orderBy('type_adresse ASC, num ASC')
+  ->fetchArray();
+
+$abt = ClientsAdresses::orderByType($al);
+
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<script type="text/javascript">
+  var addressesByType = <?php echo json_encode($abt) ?>;
+  HN.TC.CLIENT_MAX_ADDRESS_BY_TYPE = 5;
+  HN.TC.ClientsAdresses = {
+    TYPE_DELIVERY: <?php echo ClientsAdresses::TYPE_DELIVERY ?>,
+    TYPE_BILLING: <?php echo ClientsAdresses::TYPE_BILLING ?>,
+    typeList: <?php echo json_encode(ClientsAdresses::$typeList) ?>
+  };
+</script>
+
+<div id="account-edit-address-form-dialog">
+  <div class="contact-infos grey-block">
+    <div class="top">
+      <i>Coordonnées de <span id="aeafd-type">Livraison/Facturation</span></i><br />
+      Définir comme adresse principale <input type="checkbox" name="set_as_main" value="" />
+    </div>
+    <ul>
+      <li><label for="nom_adresse">Nom adresse :</label><input type="text" name="nom_adresse" value=""/></li>
+      <li><label for="titre">Civilité :</label><select name="titre" class="edit"><option value="1">M.</option><option value="2">Mme</option><option value="3">Mlle</option></select></li>
+      <li><label for="nom">Nom :</label><input type="text" name="nom" value=""/></li>
+      <li><label for="prenom">Prénom :</label><input type="text" name="prenom" value=""/></li>
+      <li><label for="societe">Société :</label><input type="text" name="societe" value=""/></li>
+      <li><label for="tel1">Téléphone :</label><input type="text" name="tel1" value=""/></li>
+      <li><label for="fax1">Fax :</label><input type="text" name="fax1" value=""/></li>
+      <li><label for="adresse">Adresse :</label><textarea name="adresse" rows="3"></textarea></li>
+      <li><label for="complement">Complément :</label><input type="text" name="complement" value=""/></textarea></li>
+      <li><label for="cp">Code postal :</label><input type="text" name="cp" value=""/></li>
+      <li><label for="ville">Ville :</label><input type="text" name="ville" value=""/></li>
+      <li>
+        <label for="pays">Pays :</label>
+        <select name="pays" class="edit">
+         <?php for ($i=1; $i<=$cc; $i++) : ?>
+          <option value="<?php echo $cl[$i] ?>" selected="selected"><?php echo $cl[$i] ?></option>
+         <?php endfor ?>
+        </select>
+      </li>
+      <li id="aeafd-delivery-infos"><label for="infos_sup">Instruction de livraison :</label><textarea name="infos_sup"></textarea></li>
+    </ul>
+    <div class="actions"><span id="aeafd-btn" class="blue-title">Enregistrer/Créer adresse</span></div>
+    <div class="response-error error"></div>
+    <div class="blue-close"><span id="aeafd-close">[Fermer]</span></div>
+    <div class="zero"></div>
+  </div>
+</div>
+
+<div class="account right-account-panel">
+
+  <div class="right-account-panel-inlay fl">
+    
+    <div class="account-header">
+      <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes coordonnées</h1>
+      <strong><?php echo $customerInfos['titre'].' '.ucfirst($customerInfos['prenom'])." ".ucfirst($customerInfos['nom']) ?></strong>,
+      retrouvez ici l'ensemble des coordonnées enregistrées sur Techni-Contact.<br />
+      Vous pouvez rajouter de nouvelles adresses de livraison ou de facturation à votre guise.<br />
+      <br />
+      <div class="blue-title">Mes identifiants de compte</div>
+      <div class="contact-infos infos-resume login-infos">
+        <ul>
+          <li>
+            <label class="fl">Identifiant :</label>
+            <div class="text email fl margin-right-10"><?php echo $customerInfos["login"] ?></div>
+            <div class="actions fl"><a href="" class="color-blue">Modifier</a></div>
+            <input type="text" name="email" class="edit" style="display: none" value="<?php echo $customerInfos["login"] ?>"/>
+            <div class="zero"></div>
+          </li>
+          <li>
+          <label class="fl">Mot de passe:</label>
+            <div class="text fl margin-right-10">******</div>
+            <div class="actions fl"><a href="" class="color-blue">Modifier</a><?php // / <a href="">Modifier mes alertes e-mail</a> ?></div>
+            <input type="password" name="pass" class="edit" style="display: none" value=""/>
+            <div class="zero"></div>
+          </li>
+        </ul>
+        <div class="actions hidden"><b><a href="" class="color-blue">Sauvegarder les modifications</a></b> | <a href="" class="color-blue">Annuler les modifications</a></div>
+        <div class="zero"></div>
+      </div>
+    </div>
+    
+    <div class="account-body">
+      <div class="infos-complete">
+        <div class="address-type-block fl">
+          <div class="create-address-link"><a href="javascript:HN.TC.showEditAddressForm(0);" class="color-blue">Créer une nouvelle adresse de livraison</a></div>
+          <div class="contact-infos delivery-infos fr grey-block">
+            <div class="blue-title">Mes adresses de livraison</div>
+            <ul id="delivery-address-list">
+            </ul>
+          </div>
+        </div>
+        <div class="address-type-block fr">
+          <div class="create-address-link"><a href="javascript:HN.TC.showEditAddressForm(1);" class="color-blue">Créer une nouvelle adresse de facturation</a></div>
+          <div class="contact-infos billing-infos grey-block">
+            <div class="blue-title">Mes adresses de facturation</div>
+            <ul id="billing-address-list">
+            </ul>
+          </div>
+        </div>
+        <div class="zero"></div>
+      </div>
+    </div>
+    
+  </div>
+  
+</div>
+<div class="zero"></div>
+
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

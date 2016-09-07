@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Techni-Contact : Gestion des appels entrants</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <style type="text/css">
+  body { margin: 0; padding: 0; font: normal 13px Arial,Helvetica,sans-serif; color: #000000; background-color: #efebe3 }
+  a:link, a:visited, a:hover, a:active { color: #000080; text-decoration: none }
+  a:hover { text-decoration: underline }
+  .bg { width: 430px; height: 290px; margin: 5px; padding: 5px; border: 2px solid #E5E1D8; border-radius: 5px; background: #ffffff }
+  #date { color: #336600 }
+  #number { font-weight: bold; color: #660000 }
+  .infos-title { margin: 10px 0 0; padding: 5px 0; font-style: italic; border-top: 1px solid #dddddd }
+  ul.infos { margin: 0 0 0 10px; padding: 0; list-style: none }
+  ul.infos li label { display: inline-block; width: 120px; font-weight: bold }
+  ul.infos li span {  }
+  #close { float: right; position: relative; top: -5px; right: -5px; padding: 5px 5px; font-weight: bold; cursor: pointer }
+  .icon { display: inline-block; width: 16px!important; height: 16px!important; padding: 0!important; vertical-align: text-bottom!important; cursor: pointer }
+  .icon.hidden { display: none }
+  .icon.eye { background: url(../manager/ressources/icons/eye.png) }
+  .icon.telephone { background: url(../manager/ressources/icons/telephone.png) }
+  .icon.status-online { background: url(../manager/ressources/icons/status_online.png) }
+  #client-link, #last-order, #last-estimate, #last-lead { display: none }
+  </style>
+  <!--[if lte IE 8]>
+  <style type="text/css">
+  .icon { display: inline }
+  </style>
+  <![endif]-->
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <script type="text/javascript">
+    /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
+    (function(e){function r(e){return Object.prototype.toString.call(e).slice(8,-1).toLowerCase()}function i(e,t){for(var n=[];t>0;n[--t]=e);return n.join("")}var t=function(){return t.cache.hasOwnProperty(arguments[0])||(t.cache[arguments[0]]=t.parse(arguments[0])),t.format.call(null,t.cache[arguments[0]],arguments)};t.format=function(e,n){var s=1,o=e.length,u="",a,f=[],l,c,h,p,d,v;for(l=0;l<o;l++){u=r(e[l]);if(u==="string")f.push(e[l]);else if(u==="array"){h=e[l];if(h[2]){a=n[s];for(c=0;c<h[2].length;c++){if(!a.hasOwnProperty(h[2][c]))throw t('[sprintf] property "%s" does not exist',h[2][c]);a=a[h[2][c]]}}else h[1]?a=n[h[1]]:a=n[s++];if(/[^s]/.test(h[8])&&r(a)!="number")throw t("[sprintf] expecting number but found %s",r(a));switch(h[8]){case"b":a=a.toString(2);break;case"c":a=String.fromCharCode(a);break;case"d":a=parseInt(a,10);break;case"e":a=h[7]?a.toExponential(h[7]):a.toExponential();break;case"f":a=h[7]?parseFloat(a).toFixed(h[7]):parseFloat(a);break;case"o":a=a.toString(8);break;case"s":a=(a=String(a))&&h[7]?a.substring(0,h[7]):a;break;case"u":a>>>=0;break;case"x":a=a.toString(16);break;case"X":a=a.toString(16).toUpperCase()}a=/[def]/.test(h[8])&&h[3]&&a>=0?"+"+a:a,d=h[4]?h[4]=="0"?"0":h[4].charAt(1):" ",v=h[6]-String(a).length,p=h[6]?i(d,v):"",f.push(h[5]?a+p:p+a)}}return f.join("")},t.cache={},t.parse=function(e){var t=e,n=[],r=[],i=0;while(t){if((n=/^[^\x25]+/.exec(t))!==null)r.push(n[0]);else if((n=/^\x25{2}/.exec(t))!==null)r.push("%");else{if((n=/^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-fosuxX])/.exec(t))===null)throw"[sprintf] huh?";if(n[2]){i|=1;var s=[],o=n[2],u=[];if((u=/^([a-z_][a-z_\d]*)/i.exec(o))===null)throw"[sprintf] huh?";s.push(u[1]);while((o=o.substring(u[0].length))!=="")if((u=/^\.([a-z_][a-z_\d]*)/i.exec(o))!==null)s.push(u[1]);else{if((u=/^\[(\d+)\]/.exec(o))===null)throw"[sprintf] huh?";s.push(u[1])}n[2]=s}else i|=2;if(i===3)throw"[sprintf] mixing positional and named placeholders is not (yet) supported";r.push(n)}t=t.substring(n[0].length)}return r};var n=function(e,n,r){return r=n.slice(0),r.splice(0,0,e),t.apply(null,r)};e.sprintf=t,e.vsprintf=n})(typeof exports!="undefined"?exports:window);
+  </script>
+</head>
+<body>
+<div id="call-infos" class="bg">
+  <div id="close">X</div>
+  <div>Appel entrant de <span id="number"></span>&nbsp;<span id="date"></span>&nbsp;<span id="client-status" class="icon status-online hidden"></span></div>
+  <div class="infos-title">Informations Client :</div>
+  <ul class="infos">
+    <li><label>Société :</label><span id="client-company"></span></li>
+    <li><label>Nom :</label><span id="client-lastname"></span></li>
+    <li><label>Prénom :</label><span id="client-firstname"></span></li>
+    <li><label>Tel :</label><span id="client-tel"></span></li>
+    <li><label>&nbsp;</label><a href="#" id="client-link"><span class="icon eye"></span> Voir la fiche client</a></li>
+  </ul>
+  <div id="last-order">
+    <div class="infos-title">Dernière <b>commande</b> :</div>
+    <ul class="infos">
+      <li><label>Numéro :</label><span id="order-id"></span></li>
+      <li><label>Date :</label><span id="order-date"></span></li>
+      <li><label>Fournisseur :</label><span id="order-sup_name"></span></li>
+      <li><label>Donner d'ordre :</label><span id="order-sender_name"></span></li>
+      <li><label>&nbsp;</label><a href="#" id="order-link"><span class="icon eye"></span> Voir la commande</a></li>
+    </ul>
+  </div>
+  <div id="last-estimate">
+    <div class="infos-title">Dernier <b>devis</b> :</div>
+    <ul class="infos">
+      <li><label>Numéro :</label><span id="estimate-id"></span></li>
+      <li><label>Date :</label><span id="estimate-date"></span></li>
+      <li><label>Créé par :</label><span id="estimate-created-user-name"></span></li>
+      <li><label>&nbsp;</label><a href="#" id="estimate-link"><span class="icon eye"></span> Voir le devis</a></li>
+    </ul>
+  </div>
+  <div id="last-lead">
+    <div class="infos-title">Dernier <b>lead</b> <b id="lead-type"></b> :</div>
+    <ul class="infos">
+      <li><label>Numéro :</label><span id="lead-id"></span></li>
+      <li><label>Date :</label><span id="lead-date"></span></li>
+      <li><label>Produit :</label><span id="lead-product_name"></span></li>
+      <li><label>Partenaire :</label><span id="lead-partner_name"></span></li>
+      <li><label>Comm. en charge :</label><span id="lead-comm_name"></span></li>
+      <li><label>&nbsp;</label><a href="#" id="lead-link"><span class="icon eye"></span> Voir la fiche lead</a></li>
+    </ul>
+  </div>
+</div>
+
+<script type="text/javascript">
+
+// The token can be used to group a sequence of events related to the same call
+
+function OnIncomingCall(token, number)
+{
+  // Incoming call from [number]
+	
+	$("#number").text(number);
+  var now = new Date();
+  $("#date").html(
+    "le <b>"+sprintf("%02d",now.getDate())+"/"+sprintf("%02d",now.getMonth()+1)+"/"+sprintf("%04d",now.getFullYear())+
+    "</b> à <b>"+sprintf("%02d",now.getHours())+":"+sprintf("%02d",now.getMinutes())+":"+sprintf("%02d",now.getSeconds())+"</b>"
+  );
+  if (/\d{7,}/.test(number)) {
+    $.ajax({
+      type: "GET",
+      url: "call.php",
+      data: { phoneNumber: number },
+      dataType: "json",
+      cache: false
+    }).done(function(client){
+      $("#last-order, #last-estimate, #last-lead").hide();
+      if (client.id) {
+        $("#client-status").removeClass("hidden");
+        $("#client-company").text(client.societe);
+        $("#client-lastname").text(client.nom);
+        $("#client-firstname").text(client.prenom);
+        $("#client-tel").text(client.tel1);
+        $("#client-link").attr("href", client.link).show();
+        
+        if (client.lastOrder) {
+          var o = client.lastOrder;
+          $("#last-order").show();
+          $("#order-id").text(o.id);
+          $("#order-date").text(o.date);
+          $("#order-sup_name").text(o.supplier_name);
+          $("#order-sender_name").text(o.sender_name);
+          $("#order-link").attr("href", o.link);
+        
+        } else if (client.lastEstimate) {
+          var e = client.lastEstimate;
+          $("#last-estimate").show();
+          $("#estimate-id").text(e.id);
+          $("#estimate-date").text(e.date);
+          $("#estimate-created-user-name").text(e.createdUserName);
+          $("#estimate-link").attr("href", e.link);
+        
+        } else if (client.lastLead) {
+          var l = client.lastLead;
+          $("#last-lead").show();
+          $("#lead-type").text(l.partner_category_text);
+          $("#lead-id").text(l.id);
+          $("#lead-date").text(l.date);
+          $("#lead-product_name").text(l.product_name+" ("+l.product_id+")");
+          $("#lead-partner_name").text(l.partner_name+" ("+l.partner_id+")");
+          $("#lead-comm_name").text(l.comm_name);
+          $("#lead-link").attr("href", l.link);
+        }
+      
+      } else {
+        $("#client-status").addClass("hidden");
+        $("#client-company").text("-");
+        $("#client-lastname").text("-");
+        $("#client-firstname").text("-");
+        $("#client-tel").text("-");
+        $("#client-link").attr("href", "#").hide();;
+      }
+    });
+  }
+	
+	window.external.ShowPopup();
+}
+
+function OnOutgoingCall(token, number)
+{
+	// Outgoing call to [number]
+}
+
+function OnPickedUp(token)
+{
+	// The receiver has picked up the phone	
+}
+
+function OnHungUp(token)
+{
+	// The receiver or transmitter has hung up the phone
+}
+
+function OnCallDiscarded(token)
+{
+	// All the events with this token that have been fired or will soon be fired should be discarded
+	// (The call is not a real call but rather some internal plumbing that can only be identified at some point during the call sequence)		
+}
+
+//////////////////////////////////////////////////////////////////////
+
+$("#call-infos").on("click", "a", function(){
+  window.external.OpenInDefaultBrowser($(this).attr("href"));
+  window.external.HidePopup();
+  return false;
+});
+
+$("#close").on("click", function(){
+  window.external.HidePopup();
+});
+
+$("#client-status").on("click", function(){
+  $("#client-link").click();
+});
+
+</script>
+
+</body>
+</html>

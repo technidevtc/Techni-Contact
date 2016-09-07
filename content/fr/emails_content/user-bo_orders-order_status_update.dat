@@ -1,0 +1,26 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Nous souhaitons vous informer que l’état de votre commande N°ORDER_ID a été modifié.<br/>
+	<br/>
+	Le statut de votre commande est désormais le suivant :<br/>
+	<br/>
+	<strong>ORDER_PROCESSING_STATUS</strong><br/>
+	<br/>
+	Pour toute question concernant cette commande, n’hésitez pas à nous <a href="FO_ACCOUNT_URL">contacter depuis votre espace client.</a><br/>
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">FO_URL</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

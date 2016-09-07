@@ -1,0 +1,32 @@
+<div>
+	<p>Bonjour,</p>
+	<p>
+		Une demande de catalogue a été effectuée le CUSTOMER_INSCRIPTION_DATE par l'adresse CUSTOMER_IP :</p>
+		<table cellspacing="0" cellpadding="0">
+			<tr><td>Nom : </td><td><b>CUSTOMER_LASTNAME</b></td></tr>
+			<tr><td>Prénom : </td><td><b>CUSTOMER_FIRSTNAME</b></td></tr>
+			<tr><td>Fonction : </td><td><b>CUSTOMER_JOB</b></td></tr>
+			<tr><td>Téléphone : </td><td><b>CUSTOMER_PHONE</b></td></tr>
+			<tr><td>Fax : </td><td><b>CUSTOMER_FAX</b></td></tr>
+			<tr><td>Email : </td><td><b>CUSTOMER_EMAIL</b></td></tr>
+			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			<tr><td>Société : </td><td><b>CUSTOMER_COMPANY_NAME</b></td></tr>
+			<tr><td>Nb de salariés : </td><td><b>CUSTOMER_COMPANY_WORKFORCE</b></td></tr>
+			<tr><td>Secteur d'activité : </td><td><b>CUSTOMER_COMPANY_ACTIVITYSECTOR</b></td></tr>
+			<tr><td>Code NAF : </td><td><b>CUSTOMER_COMPANY_NAFCODE</b></td></tr>
+			<tr><td>Siret : </td><td><b>CUSTOMER_COMPANY_SIRENNUMBER</b></td></tr>
+			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			<tr><td>Adresse : </td><td><b>CUSTOMER_ADDRESS</b></td></tr>
+			<tr><td>Complément adresse : </td><td><b>CUSTOMER_CADDRESS</b></td></tr>
+			<tr><td>Code Postal : </td><td><b>CUSTOMER_PC</b></td></tr>
+			<tr><td>Ville : </td><td><b>CUSTOMER_CITY</b></td></tr>
+			<tr><td>Pays : </td><td><b>CUSTOMER_COUNTRY</b></td></tr>
+			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			<tr><td>Catalogues que l'utilisateur souhaite recevoir :</td><td><b>CATALOG_LIST</b></td></tr>
+			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			<tr><td>L'utilisateur souhaite :</td><td><b>CATALOG_EDITION</b></td></tr>
+			<tr><td>Précisions : </td><td><b>CATALOG_PRECISIONS</b></td></tr>
+		</table>
+	</p>
+</div>

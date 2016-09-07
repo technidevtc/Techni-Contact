@@ -1,0 +1,26 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de demander un devis gratuit sur notre site et nous vous en remercions.<br/>
+	<br/>
+	Afin que vous puissiez suivre le traitement de votre demande, <strong>nous vous avons attribu&eacute; un compte client gratuit</strong> dont voici les identifiants :
+	<br/>
+	<br/>
+	Adresse e-mail : CUSTOMER_EMAIL<br/>
+	Mot de passe : CUSTOMER_PASSWORD<br/>
+	Numéro de client : CUSTOMER_ID<br/>
+	<br/>
+	Vous pouvez changer votre mot de passe &agrave; tout moment  depuis votre espace mon <a href="SITE_ACCOUNT_URL_LOGIN?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client-lead">compte</a>.<br/>
+	<br/>
+	Ce compte <strong>gratuit est un puissant outil</strong> qui vous permet : 
+        <ul>
+                <li>De suivre le traitement de vos demandes de devis ou d’information</li>
+                <li>De suivre vos commandes</li>
+                <li>De gérer vos devis</li>
+                <li>De communiquer directement avec notre équipe et nos partenaires</li>
+                <li>De gérer vos informations personnelles</li>
+        </ul>
+
+        <br/>
+	Nous vous souhaitons une bonne DAYTIME_TERM.<br />
+</p>

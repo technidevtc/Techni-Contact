@@ -1,0 +1,210 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-info-circle"></i> Coordonn&eacute;es</h1>
+    </div>
+	
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+
+				
+				<div class="panel-body" style="overflow:hidden;">
+					
+					<div id="panel-table">
+						<div id="infos_element_left">
+							
+							<!-- Start one element -->
+							<div class="col-md-6" style="width:100%;">
+								<panel heading="Vos coordonn&eacute;es" class="ng-isolate-scope">
+									<div class="panel ">
+										<div class="panel-heading">
+											<h4 class="ng-binding">Vos coordonn&eacute;es</h4>
+											<div class="options">
+												<panel-controls class="ng-scope">
+													<a href="">
+														<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+													</a>
+												</panel-controls>
+											</div>
+										</div>
+										
+										<div id="infos_basic_container" class="panel-body" nstyle="display: block;">
+										
+											<div class="row ng-scope">
+											
+												<div>
+													<div id="infos_basic_loader" class="infos_loader">
+														<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+													</div>
+													
+													<div id="infos_basic_content">
+													</div>
+													
+												</div><!-- end div .col-md-3 col-sm-6 -->
+
+											</div> <!-- end div .row ng-scope -->
+											
+										</div> <!-- end div .panel-body --> <!-- end #infos_basic_container -->
+										
+									</div><!-- end div .panel -->
+								</panel>
+						
+							</div>
+							<!-- end one element -->
+							
+
+							<!-- Start one element -->
+							<div class="col-md-6" style="width:100%; margin: 20px 0 20px 0;">
+								<panel heading="Vos acc&egrave;s" class="ng-isolate-scope">
+									<div class="panel ">
+										<div class="panel-heading">
+											<h4 class="ng-binding">Vos acc&egrave;s</h4>
+											<div class="options">
+												<panel-controls class="ng-scope">
+													<a href="">
+														<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+													</a>
+												</panel-controls>
+											</div>
+										</div>
+										
+										<div id="infos_connexion_container" class="panel-body" nstyle="display: block;">
+										
+											<div class="row ng-scope">
+											
+												<div>
+													<div id="infos_connexion_loader" class="infos_loader">
+														<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+													</div>
+													
+													<div id="infos_connexion_content">
+													</div>
+													
+												</div><!-- end div .col-md-3 col-sm-6 -->
+
+											</div> <!-- end div .row ng-scope -->
+											
+										</div> <!-- end div .panel-body --> <!-- end #infos_connexion_container -->
+										
+									</div><!-- end div .panel -->
+								</panel>
+						
+							</div>
+							<!-- end one element -->
+							
+							
+						</div><!-- end #infos_element_left -->
+						
+						<div id="infos_element_right">
+						
+						<!-- Start one element -->
+							<div class="col-md-6" style="width:100%;">
+								<panel heading="Vos acc&egrave;s" class="ng-isolate-scope">
+									<div class="panel ">
+										<div class="panel-heading">
+											<h4 class="ng-binding">Vos contacts pour transfert</h4>
+											<div class="options">
+												<panel-controls class="ng-scope">
+													<a href="">
+														<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+													</a>
+												</panel-controls>
+											</div>
+										</div>
+										
+										<div id="infos_contacts_container" class="panel-body" nstyle="display: block;">
+										
+											<div class="row ng-scope">
+											
+												<div>
+													<div id="infos_contacts_loader" class="infos_loader">
+														<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+													</div>
+													
+													<div id="infos_contacts_content">
+													</div>
+													<div id="infos_contacts_add_listner_container">
+														<input type="button" id="infos_contacts_add_btn" class="btn btn-default" value="Ajouter" onclick="javascript:infos_contacts_add_listner()" />
+													</div>
+													
+												</div><!-- end div .col-md-3 col-sm-6 -->
+
+											</div> <!-- end div .row ng-scope -->
+											
+										</div> <!-- end div .panel-body --> <!-- end #infos_contacts_container -->
+										
+									</div><!-- end div .panel -->
+								</panel>
+						
+							</div>
+							<!-- end one element -->
+
+					
+						</div><!-- end #infos_element_right -->						
+						
+					</div><!-- end div #panel-table -->
+
+					<script type="text/javascript">
+						infos_basic_load();
+						infos_contacts_load();
+						infos_connexion_load();
+					</script>
+					
+				</div><!-- end div .panel-heading -->
+			</div><!-- end div .panel panel-primary -->
+			
+			
+			<!-- Start Infos basic Edit -->
+			
+				<div id="infos-dialog-basic-edit-popup" title="Modifier vos coordonn&eacute;es" style="display: none;">
+					<div id="infos-dialog-basic-edit-container">
+						<div id="infos-dialog-basic-edit-response"></div>
+					</div>
+					<p id="infos-dialog-basic-edit-popup-loader" style="text-align: center;">
+							<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				
+				
+			<!-- End Infos basic Edit -->
+			
+			
+			<!-- Start Infos Connexion Edit -->
+			
+				<div id="infos-dialog-connexion-edit-popup" title="Modifier vos acc&egrave;s" style="display: none;">
+					<div id="infos-dialog-connexion-edit-container">
+						<div id="infos-dialog-connexion-edit-response"></div>
+					</div>
+					<p id="infos-dialog-connexion-edit-popup-loader" style="text-align: center;">
+							<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				
+				
+			<!-- End Infos Connexion Edit -->
+			
+			
+			<!-- Start Infos Contacts -->
+			
+				<div id="infos-dialog-contacts-popup" title="Vos contacts pour transfert" style="display: none;">
+					<div id="infos-dialog-contacts-container">
+						<div id="infos-dialog-contacts-response"></div>
+					</div>
+					<p id="infos-dialog-contacts-popup-loader" style="text-align: center;">
+							<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</p>
+				</div>
+				
+				
+			<!-- End Infos Contacts -->
+			
+			
+			
+			
+			
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	
+
+</div><!-- end div .za -->

@@ -1,0 +1,2 @@
+RewriteEngine on
+RewriteRule ^([0-9]{1,8})\-([a-z_-]+)\-(\d?)\.jpg$ image.php?id=$1&format=$2&num=$3

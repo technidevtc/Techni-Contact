@@ -1,0 +1,474 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(SITE.'misc-send-request.php');
+require(ADMIN.'generator.php');
+include(LANG_LOCAL_INC."includes-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."www-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."common-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."infos-".DB_LANGUAGE."_local.php");
+
+/*if (isset($form_pdt_search_origin))
+  $_GET["origin"] = $form_pdt_search_origin;*/
+if(!empty($_GET["origin"]))
+switch($_GET["origin"]) {
+  case "rejets":
+    $object = "recherche produit suite à rejet lead";
+    $source = "tc-contact-search-engine-rejets";
+    break;
+  
+  case "moteur-recherche":
+    $object = "recherche produit";
+    $source = "tc-contact-search-engine";
+    break;
+  
+  case "recherche-equipe-formulaire":
+    $object = "recherche produit";
+    $source = "tc-contact-search-bloc-droit";
+    break;
+  
+  case "recherche-equipe":
+  default:
+    $object = "recherche produit";
+    $source = "tc-contact-search-main-button";
+    break;
+}
+//var_dump($_SERVER['REQUEST_URI']);
+switch($_SERVER['REQUEST_URI']) {
+  case "rejets":
+    $origin = 'rejets';
+    break;
+  case "/recherche.html":
+  default:
+    $origin = 'recherche-equipe';
+    break;
+  case "/rechercher.html":
+  default:
+    $origin = 'moteur-recherche';
+    break;
+}
+//var_dump($origin);
+
+// Var telling us if the user tried to validate from this same page
+$valid_form = $_SERVER["REQUEST_METHOD"] == 'POST' && isset($_POST["nom"]);
+
+$error = $infos = array();
+if ($valid_form) {
+
+	$infos["nom"]        = isset($_POST["nom"]) ?        strtoupper(substr(trim($_POST["nom"]), 0, 255)) : "";
+	$infos["prenom"]     = isset($_POST["prenom"]) ?     ucfirst(substr(trim($_POST["prenom"]), 0, 255)) : "";
+	$infos["societe"]    = isset($_POST["societe"]) ?    ucfirst(substr(trim($_POST["societe"]), 0, 255)) : "";
+	$infos["telephone"]  = isset($_POST["telephone"]) ?  preg_replace("/[^0-9]/", "", $_POST["telephone"]) : "";
+//	$infos["adresse"]    = isset($_POST["adresse"]) ?    substr(trim($_POST["adresse"]), 0, 255) : "";
+//	$infos["cp"]         = isset($_POST["cp"]) ?         substr(trim($_POST["cp"]), 0, 255) : "";
+//	$infos["ville"]      = isset($_POST["ville"]) ?      substr(trim($_POST["ville"]), 0, 255) : "";
+//	$infos["pays"]       = isset($_POST["pays"]) ?       substr(trim($_POST["pays"]), 0, 255) : "";
+	$infos["email"]      = isset($_POST["email"]) ?      substr(trim($_POST["email"]), 0, 255) : "";
+//	$infos["objet"]      = isset($_POST["objet"]) ?      (int)$_POST["objet"] : null;
+	$infos["message"]    = isset($_POST["message"]) ?    $_POST["message"] : "";
+        $infos["campaignID"]    = isset($_POST["campaignID"]) ?    $_POST["campaignID"] : "";
+        
+	if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos["email"])) {
+		$error["email"] = true;
+		$errorstring_log .= "Email non valide<br/>\n";
+	}
+  //var_dump($infos);
+	if (empty($infos['nom']) || strtolower($infos['nom']) == 'nom') $error['nom'] = true;				else setCookie('nom', $infos['nom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+	if (empty($infos['prenom']) || strtolower($infos['prenom']) == 'prénom') $error['prenom'] = true;		else setCookie('prenom', $infos['prenom'], time() + 24 * 3600 * 365, '/', DOMAIN);
+	if (empty($infos['societe']) || strtolower($infos['societe']) == 'société / organisation') $error['societe'] = true;		else setCookie('societe', $infos['societe'], time() + 24 * 3600 * 365, '/', DOMAIN);
+//	if (empty($infos['adresse'])) $error['adresse'] = true;		else setCookie('adresse', htmlentities($infos['adresse']), time() + 24 * 3600 * 365, '/', DOMAIN);
+//	if (empty($infos['cp'])) $error['cp'] = true;				else setCookie('cp', htmlentities($infos['cp']), time() + 24 * 3600 * 365, '/', DOMAIN);
+//	if (empty($infos['ville'])) $error['ville'] = true;			else setCookie('ville', htmlentities($infos['ville']), time() + 24 * 3600 * 365, '/', DOMAIN);
+//	if (empty($infos['pays'])) $error['pays'] = true;			else setCookie('pays', htmlentities($infos['pays']), time() + 24 * 3600 * 365, '/', DOMAIN);
+//	if ($infos["objet"] === null)  $error["objet"] = true;
+	if (empty($infos['message']) || $infos['message'] == 'Que cherchez-vous?') $error['message'] = true;
+
+	if (!preg_match(REGEX_TEL, $infos["telephone"]) || empty($infos["telephone"]))
+		$error['telephone'] = true;
+	else setCookie('telephone', $infos['telephone'], time() + 24 * 3600 * 365, '/', DOMAIN);
+
+	if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos['email']))
+		$error['email'] = true;
+	else setCookie('email', $infos['email'], time() + 24 * 3600 * 365, '/', DOMAIN);
+
+	if (empty($error) && !isset($_POST["onlyCheck"]) ) {
+
+		if (!empty($infos['email'])) {
+           /* require_once (ICLASS . '_ClassEmail.php');
+      $db = $handle = DBHandle::get_instance();
+			$mail = new Email($handle);
+			$mail_infos = array(
+				"CUSTOMER_LASTNAME" => htmlentities($infos['nom']),
+				"CUSTOMER_FIRSTNAME" => htmlentities($infos['prenom']),
+				"CUSTOMER_COMPANY_NAME" => htmlentities($infos['societe']),
+				"CUSTOMER_PHONE" => htmlentities($infos['telephone']),
+				"CUSTOMER_EMAIL" => htmlentities($infos['email']),
+				"CONTACT_SUBJECT" => htmlentities($text),
+				"CONTACT_MESSAGE" => htmlentities($infos['message']),
+				"CONTACT_DATE" => date("d/m/Y - H:i:s")
+			);
+
+			$mail->Build("Un internaute souhaite une ".$text, "", "contact-search-engine", "From: Formulaire de recherche TC <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n", $mail_infos);
+			$mail->Send(utf8_decode('b.dieterlen@techni-contact.com'));
+			$mail->Save();*/
+                        $mail = new Email(array(
+      'email' => "demande-recherche@techni-contact.com",
+      'subject' => "Un internaute souhaite une ".$object,
+      'headers' => "From: Formulaire de recherche TC <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n",
+      'template' => 'tc-contact-search-engine',
+      'data' => array(
+				"CUSTOMER_LASTNAME" => urldecode($infos['nom']),
+				"CUSTOMER_FIRSTNAME" => urldecode($infos['prenom']),
+				"CUSTOMER_COMPANY_NAME" => urldecode($infos['societe']),
+				"CUSTOMER_PHONE" => urldecode($infos['telephone']),
+				"CUSTOMER_EMAIL" => urldecode($infos['email']),
+				"CONTACT_SUBJECT" => urldecode($object),
+				"CONTACT_MESSAGE" => urldecode($infos['message']),
+				"CONTACT_DATE" => date("d/m/Y - H:i:s")
+			)
+    ));
+    $mail->send();
+
+			include_once(ADMIN."generator.php");
+                        $db = $handle = DBHandle::get_instance();
+			$contactID = generateID(1, 0x7fffffff, 'id', 'contacts_form', $handle);
+			
+                        mb_convert_variables("UTF-8", "ASCII,UTF-8,ISO-8859-1", $infos);
+			$db->query("
+			INSERT INTO contacts_form (
+				id, timestamp, nom, prenom, societe,
+				tel, email, source, objet,
+				message, campaignID)
+			VALUES (
+				'".$contactID."', '".time()."', '".$db->escape($infos["nom"])."', '".$db->escape($infos["prenom"])."', '".$db->escape($infos["societe"])."',
+				'".$db->escape($infos["telephone"])."', '".$db->escape($infos["email"])."', '".$db->escape($source)."', '".$db->escape($object)."',
+				'".$db->escape($infos["message"])."', '".$db->escape($infos["campaignID"])."')", __FILE__, __LINE__);
+
+			$session = new UserSession();
+			$session->authorized_contact_search_infos = array('nom'=>$db->escape($infos["nom"]), 'prenom'=>$infos["prenom"]);
+//			header("Location: " . URL . "rechercher-demande-envoyee.html"); test.techni-contact.com/rechercher-demande-envoyee.html
+                        echo 'SearchOk';
+			exit();
+
+		}
+		else $error_app = true;
+
+
+	}else {
+          $a = 0;
+          foreach($error as $key => $value) {
+            if ($value == true) {
+              if($a != 0)
+                echo '|';
+              echo $key;
+            }
+            $a++;
+          }
+          exit;
+    }
+
+  if ($valid_form && empty($error) && !isset($_POST["onlyCheck"]) ) {
+    $session = new UserSession();
+    $session->authorized_adv_infos = array_merge($CustomerMailData, $MainProductMailData, array("cdtts" => $cdtts, "cdtts_log" => $cdtts_log));
+    echo 'SearchOk';
+    exit();
+  }
+}
+
+
+
+
+?>
+<!--<script type="text/javascript" src="<?php echo $res_url ?>scripts/tooltips.js"></script>-->
+<script type="text/javascript">
+  
+  var ERRORS_TEXT = new Array();
+  ERRORS_TEXT["telephone"] = "Merci de renseigner votre téléphone.";
+  ERRORS_TEXT["nom"] = "Merci de renseigner votre nom.";
+  ERRORS_TEXT["prenom"] = "Merci de renseigner votre prénom.";
+  ERRORS_TEXT["email"] = "Merci de renseigner votre Email. Ex: xxxx@domaine.com";
+  ERRORS_TEXT["societe"] = "Merci de renseigner le nom de votre société.";
+  ERRORS_TEXT["message"] = "Merci de saisir votre demande.";
+
+$(function () {
+  var search_ask_form = $("form[name='search_ask_form']");
+  var errorFields = <?php echo json_encode(array_keys($error)); ?>;
+//  if (errorFields.length > 0) {
+//    for (var i=0; i<errorFields.length; i++) errorFields[i] = "label[for='"+errorFields[i]+"']";
+//    alertstring = "Afin de nous transmettre votre demande, veuillez renseigner le(s) champs suivants :\n";
+//    $(errorFields.join(","), search_ask-form).addClass("error").each(function() {
+//       alertstring += " - " + $.trim(this.innerHTML.substring(0, this.innerHTML.lastIndexOf("*"))) + "\n";
+//    });
+//    alert(alertstring);
+//  }
+//
+//  $("textarea[name='precisions']", search_ask-form).focus(function(){
+//    if (this.innerHTML == "<?php echo FORM_PERSONNAL_INFOS_WARNING; ?>") this.innerHTML = "";
+//  });
+//
+  var submited = false;
+
+/*
+  $(".edit").focus(function() {
+    //var tooltip = $(this).tooltip();
+    //tooltip.hide();
+    var bad = false;
+    if ($(this).hasClass("badInfos") == true) {
+      $(this).removeClass("badInfos");
+      bad = true;
+    }
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    $("#error_"+idArray[1]).hide();
+    if (idArray[1]) {
+      if (ERRORS_TEXT[idArray[1]]) {
+        var errContent = ERRORS_TEXT[idArray[1]];
+      }
+      else {
+        errContent = "Merci de renseigner " + idArray[1];
+      }
+
+//      if (errContent.replace(/^\s*|\s*$/,"") != "" && bad == true) {
+//        $("#tooltip").html(errContent);
+//        //tooltip.show();
+//      }
+    }
+  }).blur(function() {
+//    $("#tooltip").html("");
+    formData = search_ask-form.serialize();
+
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    var fname = idArray[1];
+
+    $.ajax({
+      type: "POST",
+      data: formData+"&onlyCheck=true",
+      url: search_ask-form.attr("action"),
+      success: function(data) {
+        data = data.replace(/^\s*|\s*$/,"");
+        if (data != 'checkOk') {
+          var errors = data.split('|');
+
+          var i = 0;
+          var fieldNameError = false;
+          $('.leadform_error').html('');
+//          $('.leadform_ok').html('');
+          for (i=0; i<errors.length; i++) {
+            if (submited == true) {
+              var errorContent = '';
+              if (ERRORS_TEXT[errors[i]]) {
+                errorContent = ERRORS_TEXT[errors[i]];
+              }
+              else {
+                errorContent = "Merci de renseigner " + errors[i];
+              }
+              $("#error_"+errors[i]).html("Merci de renseigner ce champ.");
+              $("#error_"+errors[i]).show();
+              $("#field_"+errors[i]).addClass("badInfos");
+              $("#ok_"+errors[i]).html("<img src='<?php echo $res_url; ?>images/error.jpg' class='okImg' alt='X' />");
+              
+              if (errors[i] == fname)
+                fieldNameError = true;
+            }
+            else {
+              if (errors[i] == fname) {
+                fieldNameError = true;
+              }
+            }
+          }
+          
+          if (fieldNameError == true) {
+            var errorContent = '';
+            if (ERRORS_TEXT[fname]) {
+              errorContent = ERRORS_TEXT[fname];
+            }
+            else {
+              errorContent = "Merci de renseigner " + fname;
+            }
+            var fieldName = $("#error_"+fname).prev('label').text();
+
+            $("#error_"+fname).html("Merci de renseigner ces champs<br />.");
+            $("#error_"+fname).show();
+            $("#field_"+fname).addClass("badInfos");
+            $("#ok_"+fname).html("<img src='<?php echo $res_url ?>images/error.jpg' class='okImg' alt='X' />");
+          }
+          else {
+
+              $("#ok_"+fname).html("<img src='<?php echo $res_url ?>images/js-checkbox-20-on.gif' class='okImg' alt='ok' />");
+              $("#ok_"+fname).show();
+              $("#error_"+fname).hide();
+              $("#error_"+fname).html("");
+          }
+        }
+        else {
+          if (fname != '') {
+            $("#ok_"+fname).html("<img src='<?php echo $res_url ?>images/js-checkbox-20-on.gif' class='okImg' alt='ok' />");
+            $("#ok_"+fname).show();
+          }
+        }
+      }
+    });
+  });*/
+
+    $(".edit").focus(function() {
+      $('.search-ask-form-error').hide();
+
+      if ($(this).hasClass("badInfos") == true) {
+        $(this).removeClass("badInfos");
+      }
+    })
+
+  $(".btn-send-search-ask", search_ask_form).click(function(){
+    submited = true;
+    // Ajax request to valid form
+    $('.search-page-form-find-product input#field_societe').removeAttr('disabled');
+    var formData = search_ask_form.serialize();
+    $.ajax({
+      type: "POST",
+      data: formData,
+      url: search_ask_form.attr("action"),
+      success: function(data) {
+        data = data.replace(/^\s*|\s*$/,"");
+        if (data == 'SearchOk') {
+          document.location.href = "<?php echo URL ?>rechercher-demande-envoyee.html";
+        }
+        else {
+          if($('.search-page-form-find-product input#field_societe').val() == 'Particulier' && $('.search-page-form-find-product input#is_individual').attr('checked') == 'checked')
+            $('.search-page-form-find-product input#field_societe').attr('disabled', 'disabled');
+          $('.badInfos').removeClass('badInfos');
+          data = data.replace(/^\s*|\s*$/,"");
+          var errors = data.split('|');
+          $('.leadform_ok').html('');
+          var i = 0;
+          var html = '<div class="search-ask-error-arrow-right"></div>Merci de renseigner ces champs.';
+          for (i=0; i<errors.length; i++) {
+            var errorContent = '';
+            if (ERRORS_TEXT[errors[i]]) {
+              errorContent = ERRORS_TEXT[errors[i]];
+            }
+            else {
+              errorContent = "Merci de renseigner " + errors[i];
+            }
+            html += '<br /> - '+(errorContent == '' ? $("#error_"+errors[i]).prevAll('label:first').text().replace(' *', ''): errorContent);
+            $("#field_"+errors[i]).addClass("badInfos");
+          }
+          $('.search-ask-form-error').html(html);
+          $('.search-ask-form-error').css({left: 300-parseInt($('.search-ask-form-error').css('width'))})
+          $('.search-ask-form-error').show();
+          self.location.href="#nom_label";
+        }
+      }
+    });
+    return false;
+  });
+  
+  $('.search-page-form-find-product input#is_individual')
+    .mouseenter(function(){$('.search-page-form-find-product .label-individual').show()})
+    .mouseleave(function(){$('.search-page-form-find-product .label-individual').hide()})
+    .live('click', function(){
+      if($(this).attr('checked') == 'checked')
+        $('.search-page-form-find-product input#field_societe').attr('disabled','disabled').attr('value','Particulier');
+    else
+        $('.search-page-form-find-product input#field_societe').removeAttr('disabled');
+    });
+});
+
+//function findPosX(obj) {
+//  var curleft = obj.offsetLeft || 0;
+//  while (obj = obj.offsetParent) {
+//    curleft += obj.offsetLeft
+//  }
+//  return curleft;
+//}
+//
+//function findPosY(obj) {
+//  var curtop = obj.offsetTop || 0;
+//  while (obj = obj.offsetParent) {
+//    curtop += obj.offsetTop
+//  }
+//  return curtop;
+//}
+//
+//function showTooltip(content, element) {
+//  var offsetX = 25;
+//  var offsetY = 25;
+//
+//  var posX = findPosX(element) + offsetX;
+//  var posY = findPosY(element) - offsetY;
+//
+//  $("#tooltip").html(content);
+//  $("#tooltip").css({top: posY, left: posX});
+//  $("#tooltip").show();
+//}
+//
+//function hideTooltip() {
+//
+//  $("#tooltip").hide();
+//  $("#tooltip").html("");
+//
+//}
+
+</script>
+
+<div class="blue-title">Vous ne trouvez pas votre produit?</div>
+  <span>Confiez à notre équipe la recherche du produit dont vous avez besoin.<br />
+Si elle identifie un partenaire ou un fournisseur susceptible de répondre à votre besoin, elle vous mettra en contact avec lui, ou vous transmettra directement un devis. </span><br />
+  <br />
+  <div class="search-ask-form">
+  <form id="search_ask_form" name="search_ask_form" action="<?php echo URL."form-demande-recherche-produit.html?origin=".$origin; ?>" method="post">
+  <div class="contact-infos">
+   <input type="hidden" name="type" value="<?php echo $lead_type ?>">
+    <input type="hidden" name="pdtID" value="<?php echo $pdt["id"] ?>">
+    <input type="hidden" name="catID" value="<?php echo $pdt["cat_id"] ?>">
+    <input type="hidden" name="campaignID" value="<?php echo $_GET["campaignID"] ?>">
+    
+
+
+        <div class="width-600">
+
+          <div class="search-page-form-find-product">
+            <div class="fl form-col-width-260">
+              <label for="nom">Nom <span class="blue-title">*</span></label>
+              <input id="field_nom" name="nom" type="text" maxlength="255" class="edit" value="<?=(isset($_COOKIE["nom"]) && $show) ? $_COOKIE["nom"] : $infos["nom"]?>"/>
+              <!-- End .error -->
+
+              <label for="prenom">Prénom <span class="blue-title">*</span></label>
+              <input id="field_prenom" name="prenom" type="text" maxlength="255" class="edit" value="<?=(isset($_COOKIE["prenom"]) && $show) ? $_COOKIE["prenom"] : $infos["prenom"]?>"/>
+              <!-- End .error -->
+
+              <label for="societe">Nom société / organisation <span class="blue-title">*</span><?php if (isset($notReqFields["societe"])) echo "(optionnel)"; ?></label>
+              <input id="field_societe" name="societe" type="text" maxlength="255" class="edit" value="<?=(isset($_COOKIE["societe"]) && $show) ? $_COOKIE["societe"] : $infos["societe"]?>"/>
+              <div class="zero"></div>
+              <!-- End .error -->
+              
+              <label for="is_individual">Cochez la case si vous êtes un particulier</label>
+              <input type="checkbox" name="is_individual" id="is_individual" alt="Particulier" title="Particulier" />
+              <div class="zero"></div>
+              <!-- End .error -->
+
+              <label for="telephone" id="telephone_label">Téléphone <span class="blue-title">*</span></label>
+              <input id="field_telephone" name="telephone" type="text" maxlength="255" class="edit" value="<?=(isset($_COOKIE["telephone"]) && $show) ? $_COOKIE["telephone"] : $infos["telephone"]?>"/>
+              <!-- End .error -->
+
+              <label for="email">Email <span class="blue-title">*</span></label>
+              <input id="field_email" name="email" type="text" maxlength="255" class="edit" value="<?=(isset($_COOKIE["email"]) && $show) ? $_COOKIE["email"] : $infos["email"]?>"/>
+              <!-- End .error -->
+
+            </div>
+            <div class="fr form-col-width-332">
+              <label for="message">Que recherchez-vous ? <span class="small-grey-text">( décrivez votre projet en quelques mots )</span></label>
+              <textarea  class="edit" id="field_message" name="message" ></textarea>
+              <div class="zero"></div>
+              <br/>
+              <div class="search-ask-form-error" id="error_message"></div>
+              <div class="btn-send-search-ask fr"></div>
+              <div class="zero"></div>
+            </div>
+            <div class="zero"></div>
+          </div>
+        </div>
+
+  </div>
+  </form>
+</div>
+<div class="zero"></div>

@@ -1,0 +1,18 @@
+<br /><br />
+Bonjour,<br />
+<br />
+Ceci est une notification de commande.<br />
+<br />
+En cliquant sur le lien ci-dessous, vous accéderez au détail de la commande ainsi qu'au bon de livraison à insérer dans le colis expédié.<br />
+Ce bon de livraison contient toutes les informations relatives à l'expédition de la commande.<br />
+<br />
+La fiche commande vous permet aussi de nous envoyer directement un message pour nous demander des précisions concernant celle-ci.<br />
+<br />
+<a href="LINKcommande.html?idCommande=CMD_NUMBER&uid=AVERTISER_UID">Voir votre commande</a><br />
+<br />
+Notre équipe reste à votre disposition pour tout renseignement complémentaire :<br />
+<br />
+Service Achat<br />
+<a href="mailto:achat@techni-contact.com">achat@techni-contact.com</a><br />
+01 72 08 01 13<br />
+<br />

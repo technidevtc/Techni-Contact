@@ -1,0 +1,119 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 18 juillet 2005
+
+ Fichier : /secure/extranet/search.html
+ Description : Recherche produit
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = SEARCH_TITLE;
+
+define('WHERE', WHERE_PRODUCTS_CARD);
+$nav   = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; <a href="products.html?SESSION">' . HEAD_PRODUCT_LIST . '</a> &raquo; ' . COMMON_SEARCH;
+
+require(EXTRANET . 'head.php');
+?>
+<div class="barre"><a href="index.html?<?php echo $sid ?>"><?php echo HEAD_HOMEPAGE ?></a> &raquo; <a href="products.html?<?php echo $sid ?>"><?php echo HEAD_PRODUCT_LIST ?></a> &raquo; <?php echo COMMON_SEARCH ?></div>
+<div class="miseAZero"></div>
+<?php
+require(EXTRANET . 'alertmdp.php');
+
+$search = isset($_POST['p']) ? trim(substr($_POST['p'], 0, 255)) : '';
+
+if(strlen($search) >= 3)
+{
+    $data = array();
+
+    $tab = explode(' ', $search);
+    $req = '';
+
+    for($i = 0; $i < count($tab); ++$i)
+    {
+        $req .= ' and p.name like \'%' . $handle->escape(trim($tab[$i])) . '%\'';
+    }
+
+    if($res = & $handle->query('select p.id, p.name, p.fastdesc, s.id, f.name from families_fr f, products_families pf, products_fr p left join sup_requests s on p.id = s.idProduct where p.idAdvertiser = \'' . $handle->escape($user->id) . '\' and p.active = 1 and pf.idProduct = p.id and pf.idFamily = f.id ' . $req . ' group by p.id order by p.name', __FILE__, __LINE__))
+    {
+        while($row  = & $handle->fetch($res))
+        {
+            $data[] = & $row;
+        }
+    }
+}
+
+?>
+<script language="JavaScript">
+<!--
+function s_confirm(id)
+{
+    if (confirm('<?php echo SEARCH_DELETE_CONFIRMATION ?>'))
+    {
+        document.location='del_product.html?<?php print(session_name() . '=' . session_id() . '&id=') ?>' + id;
+    }
+}
+//-->
+</script>
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo COMMON_SEARCH ?></div>
+		<div class="bloc-texte" style="text-align: center">
+			<form action="search.html?<?php print(session_name() . '=' . session_id()) ?>" method="post">
+				<?php echo COMMON_PRODUCT ?> : <input type="text" name="p" maxlength="255" size="50" value="<?php print(to_entities($search)) ?>"> <input type="button" value="<?php echo COMMON_BUTTON_VALIDATE ?>" onClick="this.form.submit(); this.disabled=true">
+			</form>
+		</div>
+	</div>
+	<div class="miseAZero"></div><br>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo SEARCH_RESULTS ?></div>
+		<div class="bloc-texte">
+<?php
+if(strlen($search) < 3)
+{
+    print '<center>' . SEARCH_ERROR_LENGTH . '</center>';
+}
+else if(count($data) > 0)
+{
+?>
+			<table width="100%" border="0" cellspacing="0" cellpadding="2" class="liste-demandes">
+				<tr class="tr-titre">
+					<td width="200"><?php echo COMMON_CATEGORY ?></td>
+					<td><?php echo COMMON_PRODUCT_NAME ?></td>
+					<td width="20">&nbsp;</td>
+				</tr>
+<?php
+    for($i = 0; $i < count($data); ++$i)
+    {
+		$extra  = $data[$i][2] ? ' - ' . $data[$i][2] : '';
+		$pub     = (!$data[$i][3]) ? '<img src="ressources/images/poubelle.gif" alt="' . SEARCH_ASK_DELETE . '" width="20" height="20" onClick="s_confirm(' . $data[$i][0] . ')">' : '&nbsp;';
+		$style   = (!$data[$i][3]) ? ' style="cursor:pointer; cursor:hand"' : '';
+		$onclick = (!$data[$i][3]) ? 'onClick="document.location=\'product_detail.html?' . session_name() . '=' . session_id() . '&id=' . $data[$i][0] . '\'"': '';
+		
+		print(
+'				<tr class="tr-normal" onMouseOver="this.className=\'tr-hover\'" onMouseOut="this.className=\'tr-normal\'"' . $style . '><td class="type"' . $onclick . '>' . to_entities($data[$i][4]) . '</td><td class="produit"' . $onclick . '>' . to_entities($data[$i][1].  $extra). ' </td><td class="suppr">' . $pub . '</td></tr>' . "\n");
+    }
+    print(
+'			</table>');
+}
+else
+{
+	print'<center><b>' . COMMON_NO_RESULT . '</b></center>';
+}
+?>
+
+		</div>
+	</div>
+</div>
+<?php
+require(EXTRANET . 'tail.php');
+?>

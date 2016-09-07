@@ -1,0 +1,67 @@
+ <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+
+
+$title = "Votre d&eacute;sabonnement a bien &eacute;t&eacute; pris en compte";
+$meta_desc = "";
+$breadcrumb_label = 'Notre soci&eacute;t&eacute;';
+require(SITE . "head.php");
+
+if ($_SERVER["REQUEST_METHOD"] == "GET") {
+	
+	if(!empty($_GET['tokens'])){
+		$tokens = $_GET['tokens'];
+		
+		$tokens_explode = explode('-',$tokens);
+		$id_email = $tokens_explode[0];
+		
+		?>
+		
+		<script>
+			var contentType ="application/x-www-form-urlencoded; charset=utf-8";
+			if(window.XDomainRequest)
+				contentType = "text/plain";
+			$.ajax({
+			type: "GET",
+			url: "http://188.165.255.173/fr/ws_emailing/send_id_email.php?id_email="+<?= $id_email ?>,
+			contentType:contentType,
+			
+			success: function (d) {
+			document.getElementById('email_get').innerHTML = d;
+			//document.location.href="liste_categories.php?tokens_send=suppresion"; 
+			}
+		});
+			
+		</script>
+	
+<?php	}
+
+}
+		
+?>
+<div class="white-bg padding-top-20">
+					<div class="blocks-left">
+						<div class="blue-title">Votre demande de d&eacute;sabonnement a bien &eacute;t&eacute; pris en compte</div>
+						<div class="zero"></div>
+						<div id="our-company">
+							<div>
+							<p>
+								Nous vous informons que l'adresse <span id="email_get" style="font-weight:bold;"></span>  ne recevra plus de Newsletter de la part de <strong>Techni-Contact.</strong>
+							</p>
+							
+							<p>
+							Notre &eacute;quipe reste toujours &agrave; votre disposition pour faciliter vos achats professionnels, quelque soit votre domaine d'activit&eacute;. 
+							</p>
+							<p>
+							N'h&eacute;sitez pas &agrave; faire appel &agrave; nos experts au 01.55.60.29.29.
+							</p>
+							</div>
+						</div>
+					</div>
+					
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

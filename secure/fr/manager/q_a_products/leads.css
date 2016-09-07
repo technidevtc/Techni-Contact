@@ -1,0 +1,147 @@
+/** GENERAL **/
+form { margin: 0; padding: 0; }
+select { height: 22px; padding: 1px 0; font: normal 13px arial, helvetica, sans-serif; color: #333333; border: 1px solid #CCCCCC; }
+img { border: 0 }
+.button { padding: 0; border: 1px solid #CCCCCC; background-color: #ffffff; font-size: 11px; }
+.zero { clear: both; }
+.vspacer { vertical-align: middle; width: 1px!important; height: 100%!important }
+.inline-block { float: none; display: -moz-inline-stack; display: inline-block }
+.vmaib { float: none; display: -moz-inline-stack; display: inline-block; vertical-align: middle } /* Vertically Middle Aligned Inline Block */
+.vtaib { float: none; display: -moz-inline-stack; display: inline-block; vertical-align: top } /* Vertically Top Aligned Inline Block */
+.vsma { display: -moz-inline-stack; display: inline-block; vertical-align: middle; width: 0px!important; height: 100%!important; background: #ff00ff } /* Vertical Spacer for Middle Alignement */
+.fl { float: left }
+.fr { float: right }
+.error { font-weight: bold; color: #b00000 }
+.intitule { font-weight: bold; padding: 2px; float: left; }
+.valeur { padding: 2px; }
+.valeurL { padding: 2px; float: left; }
+.valeurR { padding: 2px; float: right; }
+.fValidUn, .fValidUnD { font: bold 11px Arial, Helvetica, sans-serif; text-align: center; }
+.fValidUnD { float: right; }
+.fValidDeux { font: bold 14px Arial, Helvetica, sans-serif; text-align: center; padding: 10px; height: auto; }
+.fValidTrois { font: bold 12px Arial, Helvetica, sans-serif; background: white url(flecheSix.gif) no-repeat; border: solid 1px #cd2d2c; width: 250px; height: 25px; padding: 0 10px 0 15px; margin: 0 auto; text-align: center; display: block; }
+.window_title_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; height: 23px; background: url(../images/dot-bg.jpg); }
+.window_title_bar .wtb_close_img { float: right; padding: 4px; margin: 0; }
+.window_title_bar .wtb_move_img { float: left; margin: 2px; }
+.window_title_bar .wtb_text { padding: 3px; cursor: default; }
+.window_subtitle_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; display: block; padding: 4px 0px; background: url(../images/dot-bg.jpg); }
+.window_bg { border: 1px solid #999999; padding: 10px; margin: 10px; }
+.window_bg_small { border: 1px solid #999999; padding: 5px; margin: 5px; }
+.listing { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; color: #999999; word-spacing: 1px; text-align: right; margin: 5px; }
+.listing a:link, .listing a:visited { color: #999999; text-decoration: none; }
+.listing a:hover { text-decoration: underline; }
+.listing .listing-current{ font-size: 12px; font-weight: bold; color:#666666; }
+.titreBloc { padding: 4px 4px 4px 10px; color: #FFFFFF; font: bold 12px arial, helvetica, sans-serif; letter-spacing: 1px; border-bottom: 1px solid #EEEEEE; background-color: #5D6068; text-align: center; }
+
+#LeadSearchDBShad { z-index: 1; position: absolute; top: 35px; left: 55px; width: 384px; height: 69px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#LeadSearchDB { z-index: 2; position: absolute; top: 30px; left: 50px; width: 380px; height: 65px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+#LeadFilterDBShad { z-index: 1; position: absolute; top: 35px; left: 465px; width: 464px; height: 69px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#LeadFilterDB { z-index: 2; position: absolute; top: 30px; left: 460px; width: 460px; height: 65px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+
+.blocka { padding: 7px 40px 7px 0; float: left; font-size: 11px; }
+
+/* leads */
+.leads { padding: 0 20px }
+
+/* lead section */
+.section { padding: 0 20px }
+.section fieldset { margin: 0 0 5px; padding: 4px 8px 8px; border: 2px groove threedface }
+.section legend { margin: 0 2px; font-weight: bold; font-size: 15px; color: #b00000 }
+.section .block { padding: 10px; margin: 0 5px; border: 1px solid #dddddd; background: #ffffff; -moz-border-radius:3px 3px 3px 3px }
+.section .layer { position: absolute; z-index: 10; padding: 5px; border: 5px solid #dddddd; background: #ffffff; cursor: move }
+.section .layer .close { position: absolute; right: 15px; top: 17px; z-index: 11; width: 18px; height: 18px; background: url(../ressources/images/close-cross-18x18-orange.png) no-repeat; cursor: pointer }
+.section .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+.section .text { padding: 4px }
+.section .date-picker { width: 400px; padding: 5px; border: 1px solid #cccccc }
+.section .label, .section label { float: left; width: 248px; height: 20px; font-weight: bold }
+.section label.error { text-align: left; text-decoration: underline }
+.section .value { float: left; margin: 0 20px 0 0 }
+.section .value .lightgray { color: #cccccc }
+.section img.view-fo { margin: 0 5px 0 0; vertical-align: middle }
+
+.section strong { font-weight: bold }
+.section .pdt-preview { float: left; margin: 4px }
+.section .pdt-preview { white-space: nowrap }
+.section .pdt-preview.red { margin: 2px; border: 2px solid #b00000 }
+.section .pdt-preview.fl { width: 420px; background: #f4f4f4 }
+.section .pdt-preview .picture { float: left; width: 150px; height: 110px; text-align: center; border: 1px solid #cccccc; background: #ffffff }
+.section .pdt-preview .infos { float: left; height: 112px; padding: 0 0 0 20px; font: normal 11px arial, helvetica, sans-serif; overflow: hidden }
+.section .pdt-preview.fl .infos { float: right; width: 248px; padding: 0 }
+.section .pdt-preview .infos strong { font-size: 12px; margin: 0; padding: 0 }
+.section .pdt-preview .infos a { color: #36339a; text-decoration: underline }
+.section .pdt-preview .infos a:hover { text-decoration: none }
+
+.section .pdt-sheet h1 { font-weight: bold; font-size: 22px; color: #b00000 }
+.section .pdt-sheet h2 { font-weight: bold; font-size: 15px; color: #b00000 }
+.section .pdt-sheet .picture { float: left; width: 250px; height: 226px; padding: 2px; text-align: center; border: 1px solid #cccccc }
+.section .pdt-sheet .infos { padding: 7px 5px; border: 1px solid #e4e4e4; background: url(../ressources/images/block-bg-grey-150.gif) repeat-x #fcfcfc }
+.section .pdt-sheet .infos .infos-head { padding: 3px 0 }
+.section .pdt-sheet .infos .infos-right { float: left; height: 200px; padding: 0 0 12px 20px; font: normal 11px arial, helvetica, sans-serif }
+.section .pdt-sheet .infos .infos-right strong { font-size: 12px; margin: 0; padding: 0 }
+.section .pdt-sheet .infos .infos-right .pdt_price { width: 150px; margin: 10px 0; font-size: 18px; color: #b00000; text-align: center }
+.section .pdt-sheet .infos .infos-right .pdt_price strong { font-weight: bold; font-size: 23px }
+.section .pdt-sheet .desc { margin: 10px 0 0; padding: 7px; border: 1px solid #e4e4e4; background: #fcfcfc }
+.section .pdt-sheet .refs { margin: 10px 0 0 }
+.section .pdt-sheet .refs table { width: 100%; font-size: 11px; border: 1px solid #8b8b8b; border-collapse: collapse }
+.section .pdt-sheet .refs th { padding: 5px; font-weight: bold; color: #ffffff; text-align: center; background: #b00000 }
+.section .pdt-sheet .refs td { padding: 5px; text-align: center; border-left: 1px solid #E8E8E8 }
+.section .pdt-sheet .refs td:first-child { border: 0 }
+
+.section .filtering fieldset { float: left; margin: 0 5px }
+.section .filtering fieldset label { float: none }
+
+.tooltip { display: none; position: absolute; width: 400px; max-height: 100px; padding: 3px; color: #000000!important; border: 1px solid #333333; border-radius: 3px; overflow: auto; background: #ffffff }
+.section .item-list .see { width: 25px }
+.section .item-list tr.hl { background: #f0f0f0 }
+.section .item-list td { vertical-align: middle }
+.section .item-list td a { display: inline-block; margin: 5px 0; vertical-align: middle }
+.section .item-list .upper { font-weight: bold; font-size: 11px; text-transform: uppercase }
+.section .item-list .lightblue { color: #2e65c0 }
+.section .item-list .darkblue { color: #164183 }
+.section .item-list .green { color: #336600 }
+.section .item-list .date { width: 100px }
+.section .item-list .actions { width: 50px; text-align: center }
+.section .item-list .actions .icon { display: inline-block; width: 16px; height: 16px; margin: 0 4px; background-repeat: no-repeat; cursor: pointer }
+.section .item-list .actions .icon.accept { background: url(../ressources/icons/accept.png) }
+.section .item-list .actions .icon.delete { background: url(../ressources/icons/delete.png) }
+.section .item-list td div.unfold { width: 15px; height: 15px; margin: 5px auto; background: url(../images/add-sub-more.gif) 0 0 no-repeat; }
+
+.section .item-list-container { max-height: 462px; padding: 0 5px; overflow: auto }
+
+#actions-dialog textarea { vertical-align: baseline; resize: none }
+#sld_pdt_sheet { display: none; left: 80px; top: 400px; width: 800px }
+#btn-print-sleads-list { float: right }
+
+#bottomBar{position : fixed; height: 60px; bottom: 0px; left: 0px; right: 0px }
+/* callBar */
+#callBar {  height: 60px; width: 650px; background: #000; z-index: 1; margin-left: auto; margin-right: auto;  opacity:0.6;filter:alpha(opacity=60); border-top : 5px steelblue ridge;border-style: outset;border-left : 5px steelblue ridge;border-right : 5px steelblue ridge;}
+
+.ui-statelike-choice-no {	border:1px solid #f66;
+	background:#f6f6f6 url(images/ui-bg_highlight-soft_100_f6f6f6_1x100.png) 50% 50% repeat-x;
+	font-weight:bold;
+	color:#990000;
+	outline:none;}
+
+#inCallbar{height: 60px; position : fixed; bottom: 0px; background: tranparent; z-index: 1; left: 0px; right: 0px}
+#inCallbar div {margin-left: auto; margin-right: auto; width: 650px; padding-top: 10px;  height: 60px; padding-left: 150px}
+
+/* call status */
+#callStatus { float: right; margin-right: 40px; min-width: 300px; background-color: #F4FAFF; border: 1px solid #CCCCCC; padding: 5px;}
+
+/* RDV */
+  .bloc { border: 1px solid #CCCCCC; font-family: Arial, Helvetica, sans-serif; }
+  .bloc-titre2 { font-size: 12px; font-weight: bold; color: #000000; background-color: #E5E1D8; padding: 5px; }
+    conversations
+  .conversation { width: 99%; font: normal 11px arial, helvetica, sans-serif }
+  .conversation .title, .conversation h2 { position: relative; top: 1px; left: 0; float: left; height: 14px; padding: 2px 10px 1px; font: normal 11px arial, helvetica, sans-serif; color: #b00000; border: 1px solid #7f7f7f; background: url(../ressources/images/conversation-title-bg.png) repeat-x; margin-bottom: 0px}
+  .conversation ul { clear: both; margin: 0; padding: 0; list-style-type: none; border: 1px solid #4d4d4d }
+  .conversation ul.grey { background: #f2f2f2 }
+  .conversation ul.white { background: #ffffff }
+  .conversation li { margin: 0; padding: 3px 5px; border-top: 1px solid #c6c6c6 }
+  .conversation li.first { border-top: 0 }
+  
+fieldset { margin: 0 0 5px; padding: 4px 8px 8px; border: 2px groove threedface }
+legend { margin: 0 2px; font-weight: bold; font-size: 15px; color: #b00000 }
+#rdv-dialog form table tbody tr td.label {vertical-align: top}
+/* RDV */
+

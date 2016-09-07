@@ -1,0 +1,138 @@
+<?php 
+	require_once('extranet_v3_functions.php'); 
+	
+	$uid	= mysql_escape_string($_GET['uid']);	
+	$params = $_GET['params'];
+	if(!empty($uid)){
+
+		require_once('extranet_v3_autolog.php');
+		
+		if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_SUPPLIER__)==0){
+			//Annonceur
+			if(!empty($params)){
+			$id  = $_GET['id'];
+			header('Location: '.EXTRANET_URL.'extranet-v3-contacts-detail-print.html?id='.$id.'&uid='.$uid);
+			}else {			
+			header('Location: '.EXTRANET_URL.'index-old-extranet.html');
+			}
+			
+		}else{
+			if(!empty($params)){
+			$id  = $_GET['id'];
+			header('Location: '.EXTRANET_URL.'extranet-v3-contacts-detail-print.html?id='.$id.'&uid='.$uid);
+			}else{			
+			header('Location: '.EXTRANET_URL.'extranet-v3-home.html');
+			}
+		}
+		
+	}else{
+	
+		$login			= mysql_escape_string($_POST['flogin']);
+		$password		= mysql_escape_string($_POST['fpassword']);
+		$user_os		= mysql_escape_string($_POST['fos']);
+		$user_navigator	= mysql_escape_string($_POST['fnavigator']);
+		$user_time		= mysql_escape_string($_POST['fusertime']);
+		
+		if(!empty($login) && !empty($password)){
+			$res_get_user_normal = $db->query("SELECT 
+												e_users.id, e_users.c,
+												e_users.webpass, 
+												e_users.login, e_users.pass, 
+												
+												a.nom1, a.contact,
+												a.category, a.litigation_time,
+												a.actif, a.email,
+												a.parent
+												
+											FROM
+												extranetusers e_users 
+													LEFT JOIN advertisers a ON a.id=e_users.id
+											WHERE
+												e_users.login='".$login."'
+											AND
+												e_users.pass='".$password."'
+											AND
+												a.deleted != 1
+											AND
+												a.actif=1", __FILE__, __LINE__);
+												
+			if(mysql_num_rows($res_get_user_normal)==1){
+				$content_get_user_normal = $db->fetchAssoc($res_get_user_normal);
+				
+				$_SESSION['extranet_user_ip']				= client_ip();
+				$_SESSION['extranet_user_id']				= $content_get_user_normal['id'];
+				$_SESSION['extranet_user_actif']			= $content_get_user_normal['actif'];
+				$_SESSION['extranet_user_c']				= $content_get_user_normal['c'];	
+				$_SESSION['extranet_user_webpass']			= $content_get_user_normal['webpass'];				
+				$_SESSION['extranet_user_contact']			= $content_get_user_normal['contact'];
+				$_SESSION['extranet_user_name1']			= $content_get_user_normal['nom1'];
+				$_SESSION['extranet_user_email']			= $content_get_user_normal['email'];
+				$_SESSION['extranet_user_category']			= $content_get_user_normal['category'];
+				$_SESSION['extranet_user_litigation_time']	= $content_get_user_normal['litigation_time'];
+				$_SESSION['extranet_user_parent']			= $content_get_user_normal['parent'];
+				
+				//Save the informations and redirect to Home Sweet Home
+				//$res_get_user_normal = $db->query("INSERT INTO..", __FILE__, __LINE__);
+				
+				$log_session	= addslashes($_SESSION['extranet_user_name1']).' | '.$_SESSION['extranet_user_ip'];
+				$log_action		= 'Identification de l\'utilisateur ('.$_SESSION['extranet_user_id'].') # form # ';
+				$log_action		.= $user_os.' # '.$user_navigator.' # '.date('Y-m-d H:i:s',$user_time);
+				$log_action		= addslashes($log_action);
+				
+				$res_save_log = $db->query("INSERT INTO extranetlogs(id, timestamp, session, action)
+											values(NULL, ".time().", '".$log_session."', '".$log_action."')", __FILE__, __LINE__);
+										
+				
+				if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_SUPPLIER__)==0){
+					//Annonceur
+					
+					$_SESSION['id'] 	= $content_get_user_normal['id'];
+					$_SESSION['ip'] 	= $_SERVER['REMOTE_ADDR'];
+					$_SESSION['login'] 	= $content_get_user_normal['login'];
+					$_SESSION['pass']  	= $content_get_user_normal['pass'];
+				
+					header('Location: '.EXTRANET_URL.'index-old-extranet.html');
+					
+				}else{
+					header('Location: '.EXTRANET_URL.'extranet-v3-home.html');
+				}
+			
+				/*if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_ADVERTISER__)==0){
+					//Annonceur
+					header('Location: '.EXTRANET_URL.'advertiser-home.html');
+					
+				}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_SUPPLIER__)==0){
+					//Fournisseur
+					header('Location: '.EXTRANET_URL.'supplier-home.html');
+					
+				}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_ADVERTISER_NOT_CHARGED__)==0){
+					//Annonceur non chargé
+					header('Location: '.EXTRANET_URL.'advertiser-not-charged-home.html');
+					
+				}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_PROSPECT__)==0){
+					//Prospect
+					header('Location: '.EXTRANET_URL.'prospect-home.html');
+				
+				}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_BLOCKED__)==0){
+					//Blocké
+					header('Location: '.EXTRANET_URL.'blocked-home.html');
+					
+				}else if(strcmp($_SESSION['extranet_user_category'],__ADV_CAT_LITIGATION__)==0){
+					//Litige
+					header('Location: '.EXTRANET_URL.'litigation-home.html');
+				}else{
+					header('Location: '.EXTRANET_URL.'login.html');
+				}*/
+			
+			}else{
+				//Login and password doesn't match
+				header('Location: '.EXTRANET_URL.'login.html?c=7032698');
+			}
+			
+		}else{
+			//Empty Login or Password redirect to login form
+			header('Location: '.EXTRANET_URL.'login.html?c=6521589');
+		}//end else if(!empty($login) && !empty($password))
+		
+	}//end else if(!empty($uid))
+?>

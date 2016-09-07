@@ -1,0 +1,186 @@
+--------------------------------------------------------------------------------
+-- Exemple 1
+--------------------------------------------------------------------------------
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<produits>
+	<produit>
+		<idproduit>187</idproduit>
+		<reference>EM1224</reference>
+		<ean> 9782218048690 </ean>
+		<nomproduit><![CDATA[Balladeur MP3 Sony]]></nomproduit>
+		<categorie><![CDATA[Son]]> </categorie>
+		<prix>129,90</prix>
+		<disponibilite> <![CDATA[En Stock]]> </disponibilite>
+		<delaiexpedition> <![CDATA[48 heures]]> </delaiexpedition>
+		<fraisdeport>10</fraisdeport>
+		<urlficheproduit> <![CDATA[http://www.url.com/ficheproduit ?id=187]]> </urlficheproduit>
+		<urlimage><![CDATA[http://www.url.com/urlimage/187.gif]]> </urlimage>
+		<marque><![CDATA[Sony]]> </marque>
+		<descriptif><![CDATA[Balladeur MP3 avec 1 Go]]> </descriptif>
+	</produit>
+	<produit>
+		<idproduit>567</idproduit>
+		<reference>AP1234</reference>
+		<ean></ean>
+		<nomproduit><![CDATA[Machine à laver FAGOR]]></nomproduit>
+		<categorie><![CDATA[Electroménager]]> </categorie>
+		<prix>650</prix>
+		<disponibilite> <![CDATA[Hors Stock]]> </disponibilite>
+		<delaiexpedition> <![CDATA[1 semaine]]> </delaiexpedition>
+		<fraisdeport>45</fraisdeport>
+		<urlficheproduit> <![CDATA[http://www.url.com/ficheproduit ?id=567]]> </urlficheproduit>
+		<urlimage><![CDATA[http://www.url.com/urlimage/567.gif]]> </urlimage>
+		<marque><![CDATA[FAGOR]]> </marque>
+		<descriptif><![CDATA[Machine à laver à tambour]]> </descriptif>
+	</produit>
+	<produit>
+		
+	</produit>
+</produits>
+
+A stocker/décrire
+----------------------------------------
+A stocker : version xml + encoding
+boucle produit avec pour chaque produit, la liste des propriétés (obligatoire/facultative + éventuellement supplémentaire)
+
+
+--------------------------------------------------------------------------------
+-- Exemple 2
+--------------------------------------------------------------------------------
+<produits>
+	<famille nom="logistique">
+		<description>Famille de tous les produits pour la logistique</description>
+		<produit>
+			<idproduit>187</idproduit>
+			<reference>EM1224</reference>
+			<ean> 9782218048690 </ean>
+			<nomproduit><![CDATA[Balladeur MP3 Sony]]></nomproduit>
+			<categorie><![CDATA[Son]]> </categorie>
+			<prix>129,90</prix>
+			<disponibilite> <![CDATA[En Stock]]> </disponibilite>
+			<delaiexpedition> <![CDATA[48 heures]]> </delaiexpedition>
+			<fraisdeport>10</fraisdeport>
+			<urlficheproduit> <![CDATA[http://www.url.com/ficheproduit ?id=187]]> </urlficheproduit>
+			<urlimage><![CDATA[http://www.url.com/urlimage/187.gif]]> </urlimage>
+			<marque><![CDATA[Sony]]> </marque>
+			<descriptif><![CDATA[Balladeur MP3 avec 1 Go]]> </descriptif>
+		</produit>
+	</famille>
+</produits>
+
+A stocker/décrire
+- ok so shot the policeman now, killing him no doubt plz
+- 'cauz if you do not, I will kill you for sure you know ?
+- plz !! spare my life, i have a wife and 3 children
+- I don't give a fuck dude, i will kill you, that's for sure, if you don't kill this policeman NOW !
+- plzzzzzzzz, anything but that, i can't kill a policeman !
+- so you die ?
+- nooooo plzzzzzzzz
+- i let you 5 s to make your choice
+- god ! help me !
+- 5
+- what must i do ?
+- 4
+- god ! Have i to kill this poor man ?
+- 3
+- my children, my wife, darling...
+- 2
+- i... i... i will kill him...
+- 1
+- BAM !
+- 0, ok you were just in time
+- Oh my god... what i have done ? i shot a policeman in the face...
+- Yes, bull's eye. Good job. But you know, i can't let any witness alive, so i have to kill you.
+- Wh.. What ? but you just said that...
+- BAM !
+- I just said what ? Speak louder ! I don't understarnd anything ...
+- ...
+- Well.. it seems that you don't have any more complaints, so i'll leave you there. Bye !
+
+
+----------------------------------------
+boucle famille, comportant une boucle produit correspondant à la famille
+chaque tag famille/produit/autre doit pouvoir avoir une liste d'attribut correspondant à une valeur automatique, ou a une valeur prédéfinie de la DB correspondant au niveau de boucle ou a une fonction php avec/sans une valeur prédéfinie
+pour un tag il faut donc :
+	- id unique (non affiché mais nécessaire pour des raisons de hiérarchisation)
+	- nom tag
+	- liste attribut
+		* nom=valeur avec échappement des "
+		* valeur = 
+			+ text : "en stock"
+			+ predefined_var : "__NUM_PDT__"
+			+ func : "date('Y/m/i H:m')"
+			+ func avec predefined_var : "date('Y/m/i H:m', __PRODUCT_TIMESTAMP__)"
+	- tags enfants à afficher dans l'ordre
+		- id tag 1 à (2^32-1)
+		- 0 : texte
+	- tag parent
+	- 
+
+2 types de predefined_var :
+	- global (__NB_PDT_TOTAL__ par exemple)
+	- local suivant la boucle (__NUM_PDT__, __ND_PDT_FAMILY__, __ADV_NAME__)
+
+
+
+--------------------------------------------------------------------------------
+-- Exemple 3
+--------------------------------------------------------------------------------
+<produits>
+	<annonceur nom="DUPONT">
+		<adresse>34 avenue sainte marguerite 06000 Cannes</adresse>
+		<telephone>04 04 04 04 04</telephone>
+		<produit num="1">
+			<idproduit>187</idproduit>
+			<reference>EM1224</reference>
+			<ean> 9782218048690 </ean>
+			<nomproduit><![CDATA[Balladeur MP3 Sony]]></nomproduit>
+			<categorie><![CDATA[Son]]> </categorie>
+			<prix>129,90</prix>
+			<disponibilite> <![CDATA[En Stock]]> </disponibilite>
+			<delaiexpedition> <![CDATA[48 heures]]> </delaiexpedition>
+			<fraisdeport>10</fraisdeport>
+			<urlficheproduit> <![CDATA[http://www.url.com/ficheproduit ?id=187]]> </urlficheproduit>
+			<urlimage><![CDATA[http://www.url.com/urlimage/187.gif]]> </urlimage>
+			<marque><![CDATA[Sony]]> </marque>
+			<descriptif><![CDATA[Balladeur MP3 avec 1 Go]]> </descriptif>
+		</produit>
+	</annonceur>
+</produits>
+
+A stocker/décrire
+----------------------------------------
+
+--------------------------------------------------------------------------------
+-- Exemple 4
+--------------------------------------------------------------------------------
+<produits>
+	<annonceur nom="DUPONT">
+		<adresse>34 avenue sainte marguerite 06000 Cannes</adresse>
+		<telephone>04 04 04 04 04</telephone>
+		<famille>
+			<nom>abri</nom>
+			<nom_famille_parente>logistique</nom_famille_parente>
+			<description>contient les produits logistique</description>
+			<produit num="1">
+				<idproduit>187</idproduit>
+				<reference>EM1224</reference>
+				<ean> 9782218048690 </ean>
+				<nomproduit><![CDATA[Balladeur MP3 Sony]]></nomproduit>
+				<categorie><![CDATA[Son]]> </categorie>
+				<prix>129,90</prix>
+				<disponibilite> <![CDATA[En Stock]]> </disponibilite>
+				<delaiexpedition> <![CDATA[48 heures]]> </delaiexpedition>
+				<fraisdeport>10</fraisdeport>
+				<urlficheproduit> <![CDATA[http://www.url.com/ficheproduit ?id=187]]> </urlficheproduit>
+				<urlimage><![CDATA[http://www.url.com/urlimage/187.gif]]> </urlimage>
+				<marque><![CDATA[Sony]]> </marque>
+				<descriptif><![CDATA[Balladeur MP3 avec 1 Go]]> </descriptif>
+			</produit>
+		</famille>
+	</annonceur>
+</produits>
+
+A stocker/décrire
+----------------------------------------
+

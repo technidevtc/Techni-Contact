@@ -1,0 +1,49 @@
+<br />
+<br />
+Bonjour CUSTOMER_NAME<br />
+<br />
+Nous vous contactons à propos de votre commande n°CMD_NUMBER ou de la question que vous nous avez soumise concernant celle-ci :<br />
+<br />
+<pre>
+MESSAGE</pre>
+ATTACHMENTS
+<br />
+<br />
+Vous pouvez <strong>directement nous répondre en cliquant sur le lien ci-dessous</strong> :<br />
+<a href="SITE_ACCOUNT_URL_LOGIN?utm_source=email&amp;utm_medium=email&amp;redirect=commandes&amp;email=CUSTOMER_MAIL&amp;idc=CMD_NUMBER">Répondre à ce message</a><br />
+<br />
+Afin d'assurer un meilleur suivi des commandes, merci de ne pas répondre directement au présent message mais d'utiliser le formulaire dédié.<br />
+<br />
+Nous vous remercions par avance,<br />
+<br />
+Cordialement.<br />
+<br />
+Le service après vente<br />
+<br />
+<br />
+<i>Augmentez votre Chiffre d'affaires grâce à Techni-Contact<br />
+<strong>Techni-Contact peut vous aider à augmenter votre Chiffre d'affaires</strong></i> : <a href="http://www.techni-contact.com/partenaire.html">découvrez comment.</a><br />
+<br /><br />
+Qui sommes nous ?<br />
+<br />
+<ul>
+  <li>100.000 produits et services répondant aux besoins de toutes les entreprises.</li>
+  <li>Des devis personnalisés en 24H.</li>
+  <li>Un  interlocuteur dédié à votre écoute.</li>
+  <li>Des milliers de professionnels nous faisant chaque mois confiance.</li>
+</ul>
+
+<p style="font-size: 12px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">FO_URL</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

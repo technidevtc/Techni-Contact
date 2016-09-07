@@ -1,0 +1,241 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-home"></i> Tableau de bord</h1>
+    </div>
+	
+	<?php
+		//variables for the page
+		//The first day hour minute and second of this month
+		$sql_condition_start_date	= strtotime(date("Y-m", time()).'-01 00:00:00');
+		//$sql_condition_start_date	= strtotime('2014-04-01 00:00:00');
+		
+		//The last day hour minute and second of this month
+		$sql_condition_end_date		= strtotime(date("Y-m-t", time()).' 23:59:59');
+		//$sql_condition_end_date		= strtotime('2014-04-30  23:59:59');
+	
+		//echo($sql_condition_start_date.' * '.$sql_condition_end_date);
+	?>
+	<div class="row">
+		<div class="col-md-6" style="width:100%;">
+			<panel heading="Performance pour MOIS" class="ng-isolate-scope">
+				<div class="panel ">
+					<div class="panel-heading">
+						<h4 class="ng-binding">Performance pour MOIS</h4>
+						<div class="options">
+							<panel-controls class="ng-scope">
+								<a href="">
+									<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+								</a>
+							</panel-controls>
+						</div>
+					</div>
+					
+					<div class="panel-body" nstyle="display: block;">
+					
+						<div class="row ng-scope">
+						
+						   <div class="col-md-3 col-sm-6">
+								<a class="info-tiles tiles-danger" href="extranet-v3-contacts-not-read.html">
+									<div class="tiles-heading">
+										<div class="pull-left">Demande(s) non lue(s)</div>
+										<!-- <div class="pull-right">+25.8%</div> -->
+									</div>
+									<div class="tiles-body">
+										<!-- <div class="pull-left"><i class="fa fa-download"></i></div> -->
+										<div class="pull-right-home">
+										<?php
+											$res_get_request_not_read = $db->query("SELECT
+																						COUNT(c.id) c
+																					FROM
+																						contacts c
+																					WHERE
+																						c.idAdvertiser=".$_SESSION['extranet_user_id']."
+																					AND
+																						c.cread=0
+																					AND
+																						c.create_time 
+																						BETWEEN ".$sql_condition_start_date." AND ".$sql_condition_end_date."
+																					", __FILE__, __LINE__);
+																					
+											$content_get_request_not_read = $db->fetchAssoc($res_get_request_not_read);
+											
+											echo($content_get_request_not_read['c']);
+										?>
+										</div>
+									</div>
+								</a>
+							</div><!-- end div .col-md-3 col-sm-6 -->
+							
+							<div class="col-md-3 col-sm-6">
+								<a class="info-tiles tiles-indigo" href="extranet-v3-contacts-all.html">
+									<div class="tiles-heading">
+										<div class="pull-left">Contact(s) ce mois-ci</div>
+										<div class="pull-right"></div>
+									</div>
+									<div class="tiles-body">
+										<div class="pull-left"></div>
+										<div class="pull-right-home">
+										<?php
+											$res_get_request_received = $db->query("SELECT
+																						COUNT(c.id) c
+																					FROM
+																						contacts c
+																					WHERE
+																						c.idAdvertiser=".$_SESSION['extranet_user_id']."
+																					AND
+																						c.create_time 
+																						BETWEEN ".$sql_condition_start_date." AND ".$sql_condition_end_date."
+																					", __FILE__, __LINE__);
+																					
+											$content_get_request_received = $db->fetchAssoc($res_get_request_received);
+											
+											echo($content_get_request_received['c']);
+										?>
+										</div>
+									</div>
+								</a>
+							</div><!-- end div .col-md-3 col-sm-6 -->
+							
+						   <div class="col-md-3 col-sm-6">
+								<a class="info-tiles tiles-success" href="extranet-v3-stats-products.html">
+									<div class="tiles-heading">
+										<div class="pull-left">Vue(s) produit(s)</div>
+										<div class="pull-right"></div>
+									</div>
+									<div class="tiles-body">
+										<div class="pull-left"></div>
+										<div class="pull-right-home">
+										<?php
+											$res_get_products_seen = $db->query("SELECT
+																					COUNT(s_hit.idTC) c
+																				FROM
+																					`stats_hit` s_hit
+																				WHERE
+																					s_hit.idAdvertiser=".$_SESSION['extranet_user_id']."
+																				AND
+																					s_hit.timestamp 
+																					BETWEEN ".$sql_condition_start_date." AND ".$sql_condition_end_date."
+																				", __FILE__, __LINE__);
+																					
+											$content_get_products_seen = $db->fetchAssoc($res_get_products_seen);
+											
+											echo($content_get_products_seen['c']);
+										?>
+										</div>
+									</div>
+								</a>
+							</div><!-- end div .col-md-3 col-sm-6 -->
+							
+						</div> <!-- end div .row ng-scope -->
+						
+                    </div> <!-- end div .panel-body -->
+					
+			</div><!-- end div .panel -->
+		</panel>
+	
+		</div>
+	</div><!-- end div .row -->
+	
+	
+	<div class="row">
+		<div class="col-md-6" style="width:100%;">
+			<panel heading="Performance pour MOIS" class="ng-isolate-scope" >
+				<div class="panel ">
+					<div class="panel-heading">
+						<h4 class="ng-binding">Contenu</h4>
+						<div class="options">
+							<panel-controls class="ng-scope">
+								<a href="">
+									<panel-control-collapse class="fa fa-chevron-down"></panel-control-collapse>
+								</a>
+							</panel-controls>
+						</div>
+					</div>
+					
+					<div class="panel-body" style="display: block;">
+					
+						<div class="row ng-scope">
+						
+							<div class="col-md-3 col-sm-6">
+								<a class="info-tiles tiles-success" href="extranet-v3-products.html">
+									<div class="tiles-heading">
+										<div class="pull-left">Produit(s) en ligne</div>
+										<div class="pull-right"></div>
+									</div>
+									<div class="tiles-body">
+										<div class="pull-left"></div>
+										<div class="pull-right-home">
+										<?php
+											$res_get_products_online = $db->query("SELECT
+																						COUNT(prod_fr.id) c
+																					FROM
+																						products_fr prod_fr
+																					WHERE
+																						prod_fr.idAdvertiser=".$_SESSION['extranet_user_id']."
+																					AND
+																						prod_fr.active=1
+																					AND
+																						prod_fr.deleted=0
+																					", __FILE__, __LINE__);
+																					
+											$content_get_products_online = $db->fetchAssoc($res_get_products_online);
+											
+											echo($content_get_products_online['c']);
+										?>
+										</div>
+									</div>
+								</a>
+							</div><!-- end div .col-md-3 col-sm-6 -->
+							
+							<div class="col-md-3 col-sm-6">
+								<a class="info-tiles tiles-midnightblue" href="extranet-v3-products-sent.html">
+									<div class="tiles-heading">
+										<div class="pull-left">Demandes de MAJ</div>
+										<div class="pull-right"></div>
+									</div>
+									<div class="tiles-body">
+										<div class="pull-left"></div>
+										<div class="pull-right-home">
+										<?php
+											$res_get_products_p1_count_query	= "SELECT 
+
+												count(DISTINCT(p_add_adv.id)) c
+												
+											FROM
+												products_add_adv p_add_adv
+											WHERE
+													p_add_adv.idAdvertiser=".$_SESSION['extranet_user_id']."
+												AND
+													(
+															p_add_adv.type='c'
+														OR
+															p_add_adv.type='m'
+													)
+												AND
+													p_add_adv.name not like '##########%'	
+												";
+												
+											$res_get_products_request = $db->query($res_get_products_p1_count_query, __FILE__, __LINE__);
+																					
+											$content_get_products_request = $db->fetchAssoc($res_get_products_request);
+											
+											echo($content_get_products_request['c']);
+										?>
+										</div>
+									</div>
+								</a>
+							</div><!-- end div .col-md-3 col-sm-6 -->
+							
+							
+						</div> <!-- end div .row ng-scope -->
+						
+                    </div> <!-- end div .panel-body -->
+					
+			</div><!-- end div .panel -->
+		</panel>
+	
+		</div>
+	</div><!-- end div .row -->
+	
+		
+</div>

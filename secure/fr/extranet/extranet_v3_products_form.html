@@ -1,0 +1,200 @@
+<script type="text/javascript" src="<?php echo EXTRANET_URL.'ressourcesv3/js/products.js'; ?>"></script>
+
+<form action="#" method="POST" onsubmit="return false;">
+	<input type="hidden" id="fps" value="1" />
+	<input type="hidden" id="fpp" value="10" />	
+	
+	<div class="row">
+		<div class="form-products-left">
+			<?php
+				//Get the number of products
+				$res_get_nb_products = $db->query("SELECT 
+												count(p_fr.id) c
+											FROM
+												products_fr p_fr 
+													LEFT JOIN advertisers a ON a.id=p_fr.idAdvertiser 
+											WHERE
+													p_fr.idAdvertiser=".$_SESSION['extranet_user_id']."
+												AND
+													p_fr.active='1'
+												AND	
+													p_fr.deleted='0'
+											", __FILE__, __LINE__);
+		
+				$content_get_nb_products	= $db->fetchAssoc($res_get_nb_products);
+				if($content_get_nb_products['c']==1){
+					echo('<strong>'.$content_get_nb_products['c'].'</strong> produit en ligne dans ');
+				}else{
+					echo('<strong>'.$content_get_nb_products['c'].'</strong> produits en ligne dans ');
+				}
+				
+				//Get the number of products families
+				//count(DISTINCT(pr_fam.idFamily)) c
+				/*$res_get_nb_pr_families = $db->query("SELECT 
+												count(pr_fam.idProduct) c
+												
+											FROM
+												products_families pr_fam 
+											WHERE
+												EXISTS
+													(
+														SELECT 
+															p.id
+														FROM
+															products p 
+																LEFT JOIN advertisers a ON a.id=p.idAdvertiser 
+														WHERE
+															p.idAdvertiser=".$_SESSION['extranet_user_id']."
+													)
+											", __FILE__, __LINE__);
+											*/
+											
+				$res_get_nb_pr_families = $db->query("SELECT 
+												count(DISTINCT(pr_fam.idFamily)) c
+												
+											FROM
+												products_fr p_fr 
+													LEFT JOIN advertisers a ON a.id=p_fr.idAdvertiser 
+													LEFT JOIN products_families pr_fam ON p_fr.id=pr_fam.idProduct
+											WHERE
+													p_fr.idAdvertiser=".$_SESSION['extranet_user_id']."
+												AND
+													p_fr.active='1'
+												AND	
+													p_fr.deleted='0'
+												AND 
+													pr_fam.orderFamily <= 1
+											", __FILE__, __LINE__);
+		
+				$content_get_nb_pr_families	= $db->fetchAssoc($res_get_nb_pr_families);
+				if($content_get_nb_pr_families['c']==1){
+					echo('<strong>'.$content_get_nb_pr_families['c'].'</strong> cat&eacute;gorie ');
+				}else{
+					echo('<strong>'.$content_get_nb_pr_families['c'].'</strong> cat&eacute;gories ');
+				}
+			?>
+		</div><!-- end .form-left -->
+		
+		
+		<div class="form-products-right">
+		
+			<div id="">
+				<input type="button" id="products_btn_lst_create" value="Ajouter un produit" onclick="javascript:document.location='extranet-v3-products-add.html'" class="btn btn-primary" style="margin-top:0;" /> 
+			</div>
+			
+		</div>
+	</div><!-- end div .row -->
+	
+	<div class="row">
+		<br />
+		<div class="form-products-left">
+			<div class="form-products-element-left">
+				<label for="products_search">
+					Rechercher un produit
+				</label>
+				<br />
+				<input type="search" id="products_search" name="products_search" value="" placeholder="id ou nom produit" autocomplete="off" style="width: 230px;" />
+				<input type="button" id="products_search_go" name="products_search_go" value="Go" onclick="javascript:products_search_by_string();" class="btn btn-default" />
+				
+				&nbsp;
+				<span id="products_input_autoloader">&nbsp;</span>
+				<input type="button" id="products_category_filter" value="Filtrer par cat&eacute;gories" class="btn btn-default" />
+				
+			</div>
+			<div class="form-products-element-right">
+				
+			</div>
+			<script type="text/javascript">
+				activate_products_autocomplete();
+			</script>
+		</div><!-- end .form-left -->
+		
+		
+		<div class="form-products-right">
+			&nbsp;
+		</div>
+	</div><!-- end div .row -->
+	
+	<div id="product_filter_result_container" class="row">
+		<div class="form-products-left">
+			<div id="product_filter_result_content" class="form-products-element-left">
+
+			</div>
+		</div><!-- end .form-left -->
+		
+		<div class="form-products-right">
+			&nbsp;
+		</div>
+	</div><!-- end div .row -->
+	
+	<div id="products_search_autosuggest" class="row">
+		<span id="products_search_autosuggest_filter_close">
+			<img src="ressourcesv3/icons/cross.png" alt="Fermer" title="Fermer" onclick="product_hide_autosuggest();" />
+		</span>
+		<div id="products_search_autosuggest_content">
+			&nbsp;
+		</div>
+	</div>
+	
+	<div id="products_families_filter" class="row">
+		<span id="products_families_filter_close">
+			<img src="ressourcesv3/icons/cross.png" alt="Fermer" title="Fermer" onclick="product_hide_filtrage_popup();" />
+		</span>
+		<?php
+		
+			$res_get_filter_pr_families = $db->query("SELECT 
+												count(DISTINCT(pr_fam.idFamily)) c, 
+												ffr.id familie_id,
+												ffr.name familie_name,
+												count(p_fr.id) count_products
+											FROM
+												products_fr p_fr 
+													LEFT JOIN advertisers a ON a.id=p_fr.idAdvertiser 
+													LEFT JOIN products_families pr_fam ON p_fr.id=pr_fam.idProduct
+													LEFT JOIN families_fr ffr ON pr_fam.idFamily=ffr.id
+											WHERE
+													p_fr.idAdvertiser=".$_SESSION['extranet_user_id']."
+												AND
+													p_fr.active='1'
+												AND	
+													p_fr.deleted='0'
+												AND 
+													pr_fam.orderFamily <= 1
+											GROUP BY ffr.name
+											ORDER BY ffr.name ASC
+											", __FILE__, __LINE__);
+											
+			if(mysql_num_rows($res_get_filter_pr_families)>1){
+				echo('<div id="products_familie_filter_liste">');
+					echo('<ul id="products_familie_filter">');
+					
+						$product_filter_local_loop=0;
+						while($content_get_filter_pr_families	= $db->fetchAssoc($res_get_filter_pr_families)){
+							
+							echo('<li class="row">');
+							
+								echo('<input id="prdfltr_element'.$product_filter_local_loop.'" type="checkbox" value="'.$content_get_filter_pr_families['familie_id'].'" class="checking" />');
+								echo('<input id="prdfltr_helement'.$product_filter_local_loop.'" type="hidden" value="'.$content_get_filter_pr_families['familie_name'].'" />');
+								
+								echo('<label for="prdfltr_element'.$product_filter_local_loop.'"  class="lchecking">');
+									echo($content_get_filter_pr_families['familie_name'].' ('.$content_get_filter_pr_families['count_products'].')');
+								echo('</label>');
+								
+							echo('</li>');
+							
+							$product_filter_local_loop++;
+						}//end while
+					echo('</ul>');
+				echo('</div>');
+				
+				echo('<div id="products_familie_filter_btn">');
+					echo('<input type="button" value="Valider" class="btn btn-primary" onclick="product_families_filter_apply()" />');
+				echo('</div>');
+			}else{
+				echo('Aucune cat&eacute;gorie existante !');
+			}
+		?>
+		
+	</div>
+
+</form>

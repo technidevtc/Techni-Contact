@@ -1,0 +1,102 @@
+#message_textarea h2, #message_toolbar h2 {
+	margin-bottom: 0;
+}
+
+#message_textarea small,  #message_toolbar small {
+	display: block;
+	margin-top: 40px;
+	font-size: 9px;
+}
+
+#message_textarea small, #message_textarea small a, #message_toolbar small, #message_toolbar small a {
+	color: #666;
+}
+
+#message_toolbar  {
+	margin-top: 13px;
+	margin-bottom: 13px;
+	display: block;
+	border-radius: 4px;
+	background: #f6f6f6;
+	position: relative;
+	z-index: 1;
+	text-align: center;
+	border: 1px solid #ddd\9;
+	background-image: linear-gradient(bottom, rgb(238,238,238) 0%, rgb(255,255,255) 100%);
+	background-image: -o-linear-gradient(bottom, rgb(238,238,238) 0%, rgb(255,255,255) 100%);
+	background-image: -moz-linear-gradient(bottom, rgb(238,238,238) 0%, rgb(255,255,255) 100%);
+	background-image: -webkit-linear-gradient(bottom, rgb(238,238,238) 0%, rgb(255,255,255) 100%);
+	background-image: -ms-linear-gradient(bottom, rgb(238,238,238) 0%, rgb(255,255,255) 100%);
+	box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.3);
+	text-align: center;
+}
+
+.message_commands {
+	border-left: 1px solid #ddd;
+	display: inline-block;
+	padding-left: 0;
+	padding: 0;
+	margin: 0;
+}
+
+.message_commands li {
+	margin: 0;
+	padding: 0;
+	display: list-item;
+	text-align: -webkit-match-parent;
+	float: left;
+}
+
+#message_toolbar a {
+	color: #000;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+#message_toolbar [data-wysihtml5-action] {
+	float: right;
+}
+
+#message_toolbar, #message_textarea {
+	width: 860px;
+	margin: auto;
+	padding: 5px;
+	-webkit-box-sizing: border-box;
+	-ms-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+#message_textarea {
+	height: 280px;
+	border: 2px solid green;
+	font-family: Verdana;
+	font-size: 11px;
+}
+
+#message_textarea:focus {
+	color: black;
+	border: 2px solid black;
+}
+
+.wysihtml5-command-active {
+	font-weight: bold;
+}
+
+[data-wysihtml5-dialog] {
+	margin: 5px 0 0;
+	padding: 5px;
+	border: 1px solid #666;
+}
+
+a[data-wysihtml5-command-value="red"] {
+	color: red;
+}
+
+a[data-wysihtml5-command-value="green"] {
+	color: green;
+}
+
+a[data-wysihtml5-command-value="blue"] {
+	color: blue;
+}

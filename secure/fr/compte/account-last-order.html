@@ -1,0 +1,101 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+	header('Location: '.COMPTE_URL.'login.html');
+	exit();
+}
+
+$oc = Doctrine_Query::create()
+  ->select('o.id, o.web_id, o.created, o.validated, o.total_ht, o.total_ttc, o.processing_status, i.web_id AS invoice_web_id')
+  ->from('Order o')
+  ->leftJoin('o.invoice i')
+  ->where('o.client_id = ?', $session->userID)
+  ->orderBy('o.created DESC')
+  ->limit('0,1')
+  ->fetchOne();
+
+//foreach ($oc as &$o)
+  //$oc['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_CMD__, $user->id, $oc['id']);
+//unset($o);
+
+$current_account_menuitem = "Mes commandes";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes commandes</h1>
+      </div>
+      <div class="account-body"></div>
+
+    </div>
+</div>
+<div class="title">Mes commandes</div>
+<div class="desc">Retrouvez ici l'ensemble des commandes effectuÃ©es sur Techni-Contact.</div>
+<div id="orders">
+ <?php //foreach ($oc as $o) : ?>
+  <div class="box account-order-box order-box fl">
+    <div class="btl"></div><div class="btr"></div>
+    <div class="bbl"></div><div class="bbr"></div>
+    <div class="box-out">
+      <div class="box-in">
+        <div class="legend">Commande n°<strong><?php echo $oc['id'] ?></strong></div>
+        <div class="infos">
+          <em>Date et heure:</em> <?php echo date('d/m/Y à H:i', $oc['created']) ?><br/>
+          <em>Total HT:</em> <?php echo sprintf('%.02f', $oc['total_ht']) ?>€<br/>
+          <em>Total TTC:</em> <?php echo sprintf('%.02f', $oc['total_ttc']) ?>€<br/>
+          <em>Etat:</em> <?php echo to_entities(Order::getGlobalProcessingStatusText($oc['processing_status'])." ".$oc[Order::getProcessingStatusTextFieldName($oc['processing_status'])]) ?>
+        </div>
+        <div class="vbar"></div>
+        <div class="links">
+         <?php if ($oc['validated'] && $oc['invoice_web_id']) : ?>
+          <a href="<?php echo PDF_DL_URL."facture/".$oc['invoice_web_id'] ?>">Télécharger la facture <img class="vmaib" src="<?php echo $res_url ?>icons/pdf_21x21.png" alt=""/></a><br/>
+         <?php else : ?>
+          <a href="<?php echo PDF_DL_URL."commande/".$oc['web_id'] ?>">Télécharger bon de commande <img class="vmaib" src="<?php echo $res_url ?>icons/pdf_21x21.png" alt=""/></a><br/>
+         <?php endif ?>
+          <a href="<?php echo COMPTE_URL."order.html?orderID=".$oc['id'] ?>">Voir détail de la commande</a><br/>
+          <a href="<?php echo COMPTE_URL."contact-form.html?type=1&id=".$oc['id'] ?>">Nous contacter concernant cette commande</a>
+        </div>
+        <div class="zero"></div>
+      </div>
+    </div>
+  </div>
+   <?php if (!empty($oc['conv'])) : ?>
+    <img class="icon-conv" src="<?php echo $res_url ?>images/bouton-voir-conversation-sav.jpg" alt="Conversation" />
+    <div class="conversation">
+      <div class="conv-title">Conversation liée à ce devis</div>
+      <ul>
+       <?php foreach ($oc['conv'] as $post) : ?>
+        <li>
+          <div class="post-title">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></div>
+         <?php if (!empty($post['attachments'])) : ?>
+          <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+          <div class="post-files" >
+           <?php foreach ($post['attachments'] as $attachment) : ?>
+            <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+           <?php endforeach ?>
+          </div>
+         <?php endif ?>
+          <div class="post-text"><?php echo htmlentities($post['text']) ?></div>
+        </li>
+       <?php endforeach // post ?>
+      </ul>
+    </div>
+   <?php endif // conv ?>
+  <div class="zero"></div>
+ <?php //endforeach // order collection ?>
+</div>
+<script type="text/javascript">
+  $("#orders")
+    .find("img.icon-conv").click(function(){ $(this).next().toggle(); }).end()
+    .find("img.post-clip").click(function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+</script>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

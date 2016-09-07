@@ -1,0 +1,35 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 15 juillet 2005
+
+ Fichier : /secure/extranet/logout.html
+ Description : Fichier déconnexion extranet
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+require(EXTRANET  . 'logs.php');
+require(ICLASS    . 'ExtranetUser.php');
+
+$handle = DBHandle::get_instance();
+$user   = & new ExtranetUser($handle);
+
+if($user->login() && $user->active)
+{
+
+    ExtranetLog($handle, $_SESSION['login'], $_SESSION['ip'], 'Déconnexion');
+
+    @session_destroy();
+}
+
+header('Location: ' . EXTRANET_URL);
+
+?>

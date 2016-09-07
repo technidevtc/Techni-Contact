@@ -1,0 +1,180 @@
+<?php
+require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos(dirname(__FILE__), "technico")+1) + 1) . "config.php";
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+
+// Flagship Products
+$res = $db->query("
+	SELECT
+		p.id, p.price AS pdt_price,
+		pfr.name, pfr.ref_name, pfr.fastdesc,
+		pf.idFamily AS catID,
+		a.id as adv_id, a.category as adv_cat,
+		rc.id AS ref_idtc, rc.price+rc.ecotax AS ref_price, (p.as_estimate + a.as_estimate) as product_as_estimate,
+                (select count(idProduct) from references_content where idProduct = p.id) as nb_refs
+	FROM products p
+	INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1
+	INNER JOIN products_families pf ON p.id = pf.idProduct
+	INNER JOIN products_flagship pfs ON p.id = pfs.idProduct AND pf.idFamily = pfs.idFamily
+	INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+	LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+	GROUP BY p.id
+	ORDER BY pfs.`order`", __FILE__, __LINE__);
+
+$pdtList = array();
+while ($pdt = $db->fetchAssoc($res)) {
+	$pdt["saleable"] = $pdt["hasPrice"] = false;
+	$pdt["price"] = $pdt["pdt_price"];
+	if ($pdt["price"] == "ref") {
+		$pdt["price"] = $pdt["ref_price"];
+	}
+	if (empty($pdt["price"])) {
+		$pdt["price"] = "sur devis";
+	}
+	elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+		$pdt["hasPrice"] = true;
+		if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__) {
+			$pdt["saleable"] = true;
+		}
+	}
+	else {
+		$pdt["price"] = "sur devis";
+	}
+
+	$pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+	$pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+
+	$pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["ref_name"].'-'.$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif";;
+	$pdtList[] = $pdt;
+}
+
+// categories xml
+$dom = new DomDocument();
+$dom->load(XML_CATEGORIES_ALL);
+$xPath = new DOMXPath($dom);
+
+// Bottom Categories List
+define("HOME_CATEGORIES_COL_COUNT", 3);
+$cat2TotalList = $xPath->query("//categories/category/category");
+$cat2PerCol = floor($cat2TotalList->length / HOME_CATEGORIES_COL_COUNT);
+$cat1List = $xPath->query("//categories/category");
+$catColList = array();
+$c2tcc = 0; // Categories 2 Total Current Count
+foreach($cat1List as $cat1) {
+	$cat2List = $xPath->query("child::category", $cat1);
+	$colIndex = floor($c2tcc / $cat2PerCol);
+	switch($colIndex) {
+		case 0 : $catColClass = "left"; break;
+		case 1 : $catColClass = "center"; break;
+		case 2 : $catColClass = "right"; break;
+		default : $catColClass = "";
+	}
+	$catColList[$colIndex]["className"] = $catColClass;
+	$catColList[$colIndex]["cat1List"][] = array("cat1" => $cat1, "cat2List" => $cat2List);
+	$c2tcc += $cat2List->length;
+}
+unset($cat1);
+
+// Mini Stores
+$nbrMiniStore = __MAX_MINI_STORE_HOME__;
+$msl1 = MiniStore::getMiniStores(true, false, true);
+$msl = array_slice($msl1, 0, $nbrMiniStore);
+
+// customer tracking
+$viewedProductIds = isset($session->tracking["product"]) ? array_slice(array_unique($session->tracking["product"]),0,4) : array();
+$viewedProductCount = count($viewedProductIds);
+
+// existing customer id ?
+if ($session->logged)
+  $clientId = $session->userID;
+else
+  $clientId = CustomerUser::getCustomerIdFromLogin($_COOKIE['email'], $db);
+
+define("__HOME__", true);
+$pageName = "home";
+
+require(SITE.'head.php');
+?>
+					<div id="left-col">
+
+						<?php if(!empty($msl)) { ?>
+
+						<div class="mini-stores-carrousel">
+							<div class="mask-mini-stores">
+								<ul class="items">
+								<?php foreach($msl as $ms) { ?>
+									<li><a href="<?php echo URL."miniboutiques/".$ms['id']."-".$ms['ref_name'].".html"; ?>"><img src="<?php echo MiniStores::getPic($ms['id'], 'home') ?>" alt="<?php echo $ms['name']; ?>"/></a></li>
+								<?php } ?>
+								</ul>
+							</div>
+						</div>
+            <div id="mini-stores-carrousel-links"></div>
+						<?php } ?>
+            <div class="clear"></div>
+
+						<div id="block-they-trust-us" class="grey-block">
+              <div class="grey-block-title">Ils nous font confiance</div>
+              <div class="they-trust-us-carrousel">
+                <div class="mask-they-trust-us">
+                  <ul class="items">
+                    <li><img src="<?php echo $res_url.'images/theytrustus/clairefontaine.jpg'; ?>" alt="clairefontaine" class="vmaib" /><div class="vsma"></div></li>
+                    <li><img src="<?php echo $res_url.'images/theytrustus/postit.jpg'; ?>" alt="postit" class="vmaib" /><div class="vsma"></div></li>
+                    <li><img src="<?php echo $res_url.'images/theytrustus/hp.jpg'; ?>" alt="hp" class="vmaib" /><div class="vsma"></div></li>
+                    <li><img src="<?php echo $res_url.'images/theytrustus/rubbermaid.jpg'; ?>" alt="rubbermaid" class="vmaib" /><div class="vsma"></div></li>
+                    <li><img src="<?php echo $res_url.'images/theytrustus/whirlpool.jpg'; ?>" alt="whirlpool" class="vmaib" /><div class="vsma"></div></li>
+                  </ul>
+                </div>
+                <div class="scroll-l"><img src="<?php echo $res_url; ?>images/carrousel-arrow-left.png" alt=""></div>
+                <div class="scroll-r"><img src="<?php echo $res_url; ?>images/carrousel-arrow-right.png" alt=""></div>
+              </div>
+            </div>
+            <div class="clear"></div>
+
+           <?php if (!empty($clientId)) : ?>
+            <div id="block-recommended-products" class="grey-block">
+              <div class="grey-block-title">Ces produits pourraient vous intéresser</div>
+              <div class="grey-block-inlay">
+                <script type="text/javascript">
+                  HN.TC.GetNuukikRecommendedProducts("block-recommended-products", [76, "users", "<?php echo $clientId ?>", "recommendation"], "", null, function(){
+                    window._gaq && _gaq.push(['_trackEvent', 'Nuukik', 'Reco HP', $(this).parent().data("pdt").infos.name]);
+                  });
+                </script>
+              </div>
+              <div class="zero"></div>
+            </div>
+           <?php endif ?>
+
+            <div id="block-top-sales" class="grey-block">
+              <div class="grey-block-title">Nos meilleures ventes</div>
+              <div class="grey-block-inlay">
+                <?php foreach($pdtList as $pdt) {
+                // if product is set as default estimate
+                $pdt_set_as_estimate = false;
+                if($pdt['price'] >= __THRESHOLD_PRICE_FOR_ESTIMATE__) $pdt_set_as_estimate = true;
+                if($pdt['product_as_estimate']) $pdt_set_as_estimate = true;
+                ?>
+                <div class="grey-block-pdt">
+                  <h3>
+                  <a href="<?php echo $pdt["url"]; ?>" class="link-block">
+                    <div class="picture">
+                      <img src="<?php echo $pdt["pic_url"]; ?>" alt="<?php echo $pdt["name"]; ?>" class="vmaib"/><div class="vsma"></div>
+                    </div>
+                    <div class="infos">
+                      <span class="label"><strong><?php echo $pdt["name"]; ?></strong></span>
+                      <div class="price"><?php echo ($pdt["hasPrice"] ? (!$pdt_set_as_estimate ? sprintf("%.02f",$pdt["price"])."€ HT" : 'sur devis') : $pdt["price"]); ?></div>
+                    </div>
+                  </a>
+                    </h3>
+                  <a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { echo $pdt['nb_refs'] > 1 ? 'btn-cart-add-pink': 'btn-cart-add-small-single'; } else { ?>btn-esti-ask-orange<?php } ?> btn-cart-add" data-adv-type="<?php echo $pdt["adv_cat"];?>" rel="nofollow"></a>
+                </div>
+              <?php } ?>
+              </div>
+              <div class="zero"></div>
+            </div>
+            <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+					</div>
+
+<?php require SITE.'blocks-right.php' ?>
+
+<?php require SITE.'foot.php' ?>

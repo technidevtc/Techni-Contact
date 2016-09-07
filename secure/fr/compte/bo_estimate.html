@@ -1,0 +1,166 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+	header("Location: " . COMPTE_URL . "login.html");
+	exit();
+}
+//https://secure-test.techni-contact.com/fr/compte/bo_estimate.html?id=n1nnhjwvy3a3wf4ixripdhkvpmkh8uto
+try {
+  $id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_STRING);
+  if (!$id)
+    throw new Exception("Identifiant devis invalide");
+  pp($id);
+  $e = Doctrine_Query::create()
+      ->select('e.*,
+                el.*,
+                IF(0,el.id,elpfr.ref_name) AS pdt_ref_name,
+                IF(0,el.id,elcat.id) AS cat_id')
+      ->from('Estimate e')
+      ->leftJoin('e.lines el')
+      ->leftJoin('el.product elp')
+      ->leftJoin('elp.product_fr elpfr')
+      ->leftJoin('elp.families elcat')
+      ->where('e.web_id = ?', $id)
+      ->andWhere('e.client_id = ?', $session->userID)
+      ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+  
+  if (empty($e['id']))
+    throw new Exception("Vous ne possédez pas de devis ayant pour identifiant ".$id);
+  
+} catch (Exception $e) {
+	header("Location: ".COMPTE_URL."index.html");
+  exit();
+}
+
+if (!$e['client_seen']) {
+  $rows = Doctrine_Query::create()
+    ->update('Estimate')
+    ->set('client_seen', '?', time())
+    ->where('id = ?', $e['id'])
+    ->execute();
+}
+
+$fdp = 20;
+$fdp_franco = 300;
+$res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco'", __FILE__, __LINE__ );
+while ($rec = $db->fetch($res))
+  $$rec[0] = $rec[1];
+
+$current_account_menuitem = "Mes devis commerciaux";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+									<script type="text/javascript">
+										HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE['email']) ? $_COOKIE['email'] : "") ?>";
+									</script>
+									<div class="title">Mon devis commercial n°<?php echo $e['id'] ?></div>
+									<div class="desc">
+                    Retrouvez ici le détail de votre devis commercial.<br/>
+										<br/>
+										Une fois validé, <strong>renvoyez-nous votre devis par fax au 01 83 62 36 12</strong> avec la mention &laquo; bon pour accord &raquo;, signature et votre tampon.
+									</div>
+									<br/>
+									<div class="big">Date et heure: <?php echo date("d/m/Y à H:i.s", $e['created']) ?></div>
+									<a href="<?php echo COMPTE_URL."contact-form.html?type=3&id=".$e['id'] ?>">Nous contacter concernant ce devis commercial</a><br/>
+									<!--<a href="" class="estimate-send">Envoyer à un collègue</a><br/>-->
+									<a href="<?php echo COMPTE_URL."estimate-list.html" ?>" class="back-link">
+										<div class="in">Retour à la liste des devis</div>
+										<div class="bl"></div>
+										<div class="br"></div>
+									</a>
+                  <div class="cart">
+                    <div class="cart-table">
+                      <table cellspacing="0" cellpadding="0">
+                        <thead>
+                        <tr>
+                          <th>Image</th>
+                          <th>Réf.</th>
+                          <th>Libellé</th>
+                          <th>Montant ht unitaire</th>
+                          <th>Quantité</th>
+                          <th>Montant total ht</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php pp($e['lines']); foreach($e['lines'] as $line) : ?>
+                          <tr class="line">
+                            <td rowspan="<?php echo (!empty($line['promotion'])+(!empty($line['discount'])))+2 ?>"><img src="<?php echo Utils::get_secure_pdt_pic_url($line['pdt_id']) ?>" alt=""/></td>
+                            <td><?php echo $line['pdt_ref_id'] ? $line['pdt_ref_id'] : "-" ?></td>
+                            <td class="al"><a href="<?php echo Utils::get_pdt_fo_url($line['pdt_id'], $line['pdt_ref_name'], $line['cat_id']) ?>"><?php echo htmlentities($line['desc']) ?></a></td>
+                            <td><?php echo sprintf('%.02f', $line['pu_ht']) ?> €</td>
+                            <td><?php echo $line['quantity'] ?></td>
+                            <td><?php echo sprintf('%.02f', $line['total_ht_pre']) ?> €</td>
+                          </tr>
+                          <tr>
+                            <td colspan="5" class="al">
+                             <?php if (!empty($line['comment'])) : ?>
+                              <i>Commentaire :</i> <?php echo htmlentities($line['comment']) ?><br />
+                             <?php endif ?>
+                              <i>Délai de livraison :</i> <?php echo htmlentities($line['delivery_time']) ?>
+                            </td>
+                          </tr>
+                         <?php	if (!empty($line['promotion'])) : ?>
+                          <tr>
+                            <td colspan="4">Promotion  de <b><?php echo sprintf('%.02f', $line['promotion'])."%</b>" ?></td>
+                            <td><?php echo sprintf('%.02f', -$line['total_ht_pre']*$line['promotion']/100) ?> €</td>
+                          </tr>
+                         <?php	endif ?>
+                         <?php if (!empty($line['discount'])) : ?>
+                          <tr>
+                            <td colspan="4">Remise de <b><?php echo sprintf('%.02f', $line['discount'])."%</b>" ?></td>
+                            <td><?php echo sprintf('%.02f', -$line['total_ht_pre']*$line['discount']/100) ?> €</td>
+                          </tr>
+                         <?php	endif ?>
+                        <?php endforeach // lines ?>
+                         <?php if (!empty($e['comment'])) : ?>
+                          <tr>
+                            <td>&nbsp;</td>
+                            <td colspan="5" class="al">
+                              <i>Note additionnelle :</i><br/>
+                              <?php echo nl2br(htmlentities($e['comment'])) ?>
+                            </td>
+                          </tr>
+                         <?php endif ?>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="cart-left">
+                      <table class="cart-totals" cellspacing="0" cellpadding="0">
+                        <tbody>
+                          <tr class="stotal-ht">
+                            <td class="label">Sous-total HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $e['stotal_ht']) ?> €</td>
+                          </tr>
+                          <tr class="fdp">
+                            <td class="label">Frais de port HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $e['fdp_ht']) ?> €</td>
+                          </tr>
+                          <tr class="total-ht">
+                            <td class="label">Total HT:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $e['total_ht']) ?> €</td>
+                          </tr>
+                          <tr class="tva">
+                            <td class="label">TVA (20%):</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $e['total_tva']) ?> €</td>
+                          </tr>
+                          <tr class="total-ttc">
+                            <td class="label">Total TTC:</td>
+                            <td class="amount"><?php echo sprintf('%.02f', $e['total_ttc']) ?> €</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="cart-right">
+                      <a class="dl-esti inline-block" href="<?php echo PDF_DL_URL."devis-commercial/".$e['web_id'] ?>"></a>
+                    </div>
+                    <div class="zero"></div>
+                  </div>
+		
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

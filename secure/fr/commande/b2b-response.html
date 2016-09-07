@@ -1,0 +1,94 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+if (Utils::be2bill_signature(BE2BILL_PASSWORD, $_GET) == $_GET['HASH']) {
+  $inputs = filter_input_array(INPUT_GET, array(
+    'EXECCODE' => FILTER_SANITIZE_NUMBER_INT,
+    'TRANSACTIONID' => FILTER_SANITIZE_NUMBER_INT,
+    'ORDERID' => FILTER_SANITIZE_NUMBER_INT
+  ));
+  
+  if ($inputs['EXECCODE'] == '0000') { // success
+    header("Location: ".COMMANDE_URL."order-confirmed.html?orderID=".$inputs['ORDERID']);
+  } else {
+    switch ($inputs['EXECCODE']) {
+      case '0001': $message = "Identification 3DSecure requise"; break;
+      case '0002': $message = "Redirection vers un moyen de paiement alternatif requis"; break;
+      case '1001': $message = "Paramètre manquant"; break;
+      case '1002': $message = "Paramètre invalide"; break;
+      case '1003': $message = "Erreur HASH"; break;
+      case '1004': $message = "Protocole non supporté"; break;
+      case '1005': $message = "Requête incorrecte, consultez la documentation pour construire la requête POST"; break;
+      case '1006': $message = "Paramètres GET interdits"; break;
+      case '2001': $message = "Alias non trouvé"; break;
+      case '2002': $message = "Transaction de référence non trouvée"; break;
+      case '2003': $message = "Transaction de référence non aboutie"; break;
+      case '2004': $message = "Transaction de référence non remboursable"; break;
+      case '2005': $message = "Autorisation de référence non capturable"; break;
+      case '2006': $message = "Transaction de référence non terminée"; break;
+      case '2007': $message = "Montant de capture invalide"; break;
+      case '2008': $message = "Montant de remboursement invalide"; break;
+      case '2009': $message = "Autorisation expirée"; break;
+      case '2010': $message = "échéancier non trouvé"; break;
+      case '2011': $message = "échéancier déjà interrompu"; break;
+      case '2012': $message = "échéancier déjà terminé"; break;
+      case '3001': $message = "Compte désactivé"; break;
+      case '3002': $message = "Adresse IP serveur non autorisée"; break;
+      case '3003': $message = "Transaction non permise"; break;
+      case '4001': $message = "Transaction refusée par le réseau bancaire"; break;
+      case '4002': $message = "Fonds insuffisants"; break;
+      case '4003': $message = "Carte refusée par le réseau bancaire"; break;
+      case '4004': $message = "Transaction abandonnée"; break;
+      case '4005': $message = "Suspicion de fraude"; break;
+      case '4006': $message = "Carte déclarée perdue"; break;
+      case '4007': $message = "Carte déclarée volée"; break;
+      case '4008': $message = "Authentification 3DSecure échouée"; break;
+      case '4009': $message = "Authentification 3DSecure expirée"; break;
+      case '4010': $message = "Transaction invalide"; break;
+      case '4011': $message = "Transaction doublon"; break;
+      case '4012': $message = "Données de carte invalides"; break;
+      case '4013': $message = "Transaction non autorisée par le réseau bancaire pour ce porteur"; break;
+      case '4014': $message = "Carte non-enrôlée 3D Secure"; break;
+      case '4015': $message = "Transaction expirée"; break;
+      case '4016': $message = "Transaction refusée par le terminal de paiement"; break;
+      case '5001': $message = "Erreur protocole d'échange"; break;
+      case '5002': $message = "Erreur réseau bancaire"; break;
+      case '5004': $message = "Délai dépassé, la réponse arrivera par URL de notification"; break;
+      case '5005': $message = "Erreur d'affichage du module 3D Secure"; break;
+      case '6001': $message = "Transaction refusée par le marchand"; break;
+      case '6002': $message = "Transaction refusée"; break;
+      case '6003': $message = "Le porteur a déjà contesté une transaction"; break;
+      case '6004': $message = "Transaction refusée par les règles du marchand"; break;
+      default: $message = "Paiement par carte bancaire annulée";
+    }
+
+  }
+} else {
+  $message = "Paiement par carte bancaire annulée";
+}
+
+define('SECURE', true);
+define('ORDER_BC_RESPONSE', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>
+<script type="text/javascript">
+  setTimeout(function(){
+    location.href = "<?php echo COMMANDE_URL ?>order-step3.html";
+  }, 10000);
+</script>
+<div class="bc-container no-margin">
+  <div class="grey-block bc-block">
+    Votre paiement par carte bancaire n'a pas pu aboutir pour la raison suivante :<br />
+    <br />
+    <strong><?php echo $message ?></strong><br />
+    <br />
+    <br />
+    Vous allez être redirigé automatiquement dans 10s vers la dernière étape de votre commande afin de pouvoir choisir un nouveau mode de paiement.<br />
+    <br />
+    <br />
+    <a href="<?php echo COMMANDE_URL ?>order-step3.html">Choisir un nouveau mode de paiement maintenant</a>
+  </div>
+</div>
+
+<?php require SITE.'foot.php' ?>

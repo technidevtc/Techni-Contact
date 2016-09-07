@@ -1,0 +1,654 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 17 juillet 2005
+
+ Fichier : /secure/extranet/infos.html
+ Description : Edition des coordonnées
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = INFOS_TITLE;
+
+define('WHERE', WHERE_INFOS);
+$nav   = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; ' . INFOS_HEAD_TITLE;
+
+require(EXTRANET . 'head.php');
+?>
+<div class="barre"><a href="index.html?<?php echo $sid ?>"><?php echo HEAD_HOMEPAGE ?></a>  &raquo; <?php echo INFOS_HEAD_TITLE ?></div>
+<div class="miseAZero"></div>
+<?php
+
+$error = false;
+$errorstring = '';
+
+/* Vérifier l'unicité d'un champ
+   i : référence handle connexion
+   i : champ à tester
+   i : référence valeur à tester
+   i : nom table optionnel
+   o : true si unique false sinon */
+function isUnique(& $handle, $field, & $value, $table = 'advertisers')
+{
+    $ret = false;
+
+    if(($result = & $handle->query('select id from ' . $table . ' where ' . $field . ' = \'' . $handle->escape($value) . '\'', __FILE__, __LINE__)) && $handle->numrows($result, __FILE__, __LINE__) == 0)
+    {
+        $ret = true;
+    }
+
+    return $ret;
+}
+
+
+/* Maj coordonnées
+   i : réf handle connexion
+   i : id
+   i : réf adresse
+   i : réf adresse 2
+   i : réf ville
+   i : code postal
+   i : réf pays
+   i : réf contact
+   i : réf délair livraison
+   i : réf marge ou remise
+   i : réf contrainte de prix
+   i : réf email
+   i : réf url
+   i : réf tel1
+   i : réf tel2
+   i : réf fax1
+   i : réf fax2
+   i : réf login
+   i : réf pass
+   o : true si ok ou false si erreur */
+function updateAdvertiser(& $handle, $id, & $adresse1, & $adresse2, & $ville, $cp, & $pays, & $delai_livraison, & $margeRemise, & $contraintePrix, & $contact, & $email, & $url, & $tel1, & $tel2, & $fax1, & $fax2, & $login, & $pass)
+{
+    $ret = false;
+
+//	if(($res = $handle->query('select id from advertisers_adv where id = \'' . $handle->escape($id) . '\'', __FILE__, __LINE__)) && $handle->numrows($res, __FILE__, __LINE__) == 1)
+//	{
+	$res = $handle->query('update advertisers set timestamp = \'' . time() . '\', adresse1 = \'' . $handle->escape($adresse1) . '\', adresse2 = \'' . $handle->escape($adresse2) . '\', ville = \'' . $handle->escape($ville) . '\', cp = \'' . $handle->escape($cp) . '\', pays = \'' . $handle->escape($pays) . '\', delai_livraison = \'' . $handle->escape($delai_livraison) . '\', margeRemise = \'' . $handle->escape($margeRemise) . '\', contraintePrix = \'' . $handle->escape($contraintePrix) . '\', contact = \'' . $handle->escape($contact) . '\', email = \'' . $handle->escape($email) . '\', url = \'' . $handle->escape($url) . '\', tel1 = \'' . $handle->escape($tel1) . '\', tel2 = \'' . $handle->escape($tel2) . '\', fax1 = \'' . $handle->escape($fax1) . '\', fax2 = \'' . $handle->escape($fax2) . '\', timestamp = \'' . time() . '\' where id = \'' . $handle->escape($id) . '\'', __FILE__, __LINE__);
+//	}
+//	else
+//	{
+//		$res = $handle->query('insert into advertisers_adv (id, timestamp, adresse1, adresse2, ville, cp, pays, delai_livraison, margeRemise, contraintePrix, contact, email, url, tel1, tel2, fax1, fax2) values (\'' . $handle->escape($id) . '\', \'' . time() . '\', \'' . $handle->escape($adresse1) . '\', \'' . $handle->escape($adresse2) . '\', \'' . $handle->escape($ville) . '\', \'' . $handle->escape($cp) . '\', \'' . $handle->escape($pays) . '\', \'' . $handle->escape($delai_livraison) . '\', \'' . $handle->escape($margeRemise) . '\', \'' . $handle->escape($contraintePrix) . '\', \'' . $handle->escape($contact) . '\', \'' . $handle->escape($email) . '\', \'' . $handle->escape($url) . '\', \'' . $handle->escape($tel1) . '\', \'' . $handle->escape($tel2) . '\', \'' . $handle->escape($fax1) . '\', \'' . $handle->escape($fax2) . '\')', __FILE__, __LINE__);
+//	}
+		
+	if($res)
+	{
+        $ret = true;
+
+        // Si nouveau mot de passe proposé
+        if($pass != '')
+        {
+            $spass = ', pass = \'' . $handle->escape($pass) . '\'';
+        }
+        else
+        {
+            $spass = '';
+        }
+        
+        $handle->query('update extranetusers set login = \'' . $handle->escape($login) . '\'' . $spass . ' where id = \'' . $handle->escape($id) . '\' limit 1', __FILE__, __LINE__);
+
+
+    }
+    
+    
+    return $ret;
+}
+
+
+function onWait(& $handle, $id)
+{
+	
+	if(($res = $handle->query('select id from advertisers_adv where id = \'' . $handle->escape($id) . '\'', __FILE__, __LINE__)) && $handle->numrows($res, __FILE__, __LINE__) == 1)
+	{
+		return true;
+	}
+	
+	return false;
+}
+
+
+
+if($_SERVER['REQUEST_METHOD'] == 'POST')
+{
+	
+    $adresse1 = isset($_POST['adresse1']) ? substr(trim($_POST['adresse1']), 0, 255) : '';
+
+    if($adresse1 == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_ADRESS;
+    }
+    
+
+    $adresse2 = isset($_POST['adresse2']) ? substr(trim($_POST['adresse2']), 0, 255) : '';
+
+
+    $ville = isset($_POST['ville']) ? substr(trim($_POST['ville']), 0, 255) : '';
+
+    if($ville == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_CITY;
+    }
+
+    $cp = isset($_POST['cp']) ? substr(trim($_POST['cp']), 0, 255) : '';
+
+    if($cp == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_PC;
+    }
+
+
+    $pays = isset($_POST['pays']) ? substr(trim($_POST['pays']), 0, 255) : '';
+
+    if($pays == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_COUNTRY;
+    }
+
+    $pays = isset($_POST['pays']) ? substr(trim($_POST['pays']), 0, 255) : '';
+
+	$isSupplier = $user->parent == '61049' ? true : false;
+
+	if ($isSupplier)
+	{
+		$delai_livraison = isset($_POST['delai_livraison']) ? substr(trim($_POST['delai_livraison']), 0, 255) : '';
+		$margeRemise     = isset($_POST['margeRemise'])     ? substr(trim($_POST['margeRemise']), 0, 255) : '';
+		$contraintePrix  = isset($_POST['contraintePrix'])  ? substr(trim($_POST['contraintePrix']), 0, 255) : '0';
+	    
+		if ($delai_livraison == '')
+	    {
+	        $error = true;
+	        $errorString .= INFOS_ERROR_DELIVERY_TIME;
+	    }
+		
+		if ($user->prixPublic == 1 && $user->peuChangerTaux == 1)
+		{
+			if ($margeRemise == '')
+			{
+				$error = true;
+				$errorString .= INFOS_ERROR_DISCOUNT;
+			}
+			elseif(!preg_match('/^[0-9]*((\.|\,)[0-9]{0,5})?$/',$margeRemise))
+			{
+				$error = true;
+				$errorString .= INFOS_ERROR_DISCOUNT_NOT_VALID;
+			}
+		}
+		else
+		{
+			$margeRemise = & $user->margeRemise;
+		}
+		
+		if (!preg_match('/^[0-9]*((\.|\,)[0-9]{0,2})?$/',$contraintePrix))
+		{
+			$error = true;
+			$errorString .= INFOS_ERROR_CONSTRAINT;
+		}
+	}
+	else
+	{
+		$delai_livraison = & $user->delai_livraison;
+		$margeRemise     = & $user->margeRemise;
+		$contraintePrix  = & $user->contraintePrix;
+	}
+    
+    
+	
+	$contact = isset($_POST['contact']) ? substr(trim($_POST['contact']), 0, 255) : '';
+	
+    $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+	
+    if($email != '' && !preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $email))
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_EMAIL;
+    }
+	
+    if($email != '' && $email != $user->email && !isUnique($handle, 'email', $email))
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_EMAIL_USED;
+    }
+	
+    $url = isset($_POST['url']) ? trim($_POST['url']) : '';
+    if($url == 'http://') $url = '';
+	
+	if($url != '' && strpos($url, '/', 8) === false)
+	{
+		$url .= '/';
+	}
+	
+    if($url != '' && !preg_match('/^(http|https|ftp):\/\/(([A-Z0-9][A-Z0-9_-]*)(\.[A-Z0-9][A-Z0-9_-]*)+)(:(\d+))?\//i', $url))
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_URL;
+    }
+	
+    $tel1 = isset($_POST['tel1']) ? trim($_POST['tel1']) : '';
+	
+    if($tel1 == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_TEL;
+    }
+	
+    $tel2 = isset($_POST['tel2']) ? trim($_POST['tel2']) : '';
+	
+    $fax1 = isset($_POST['fax1']) ? trim($_POST['fax1']) : '';
+	
+    if($fax1 == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_FAX;
+    }
+	
+    $fax2 = isset($_POST['fax2']) ? trim($_POST['fax2']) : '';
+	
+    $login = isset($_POST['login']) ? trim(substr($_POST['login'], 0, 255)) : '';
+
+    if($login == '')
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_LOGIN;
+    }
+    else if(strlen($login) < 3)
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_LOGIN_LENGTH;
+    }
+        
+    if($login != $user->login && !isUnique($handle, 'login', $login, 'extranetusers'))
+    {
+        $error = true;
+        $errorString .= INFOS_ERROR_LOGIN_EXIST;
+    }
+	
+    $pass = isset($_POST['pass']) ? substr($_POST['pass'], 0, 255) : '';
+	
+    if($pass != '')
+    {
+        if(strlen($pass) < 6)
+        {
+            $error = true;
+            $errorString .= INFOS_ERROR_PASS_LENGTH;
+        }
+        else
+        {
+            $cpass = isset($_POST['cpass']) ? substr($_POST['cpass'], 0, 255) : '';
+			
+            if($cpass != $pass)
+            {
+                $error = true;
+                $errorString .= INFOS_ERROR_PASS_SAME;
+            }
+        }
+    }
+
+
+    if(!$error)
+    {
+        $ok = updateAdvertiser($handle, $user->id, $adresse1, $adresse2, $ville, $cp, $pays, $delai_livraison, $margeRemise, $contraintePrix, $contact, $email, $url, $tel1, $tel2, $fax1, $fax2, $login, $pass);
+
+        if($ok)
+        {
+            $EOL = ($pass != '') ? ' | Changement du mot de passe' : '';
+			
+            if ($isSupplier)
+			{
+				$supplierChanges = ' | Configuration Fournisseur : Délai de livraison : ' . $delai_livraison;
+				
+				if ($user->prixPublic == 1 && $user->peuChangerTaux == 1)
+					$supplierChanges .= ' - Remise : ' . $margeRemise;
+				
+				$supplierChanges .= ' - Contrainte de prix : ' . $contraintePrix;
+			}
+			else
+			{
+				$supplierChanges = '';
+			}
+//'Nise à jour de vos coordonnées de ' . $user->name . ' / Nouvelles données => Adresse : ' . $adresse1 . ' - ' . $adresse2 . ' - ' . $ville . ' - ' .
+// $cp . ' - ' . $pays . $supplierChanges . ' | Contact : ' . $contact . ' - ' . $email . ' - ' . $url .
+//  ' | Tel & Fax : ' . $tel1 . ' - ' . $tel2 . ' - ' . $fax1 . ' - ' . $fax2 . ' | Login : ' . $login . $EOL
+                        $arrayMail = array(
+                          "email" => $email,
+                          "subject" => "Mise à jour de vos informations",
+                          "headers" => "From: web@techni-contact.com\nReply-To: web@techni-contact.com<web@techni-contact.com>\r\n",
+                          "template" => "advertiser-extranet_infos-update_infos",
+                          "data" => array(
+                            "EXP_DATE" => date('d/m/Y - H:i:s'),
+                            'ADRESSE1' => $adresse1,
+                            'ADRESSE2' => $adresse2,                          
+                            'VILLE' => $ville,
+                            'CODEPOSTAL' => $cp,
+                            'PAYS' => $pays,
+                            'CHANGES' => $supplierChanges,
+                            'CONTACT' => $contact,
+                            'EMAIL' => $email,
+                            'URL' => $url,
+                            'TEL1' => $tel1,
+                            'TEL2' => $tel2,
+                            'FAX1' => $fax1,
+                            'FAX2' => $fax2,
+                            'LOGIN' => $login,
+                            'EOL' => $EOL
+                          )
+                        );
+
+                        $mail = new Email($arrayMail);
+                        $mail->send();
+			
+			ExtranetLog($handle, $_SESSION['login'], $_SESSION['ip'], 'Demande de mise à jour des coordonnées de ' . $user->name . ' / Nouvelles données => Adresse : ' . $adresse1 . ' - ' . $adresse2 . ' - ' . $ville . ' - ' . $cp . ' - ' . $pays . $supplierChanges . ' | Contact : ' . $contact . ' - ' . $email . ' - ' . $url . ' | Tel & Fax : ' . $tel1 . ' - ' . $tel2 . ' - ' . $fax1 . ' - ' . $fax2 . ' | Login : ' . $login . $EOL);
+        }
+    }
+
+
+}
+else
+{
+        $adresse1 = & $user->adresse;
+        $adresse2 = & $user->cadresse;
+        $ville    = & $user->ville;
+        $cp       = & $user->cp;
+        $pays     = & $user->pays;
+        $contact  = & $user->contact;
+        $email    = & $user->email;
+        $url      = & $user->url;
+        $tel1     = & $user->tel1;
+        $tel2     = & $user->tel2;
+        $fax1     = & $user->fax1;
+        $fax2     = & $user->fax2;
+        $login    = & $user->login;
+		
+		$isSupplier = $user->parent == 61049 ? true : false;
+		
+		if ($isSupplier)
+		{
+			$delai_livraison = & $user->delai_livraison;
+			$prixPublic      = & $user->prixPublic;
+			$margeRemise     = & $user->margeRemise;
+			$peuChangerTaux  = & $user->peuChangerTaux;
+			$contraintePrix  = & $user->contraintePrix;
+		}
+}
+
+//$onWait = onWait($handle, $user->id);
+$onWait = false;
+
+$next = true;
+
+if($_SERVER['REQUEST_METHOD'] == 'POST')
+{
+    if(!$error)
+    {
+        if($ok)
+        {
+            $out = 'Coordonnées mises à jour avec succès.';
+        }
+        else
+        {
+            $out = INFOS_ERROR_UPDATE;
+        }
+        $next = true;
+        print('<div class="centre"><div class="bloc"><div class="bloc-titre"><center>' . $out . '</center></div></div></div>');
+    }
+    else
+    {
+        $next = true;
+    }
+}
+
+if($next)
+{
+
+?>
+<script language="JavaScript">
+<!--
+
+function trim(s)
+{
+     return s.replace(/(^\s*)|(\s*$)/g, '');
+}     
+
+//-->
+</script>
+<form method="post" action="infos.html?<?php print(session_name() . '=' . session_id()) ?>">
+<div class="centre">
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo INFOS_BLOC_TITLE ?></div>
+		<div class="bloc-texte">
+		<?php echo INFOS_BLOC_DESC ?>
+<?php
+if ($onWait) print '<br/><font color="red">' . INFOS_BLOC_NOTE . '</font>';
+?>
+		</div>
+	</div>
+	<br/>
+	<div class="miseAZero"></div>
+	<br/>
+
+<?php
+if ($error)
+{
+?>
+	<div class="bloc">
+		<div class="bloc-titre"><?php echo INFOS_ERROR ?></div>
+		<div class="bloc-texte"><?php echo $errorString ?></div>
+	</div>
+	<br/>
+	<div class="miseAZero"></div>
+	<br/>
+<?php
+}   
+?>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo INFOS_COMPANY_BLOC ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_COMPANY_NAME ?> :</div>
+			<div class="champ-form"><?php print(to_entities($user->name)) ?> </div>
+			<div class="champ-miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_ADDRESS ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="adresse1" onBlur="this.value = trim(this.value.toUpperCase())" value="<?php print(to_entities($adresse1)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_COMPLEMENT ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="adresse2" onBlur="this.value = trim(this.value.toUpperCase())" value="<?php print(to_entities($adresse2)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_CITY ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="20" maxlength="255" name="ville" onBlur="this.value = trim(this.value.toUpperCase())" value="<?php print(to_entities($ville)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_PC ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="10" name="cp" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($cp)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_COUNTRY ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="20" maxlength="255" name="pays" onBlur="this.value = trim(this.value.toUpperCase())" value="<?php print(to_entities($pays)) ?>">
+			</div>
+			<div class="champ-miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_TEL1 ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="20" name="tel1" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($tel1)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_TEL2 ?> : </div>
+			<div class="champ-form">
+				<input type="text" size="20" name="tel2" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($tel2)) ?>">
+			</div>
+			<div class="miseAZero"></div><br/>
+			<div class="champ-label"><?php echo INFOS_FAX1 ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="20" name="fax1" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($fax1)) ?>">
+			</div>
+			<div class="miseAZero"></div><br/>
+			<div class="champ-label"><?php echo INFOS_FAX2 ?> : </div>
+			<div class="champ-form">
+				<input type="text" size="20" name="fax2" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($fax2)) ?>">
+			</div>
+			<div class="miseAZero"></div><br/>
+			<div class="champ-label"><?php echo INFOS_URL ?> : </div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="url" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($url)) ?>">
+			</div>
+			<div class="miseAZero"></div>
+		</div>
+	</div>
+	<br/>
+	<br/>
+<?php
+if ($isSupplier)
+{
+?>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo INFOS_SUPPLIER_BLOC ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_SUPPLIER_DELIVERY_TIME ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="delai_livraison" onBlur="this.value = trim(this.value); maj = this.value.charAt(0).toUpperCase(); if(this.value.length > 1) this.value = maj + this.value.substring(1, this.value.length); else this.value = maj" value="<?php print(to_entities($delai_livraison)) ?>">
+			</div>
+			<div class="champ-aide"<?php echo INFOS_SUPPLIER_DELIVERY_TIME_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_SUPPLIER_CONSTRAINT ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="15" maxlength="12" name="contraintePrix" onBlur="this.value = parseFloat(trim(this.value))" value="<?php print(to_entities($contraintePrix)) ?>">€
+			</div>
+			<div class="champ-aide"><?php echo INFOS_SUPPLIER_CONSTRAINT_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+<?php
+if ($prixPublic == 1 && $peuChangerTaux == 1)
+{
+?>
+			<div class="champ-label"><?php echo INFOS_SUPPLIER_DISCOUNT ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="15" maxlength="10" name="margeRemise" onBlur="this.value = parseFloat(trim(this.value))" value="<?php print(to_entities($margeRemise)) ?>">%
+			</div>
+			<div class="champ-aide"><?php echo INFOS_SUPPLIER_DISCOUNT_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+<?php
+}
+?>			
+		</div>
+	</div>
+	<br/>
+	<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo INFOS_SUPPLIER_CONTACT_BLOC ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_SUPPLIER_CONTACT ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="contact" onBlur="this.value = trim(this.value); maj = this.value.charAt(0).toUpperCase(); if(this.value.length > 1) this.value = maj + this.value.substring(1, this.value.length); else this.value = maj" value="<?php print(to_entities($contact)) ?>">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_SUPPLIER_CONTACT_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_EMAIL_ADDRESS ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="email" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($email)) ?>">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_SUPPLIER_EMAIL_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+		</div>
+	</div>
+<?php
+}
+else
+{
+?>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo INFOS_ADVERTISER_CONTACT_BLOC ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_ADVERTISER_CONTACT ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="contact" onBlur="this.value = trim(this.value); maj = this.value.charAt(0).toUpperCase(); if(this.value.length > 1) this.value = maj + this.value.substring(1, this.value.length); else this.value = maj" value="<?php print(to_entities($contact)) ?>">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_ADVERTISER_CONTACT_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_EMAIL_ADDRESS ?> :</div>
+			<div class="champ-form">
+				<input type="text" size="30" maxlength="255" name="email" onBlur="this.value = trim(this.value)" value="<?php print(to_entities($email)) ?>">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_ADVERTISER_EMAIL_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+		</div>
+	</div>
+<?php
+}
+?>
+<br/>
+<br/>
+	<div class="bloc">
+		<div class="bloc-titre2"><?php echo INFOS_EXTRANET_BLOC ?></div>
+		<div class="bloc-texte">
+			<div class="champ-label"><?php echo INFOS_EXTRANET_LOGIN ?> * :</div>
+			<div class="champ-form">
+				<input type="text" size="20" name="login" value="<?php print(to_entities($login)) ?>" maxlength="255" onBlur="this.value = trim(this.value)">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_EXTRANET_LOGIN_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+			<a name="password"></a>
+			<div class="champ-label"><?php echo INFOS_EXTRANET_PASS ?> :</div>
+			<div class="champ-form">
+				<input type="password" size="20" name="pass" maxlength="255">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_EXTRANET_PASS_DESC ?></div>
+			<div class="miseAZero"></div>
+			<br/>
+			<div class="champ-label"><?php echo INFOS_EXTRANET_PASS_CHECK ?> :</div>
+			<div class="champ-form">
+				<input type="password" size="20" name="cpass" maxlength="255">
+			</div>
+			<div class="champ-aide"><?php echo INFOS_EXTRANET_PASS_CHECK_DESC ?></div>
+			<div class="miseAZero"></div>
+		</div>
+	</div>
+	<br/>
+	<br/>
+	<div class="bloc">
+		<div align="center">
+		<br/>
+		<div class="champ-valid"><input type="button" value="<?php echo INFOS_BUTTON_VALIDATE ?>" onClick="this.form.submit(); this.disabled=true">
+		</div>
+		<div class="bloc-texte"><?php echo INFOS_BOTTOM_NOTE ?></div>
+		</div>
+	</div>
+</div>
+</form>
+<?php
+}  // fin affichage form
+require(EXTRANET . 'tail.php');
+?>

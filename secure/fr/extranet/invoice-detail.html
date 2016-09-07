@@ -1,0 +1,141 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V3 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : OD pour Hook Network SARL - http://www.hook-network.com
+ Date de création : 11 février 2011
+ 
+ Fichier : /secure/extranet/commande.html
+ Description : Affichage commande extranet
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = "Liste de vos factures et avoirs Techni-Contact";
+
+define('WHERE', WHERE_INVOICES);
+require(EXTRANET.'head.php');
+
+try {
+
+$rid = filter_input(INPUT_GET, 'rid', FILTER_VALIDATE_INT);
+
+if (empty($rid))
+  throw new Exception("Numéro de facture invalide.");
+
+$si = Doctrine_Query::create()
+    ->select('i.*,il.*')
+    ->from('Invoice i')
+    ->innerJoin('i.lines il')
+    ->innerJoin('i.client c')
+    ->innerJoin('c.advertiser a')
+    ->where('i.rid = ?', $rid)
+    ->andWhere('a.id = ?', $user->id)
+    ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+if (!$si)
+  throw new Exception("La facture ou l'avoir n°".$rid." n'existe pas.");
+
+require(EXTRANET.'head2.php');
+?>
+<div class="barre">
+  <a href="index.html"><?php echo HEAD_HOMEPAGE ?></a>
+  &#x00bb; <a href="invoices.html">Liste de vos factures et avoirs Techni-Contact</a>
+  &#x00bb; Détail de <?php echo $si['the_type'] ?> n°<?php echo $si['rid'] ?>
+</div>
+<div class="miseAZero"></div>
+<?php require(EXTRANET.'alertmdp.php'); ?>
+<div class="centre">
+  <br />
+  <div class="bloc">
+    <div class="bloc-titre">Détails de <?php echo $si['the_type'] ?> n°<?php echo $si['rid']  ?></div>
+    <div class="bloc-texte">
+      <div class="champ-label">Date :</div>
+      <div class="champ-form"><?php echo date('d/m/Y à H:i:s', $si['issued']) ?></div>
+      <div class="miseAZero"></div>
+      <div class="champ-label">Echéance :</div>
+      <div class="champ-form"><?php echo date('d/m/Y à H:i:s', $si['due_date']) ?></div>
+      <div class="miseAZero"></div>
+    </div>
+  </div>
+  <div class="miseAZero"></div>
+  <br/>
+  <div id="conversation"></div>
+  <div class="miseAZero"></div>
+  <br/>
+  <div class="bloc">
+    <div class="bloc-titre2">Détails des produits</div>
+    <div class="bloc-texte">
+      <div id="commande">
+        <table class="liste_produits" cellspacing="0" cellpadding="0">
+          <thead>
+            <tr>
+              <th style="width: 110px">Référence fournisseur</th>
+              <th style="width: 300px">Désignation</th>
+              <th style="width: 60px">Qté.</th>
+              <th style="width: 80px">Montant unitaire HT</th>
+              <th style="width: 80px">Montant total HT</th>
+            </tr>
+          </thead>
+          <tbody id="ProductsList">
+           <?php foreach($si['lines'] as $line) : ?>
+            <tr>
+              <td class="center"><?php echo to_entities($line['sup_ref']) ?></td>
+              <td><?php echo to_entities($line['desc']) ?></td>
+              <td class="right"><?php echo $line['quantity'] ?></td>
+              <td class="ref-prix"><?php echo sprintf("%0.2f", $line['pu_ht']) ?></td>
+              <td class="ref-prix"><?php echo sprintf("%0.2f", $line['total_ht']) ?></td>
+            </tr>
+           <?php endforeach ?>
+          </tbody>
+        </table>
+        <div class="miseAZero"></div>
+        <br />
+        <div id="montant-totaux">
+          <div class="total_H">
+            <div class="total_G">Sous-total HT :</div>
+            <div class="total_D"><?php echo sprintf("%.02f", $si['stotal_ht']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Total HT :</div>
+            <div class="total_D" id="TotalHT"><?php echo sprintf("%0.2f", $si['total_ht']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Montant TVA :</div>
+            <div class="total_D" id="TotalTVA"><?php echo sprintf("%0.2f", $si['total_tva']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <div class="total_Hn">
+            <div class="total_G">Total TTC :</div>
+            <div class="total_D" id="TotalTTC"><?php echo sprintf("%0.2f", $si['total_ttc']) ?>€</div>
+            <div class="zero"></div>
+          </div>
+          <br />
+          <div class="bloc-preview2 green"><a href="<?php echo PDF_URL.strtolower($si['type_text'])."/".$si['web_id'] ?>" target="_blank">Imprimer La facture</a></div>
+          <div class="miseAZero"></div>
+        </div>
+        <div class="miseAZero"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php
+} catch (Exception $e) {
+  require(EXTRANET.'head2.php');
+?>
+  <div class="centre">
+    <div class="bloc">
+      <div class="bloc-titre">
+        <center><?php echo $e->getMessage() ?></center>
+      </div>
+    </div>
+  </div>
+<?php
+}
+require(EXTRANET.'tail.php');

@@ -1,0 +1,65 @@
+Options -Indexes
+redirectMatch 301 /videositemap.xml(.*)$ http://api.treepodia.com/sitemap/UA-TECHNICONTACT/sitemap.xml$1 
+redirectMatch 301 /familles/([0-9a-z-]{1,}),([0-9]{1,})\.html$ /familles/$1.html?page=$2
+redirectMatch 301 /familles/([0-9a-z-]{1,}),([0-9]{1,})\.html\/(.*)$ /familles/$1.html?page=$2&$3
+redirectMatch 301 /fournisseur/([0-9]{1,}),([0-9]{1,})\.html$ /fournisseur/$1.html?page=$2
+redirectMatch 301 /fournisseur/([0-9]{1,}),([0-9]{1,})\.html\/(.*)$ /fournisseur/$1.html?page=$2&$3
+ErrorDocument 403 /
+ErrorDocument 404 /404.php
+
+RewriteCond %{QUERY_STRING} ^lettre&page=1$
+RewriteRule ^index-produits.html$ /index-produits.html? [R=301,L]
+
+<Limit DELETE HEAD PUT>
+order allow,deny
+deny from all
+</Limit>
+<Limit GET POST>
+order deny,allow
+allow from all
+</Limit>
+AddType application/x-httpd-php .php4
+AddType application/x-httpd-php .html
+RewriteEngine on
+RewriteRule ^affiner/([1-11])-([0-9a-z-]{1,})\.html$ saffiner.html?priv_f=$1&priv_search=$2&priv_page=1 [L]
+RewriteRule ^affiner/([1-11])-([0-9a-z-]{1,}),([0-9]{1,})\.html$ saffiner.html?priv_f=$1&priv_search=$2&priv_page=$3 [L]
+RewriteRule ^affiner/([0-9a-z-]{1,})\.html$ saffiner.html?priv_search=$1&priv_page=1 [L]
+RewriteRule ^affiner/([0-9a-z-]{1,}),([0-9]{1,})\.html$ saffiner.html?priv_search=$1&priv_page=$2 [L]
+RewriteRule ^familles/([0-9a-z-]{1,})\.html$ categories.html?category=$1 [L,QSA]
+RewriteRule ^familles-f/([0-9a-z-]{1,})/([0-9a-z-]{1,})/([0-9a-z-]{1,})\.html$ categories.html?category=$1&filters[facet][$2_$3]=1 [L,QSA]
+RewriteRule ^miniboutiques/([1-9]?[0-9]{0,8})-([0-9a-z-]{1,})\.html$ mini-stores.html?id=$1&page=1 [L]
+RewriteRule ^miniboutiques/([1-9]?[0-9]{0,8})-([0-9a-z-]{1,}),([0-9]{1,})\.html$ mini-stores.html?id=$1&page=$3 [L]
+RewriteRule ^miniboutiques/([1-9]?[0-9]{0,8})-([0-9a-z-]{1,})\.html\/(.*)$ mini-stores.html?id=$1&page=1&$3 [L]
+RewriteRule ^miniboutiques/([1-9]?[0-9]{0,8})-([0-9a-z-]{1,}),([0-9]{1,})\.html\/(.*)$ mini-stores.html?id=$1&page=$3&$4 [L]
+RewriteRule ^fournisseur/([0-9]{1,})\.html$ suppliers.html?supplierID=$1 [L,QSA]
+RewriteRule ^produits/([0-9]{1,5})-([0-9]{1,8})-(.*)\.html(&(.*))?$ product.html?catID=$1&pdtID=$2&pdtRefName=$3&$5&%{QUERY_STRING} [L]
+RewriteRule ^utilisateurs/([0-9]+)-([0-9]+)-(.*)\.html$ utilisateur-details.html?annuaireID=$1&clientID=$2&societeName=$3&$5&%{QUERY_STRING} [L]
+RewriteRule ^guides-achat/([0-9]+)-(.*)\.html$ guides-achat.html?id_guide=$1 [L]
+RewriteRule ^blog$ blog.html [L]
+RewriteRule ^customers-surveys/(.*)\.html$ operators-note.html [L]
+RewriteRule ^produits/imprimer/([0-9]{1,5})-([0-9]{1,8})$ product-print.html?catID=$1&pdtID=$2 [L]
+RewriteRule ^newsletter/([a-z0-9]{50}) out.html?priv_id=$1 [L]
+RewriteRule ^contacts/infos/([0-9]{1,5})-([0-9]{1,8}).html$ priv_contact.html?type=1&priv_shortidfamily=$1&priv_idproduct=$2 [L]
+RewriteRule ^contacts/tel/([0-9]{1,5})-([0-9]{1,8}).html$ priv_contact.html?type=2&priv_shortidfamily=$1&priv_idproduct=$2 [L]
+RewriteRule ^contacts/devis/([0-9]{1,5})-([0-9]{1,8}).html$ priv_contact.html?type=3&priv_shortidfamily=$1&priv_idproduct=$2 [L]
+RewriteRule ^contacts/commande/([0-9]{1,5})-([0-9]{1,8}).html$ priv_contact.html?type=4&priv_shortidfamily=$1&priv_idproduct=$2 [L]
+RewriteRule ^acheterpdt/([0-9]{1,5})-([0-9]{1,8})-([0-9]*)\.html$ panier_add.html?type=0&famille=$1&produit=$2&quantity=$3 [L]
+RewriteRule ^acheterref/([0-9]{1,5})-([0-9]{1,8})-([0-9]{0,9})-([0-9]*)\.html$ panier_add.html?type=0&famille=$1&produit=$2&idTC=$3&quantity=$4 [L]
+RewriteRule ^dernieres-recherches/([-_+\%0-9a-zA-Z]+)\.html$ rechercher.html?search=$1&last_user_search=1 [L]
+RewriteRule ^assurance-qualite/([0-9]{1,})\/(oui|non)$ reject_customer_feedback.html?lead_id=$1&customer_contacted=$2 [L]
+RewriteRule ^lead-([af]).html$ lead.html?cat=$1 [L,QSA]
+RewriteRule ^lead-([af])2.html$ lead2.html?cat=$1 [L,QSA]
+RewriteRule ^lead-([af])3.html$ lead3.html?cat=$1 [L,QSA]
+RewriteRule ^lead-([af])-success.html$ lead-success.html?cat=$1 [L,QSA]
+RewriteRule ^pdf/devis-commercial/([0-9a-z]{32})$ pdf/estimate.php?web_id=$1 [L]
+RewriteRule ^pdf/facture-pro-format/([0-9a-z]{32})$ pdf/estimate.php?web_id=$1&pro_forma=1 [L]
+RewriteRule ^pdf/commande/([0-9a-z]{32})$ pdf/order.php?web_id=$1 [L]
+RewriteRule ^pdf/commande-fax/([0-9]{1,5})-([0-9]{1,8})$ pdf/order-fax.php?famille=$1&pdt_id=$2 [L]
+RewriteRule ^pdf/facture/([0-9a-z]{32})$ pdf/invoice.php?web_id=$1&type=0 [L]
+RewriteRule ^pdf/avoir/([0-9a-z]{32})$ pdf/invoice.php?web_id=$1&type=1 [L]
+RewriteRule ^telecharger-pdf/devis-commercial/([0-9a-z]{32})$ pdf/estimate.php?web_id=$1&dl=1 [L]
+RewriteRule ^telecharger-pdf/facture-pro-format/([0-9a-z]{32})$ pdf/estimate.php?web_id=$1&pro_forma=1&dl=1 [L]
+RewriteRule ^telecharger-pdf/commande/([0-9a-z]{32})$ pdf/order.php?web_id=$1&dl=1 [L]
+RewriteRule ^telecharger-pdf/facture/([0-9a-z]{32})$ pdf/invoice.php?web_id=$1&type=0&dl=1 [L]
+RewriteRule ^telecharger-pdf/avoir/([0-9a-z]{32})$ pdf/invoice.php?web_id=$1&type=1&dl=1 [L]
+RewriteRule ^guides-achat/nos-guides.html$ nos-guides.html [L]

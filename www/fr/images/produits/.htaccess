@@ -1,0 +1,2 @@
+RewriteEngine on
+RewriteRule ^([0-9]{1,8})\.jpg$ image_vl2DgkdS8keH6z.php?id=$1

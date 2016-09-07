@@ -1,0 +1,467 @@
+<?php
+	require_once('extranet_v3_functions.php');
+	define("PREVIEW", true);
+
+
+	$id_fiche		= mysql_escape_string($_GET['id']);
+
+	//Get the infos about the fiche
+	//And check if it's fiche
+	$result_get_history = $db->query("SELECT 
+								* 
+							FROM 
+								products_extranet_history  
+							WHERE  
+								p_add_adv___id=".$id_fiche." 
+							AND
+								p__idAdvertiser=".$_SESSION['extranet_user_id']."
+							AND
+								user_operation='Brouillon modification'
+								", __FILE__, __LINE__);
+	
+	
+	if(empty($_SESSION['extranet_user_id']) || !empty($id) || mysql_num_rows($result_get_history)==0){
+		header('Location: ' . EXTRANET_URL);
+		exit;
+	}
+
+	//Fetching the results
+	$content_get_history	= $db->fetchAssoc($result_get_history);
+	
+	
+	//Get the ID Parent from the session !
+	$isSupplier = $_SESSION['extranet_user_parent'] == 61049 ? true : false;
+
+	
+	$p['id'] = $id_fiche;
+
+	
+	//Loading the informations from the Result Database to the specif vars
+
+	$p['name']     = $content_get_history['pfr__name'];
+	$p['name'] 		= preg_replace('/ +/', ' ', $p['name']);
+	
+	$p['fastdesc'] = $content_get_history['pfr__fastdesc']; 
+	$p['descc']    = $content_get_history['pfr__descc'];
+	$p['descd']    = $content_get_history['pfr__descd'];
+
+	//$PriceType = isset($_POST['PriceType']) ? $_POST['PriceType'] : '0';
+	$PriceType 	= '0';
+	
+	//$code_ref = isset($_POST['code_ref']) ? $_POST['code_ref'] : '';
+	$code_ref = '';
+	
+	$p['unite']    = substr(trim($content_get_history['p__unite']), 0, 6);
+	$p['price']    = substr(trim($content_get_history['p__price']), 0, 9);
+	$p['price2']   = substr(trim($content_get_history['p__price2']), 0, 9);
+	$p['code_ref'] = '';
+	$p['unite']    = substr(trim($content_get_history['p__unite']), 0, 6);
+	if ($p['unite'] == ''){ 
+		$p['unite'] = 1; 
+	};
+
+
+	$p['delai_livraison']   = substr(trim($content_get_history['pfr__delai_livraison']), 0, 255);
+	$p['contrainteProduit'] = substr(trim($content_get_history['p__contrainteProduit']), 0, 9);
+
+
+// Loading Images
+define("MAX_PDT_PIC_COUNT", 3);
+$i = 1;
+while (is_file(PRODUCTS_IMAGE_ADV_INC."zoom/".$p["id"]."-".$i.".jpg") && $i <= MAX_PDT_PIC_COUNT) {
+	$p["pic_url"][$i-1]["zoom"] = PRODUCTS_IMAGE_ADV_URL."zoom/".$p["id"]."-".$i.".jpg";
+	$p["pic_url"][$i-1]["card"] = PRODUCTS_IMAGE_ADV_URL."card/".$p["id"]."-".$i.".jpg";
+	$p["pic_url"][$i-1]["thumb_small"] = PRODUCTS_IMAGE_ADV_URL."thumb_small/".$p["id"]."-".$i.".jpg";
+	$i++;
+}
+if (count($p["pic_url"]) == 0) {
+	$p["pic_url"][0]["zoom"] = PRODUCTS_IMAGE_ADV_URL."no-pic-zoom.gif";
+	$p["pic_url"][0]["card"] = PRODUCTS_IMAGE_ADV_URL."no-pic-card.gif";
+	$p["pic_url"][0]["thumb_small"] = PRODUCTS_IMAGE_ADV_URL."no-pic-thumb_small.gif";
+}
+$p["pic_url_count"] = count($p["pic_url"]);
+
+if($PriceType == '4') {
+	if ($isSupplier) {
+		list($colscount, $code_ref_tab) = explode('<=>', $code_ref);
+		$code_ref_tab_rows = explode('<_>', $code_ref_tab);
+		$tab_ref_cols = explode('<->', $code_ref_tab_rows[0]);
+		
+		$tab_ref_lines = array();
+		for($i = 1; $i < count($code_ref_tab_rows); ++$i) {
+			$line_data = explode('<->', $code_ref_tab_rows[$i]);
+			$line_colscount = count($line_data);
+				
+			$code_ref_line = array();
+			
+			$code_ref_line['id']    = & $line_data[0];
+			if($code_ref_line['id'] == '' || !preg_match('/^[0-9]+$/', $code_ref_line['id']))
+				$code_ref_line['id'] = "<i>" . PP_PRODUCT_NEW_REF . "</i>";
+			
+			$code_ref_line['label'] = & $line_data[1];
+			if(trim($code_ref_line['label']) == '')
+				$code_ref_line['label'] = '-';
+			
+			$code_ref_line['unite'] = & $line_data[$line_colscount-3];
+			if(!preg_match('/^[1-9]{1}[0-9]*$/',  trim($code_ref_line['unite'])))
+				$code_ref_line['unite'] = '-';
+			
+			$code_ref_line['price'] = $line_data[$line_colscount-1];
+			if (!preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', trim($code_ref_line['price'])))
+				$code_ref_line['price'] = 0;
+			elseif ($user->prixPublic == 0)
+				$code_ref_line['price']  = round($code_ref_line['price'] * (100 + $user->margeRemise)) / 100;
+			
+			for($j = 3; $j < $line_colscount-3; ++$j)
+			{
+				if ($j > 3 ) $code_ref_line['content'] .= '<->';
+				$code_ref_line['content'] .= $line_data[$j];
+			}
+			
+			$tab_ref_lines[] = $code_ref_line;
+		}
+	}
+	else {
+		list($colscount, $code_ref_tab) = explode('<=>', $code_ref);
+		$code_ref_tab_rows = explode('<_>', $code_ref_tab);
+		$tab_ref_cols = explode('<->', $code_ref_tab_rows[0]);
+		
+		$tab_ref_lines = array();
+		for($i = 1; $i < count($code_ref_tab_rows); ++$i)
+		{
+			$line_data = explode('<->', $code_ref_tab_rows[$i]);
+			$line_colscount = count($line_data);
+			
+			$code_ref_line = array();
+			
+			$code_ref_line['label'] = $line_data[1];
+			if(trim($code_ref_line['label']) == '')
+				$code_ref_line['label'] = '-';
+				
+			$code_ref_line['price'] = $line_data[$line_colscount-1];
+			if(trim($code_ref_line['price']) != '' && !preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', trim($code_ref_line['price'])))
+				$code_ref_line['price'] = 0;
+			
+			for($j = 2; $j < $line_colscount - 1; ++$j)
+			{
+				if ($j > 2 ) $code_ref_line['content'] .= '<->';
+				$code_ref_line['content'] .= $line_data[$j];
+			}
+			
+			$tab_ref_lines[] = $code_ref_line;
+		}
+	}
+}
+
+switch($PriceType) {
+	case '1' : $p['price'] = COMMON_PRICE_TYPE_ON_DEMAND;	$p['price2'] = ''; $p['delai_livraison'] = $p['contrainteProduit'] = ''; break;
+	case '2' : $p['price'] = COMMON_PRICE_TYPE_ON_ESTIMATE;	$p['price2'] = ''; $p['delai_livraison'] = $p['contrainteProduit'] = ''; break;
+	case '3' : $p['price'] = COMMON_PRICE_TYPE_CONTACT_US;	$p['price2'] = ''; $p['delai_livraison'] = $p['contrainteProduit'] = ''; break;
+	case '4' : $p['price'] = 'ref';							$p['price2'] = ''; break;
+	default : $PriceType = '0';
+}
+
+if ($isSupplier) {
+	if ($PriceType == '0') {
+		if ($user->prixPublic == 0)
+			$p['price']  = round($p['price2'] * (100 + $user->margeRemise)) / 100;
+		else
+			$p['price2'] = round($p['price'] * (100 - $user->margeRemise)) / 100;
+	}
+}
+else {
+	$p['price2'] = '';
+	$p['contrainteProduit'] = $p['delai_livraison'] = '';
+	$p['unite'] = 1;
+}
+
+define("__CAT3_SIMILAR_ITEMS_COUNT__", 10);
+define("__ADV_SIMILAR_ITEMS_COUNT__", 4);
+
+// Comments
+$p["comments"] = array("Précisions demandées lors d'une demande sur ce produit", "Précisions demandées lors d'une demande sur ce produit", "Précisions demandées lors d'une demande sur ce produit");
+$p["comments_count"] = count($p["comments"]);
+
+// Docs
+$p["doc_url"] = array("#", "#", "#");
+$p["doc_url_count"] = count($p["doc_url"]);
+
+//define('EXTRANET_PREVISUALISATION', true);
+
+$title     = to_entities($p['name']);
+$meta_desc = $meta_keys = '';
+
+require(SITE."head.php");
+?>
+
+				<div class="product" style="background: #ffffff;">
+					<div class="blocks-left">
+							
+						<div class="breadcrumb">
+							<a href="#">Famille 1</a> &raquo;
+							<a href="#">Famille 2</a> &raquo;
+							<a href="#">Famille 3</a>
+						</div>
+						<div id="product-sheet" class="grey-block pdt-sheet">
+							
+							<input type="hidden" name="pdtID" value="<?php echo $p["id"] ?>"/>
+							
+							<!--<a href="#" class="back-link">
+								<div class="in">Retour</div>
+								<div class="bl"></div>
+								<div class="br"></div>
+							</a>-->
+							<div class="zero"></div>
+							<div class="product-page-title">
+								<h1 class="bigger-blue-title" itemprop="name"><?php echo to_entities($p["name"]) ?></h1>
+								<h1 class="medium-blue-title"><?php echo to_entities($p["fastdesc"]) ?></h1>
+							</div>
+							<div class="product-page-pdt-code">
+								Code fiche produit :  <span class="color-blue"><?php echo $p["id"] ?></span></div>
+							<div>
+								
+							</div>
+							<div class="zero"></div>
+							
+							<div class="picture-block" style="float:left; width:320px;">
+								<div class="picture">
+									<img src="<?php echo $p["pic_url"][0]["card"] ?>" alt="<?php echo $p["name"]."-".$p["fastdesc"] ?>" class="vmaib"><div class="vsma"></div>
+								</div>
+								<div class="actions">
+									<div class="zoom">Zoom</div>
+								<?php if ($p["pic_url_count"] > 1) { ?>
+									<div class="list">
+									<?php for($i=1; $i <= $p["pic_url_count"]; $i++) { ?>
+										<a href="<?php echo $p["pic_url"][$i-1]["card"] ?>" title="Image n°<?php echo $i ?> du produit <?php echo $p["name"] ?>">Photo <?php echo $i ?></a>
+									<?php } ?>
+									</div>
+								<?php } ?>
+								</div>
+							</div>
+							
+							<div class="infos">
+								<div class="product-page-main-zone-desc">
+									<?php if (($pdt["saleable"] && !$pdt_set_as_estimate) || ($pdt['adv_cat'] == __ADV_CAT_SUPPLIER__ && $pdt_set_as_estimate)) { ?>
+									  <span class="atseo expert-advice"></span>
+									<?php } else { ?>
+									  <span class="atseo multiple-estimates"></span>
+									<?php } ?>
+									<h3 class="product-paragraph">
+									  <?php echo htmlentities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($pdt["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,220))."..." ?>
+									  <a class="color-blue" href="#product-desc">Lire la suite</a>
+									</h3>
+								</div>
+			  
+								<div class="product-page-main-zone-left fl">
+									<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { ?>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png"><span class="atseo shipping-fee"></span> <?php echo $pdt["shipping_fee"]; ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Commande minimum: <?php echo ($pdt["adv_min_amount"] > 0 ? sprintf("%.0f", $pdt["adv_min_amount"])."€" : "non"); ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Livraison: <?php echo $pdt["delivery_time"]; ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Garantie: <?php echo $pdt["warranty"]; ?></div>
+									  <div class="zero"></div>
+									<?php } ?>
+									
+									<?php if($pdt["docs_count"] > 0 ||  !empty ($pdt['average_note'])): ?>
+									<div class="blue-small-title product-page-notation-docs-links blue-smaller-title ">Avis / Doc</div>
+									<?php endif; ?>
+									<?php if(!empty ($pdt['average_note'])) {
+									  echo '<div class="cat3-checked-line"><img src="'.URL.'ressources/images/picto-avis.png" alt="picto-avis" /> Avis client ';
+									  showStarRater($pdt['average_note']);
+									  echo ' <a class="color-blue" href="#block-product-notation">Plus d\'infos</a></div>';
+									} ?>
+									<?php if ($pdt["docs_count"] > 0) { ?>
+									  <div class="cat3-checked-line">
+										<img src="<?php echo $res_url; ?>images/picto-docs.png" alt="picto-docs" />
+										Documentation produit  <a class="color-blue" href="#block-product-document">Plus d'infos</a>
+									  </div>
+									<? } ?>
+								</div>
+			  
+			  
+
+							
+							<?php if ($p["saleable"]) { ?>
+								<?php if ($p["ref_count"] > 1) {?>
+								<div class="price">
+									à partir de<br/>
+									<strong><?php echo sprintf("%.2f",$p["price"])."€ HT" ?></strong>
+								</div>
+								<div class="btn-action">
+									<a href="#product-refs" class="cart-add-green-3d vmaib"></a>
+								</div>
+								<?php } else { ?>
+								<div class="price">
+									<strong><?php echo sprintf("%.2f",$p["price"])."€ HT" ?></strong>
+								</div>
+								<div class="btn-action">
+									<a href="#" class="<?php if ($p["saleable"]) { ?>btn-cart-add-green-3d<? } else { ?>btn-esti-ask-red-3d<?php } ?> vmaib"></a>
+								</div>
+								<?php } ?>
+							<?php } else { ?>
+								<div class="price">
+									<?php if ($p["hasPrice"]) { ?>
+									<b>Prix indicatif:</b><br/><?php echo sprintf("%.2f",$p["price"])."€ HT" ?>
+									<?php } else { ?>
+									<b>Prix:</b> sur devis
+									<?php } ?>
+								</div>
+								<div class="btn-action">
+									<a href="#" class="<?php if ($p["saleable"]) { ?>btn-cart-add-green-3d<? } else { ?>btn-esti-ask-red-3d<?php } ?> vmaib"></a>
+								</div>
+							<?php } ?>
+							
+								<div class="zero"></div>
+								<div class="features">
+									<div class="title">Description rapide:</div>
+									<?php echo to_entities(substr(preg_replace('/&euro;/i', '€', html_entity_decode(filter_var($p["descc"], FILTER_SANITIZE_STRING), ENT_QUOTES)),0,110))."..." ?>
+								</div>
+								<?php if ($p["adv_cat"] == __ADV_CAT_SUPPLIER__) { ?>
+								<div class="others">
+									<div class="info"><strong>Frais de port:</strong> <?php echo $p["shipping_fee"] ?></div>
+									<div class="info"><strong>Commande minimum:</strong> <?php echo ($p["adv_min_amount"] > 0 ? sprintf("%.0f", $p["adv_min_amount"])."€" : "non") ?></div>
+									<div class="info"><strong>Livraison:</strong> <?php echo to_entities($p["delivery_time"]) ?></div>
+									<div class="info"><strong>Garantie:</strong> <?php echo to_entities($p["warranty"]) ?></div>
+									<div class="zero"></div>
+								</div>
+								<?php } ?>
+								<br/>
+								<div class="links">
+									<a href="#product-desc"><img src="<?php echo $res_url ?>ressources/images/see-product-sheet.png" alt=""/></a>
+								</div>
+							</div>
+							<div class="zero"></div>
+							
+							<div class="options">
+								<?php /* <a href="" class="option option-save">Sauvegarder le produit</a> */ ?>
+								<a href="#" class="option option-print">Imprimer</a>
+								<a href="" class="option option-send-friend">Envoyer à un collègue</a>
+								<?php /* <a href="" class="option option-report-error">Signaler une erreur</a> */ ?>
+								<div class="zero"></div>
+							</div>
+						</div>
+						
+						<a href="#" class="right-all-link">Voir tous les Famille 3 &raquo;</a>
+						<h2>Autres Famille 3</h2>
+						<div id="same-products" class="grey-block pdt-same">
+						<?php for ($i = 0; $i < __CAT3_SIMILAR_ITEMS_COUNT__; $i++) { ?>
+							<?php echo ($i > 0 ? "- " : "") ?>
+							<a href="#">Produit de la même famille 3</a>
+						<?php } ?>
+						</div>
+						
+						<a href="#" class="right-all-link">Voir tous les produits du fournisseur &raquo;</a>
+						<div class="block-pdt-title">Produits du même fournisseur</div>
+						<table id="same-supplier-products" class="pdt-vb-list grey-block" cellspacing="7" cellpadding="0">
+							<tbody>
+							<tr>
+						<?php for ($i = 0; $i < __ADV_SIMILAR_ITEMS_COUNT__; $i++) { ?>
+								<?php if(!$i) { ?><td>&nbsp;</td><?php } ?>
+								<td class="pdt-vb">
+									<div class="picture">
+										<img src="<?php echo PRODUCTS_IMAGE_SECURE_URL."no-pic-thumb_small.gif" ?>" alt="" class="vmaib"/><div class="vsma"></div>
+									</div>
+									<div class="infos">
+										<a href="#"><strong>Produit du même fournisseur</strong></a><br/>
+										<span class="see-link u">Voir la fiche produit</span>
+										<div class="price"><?php echo ($p["hasPrice"] ? sprintf("%.02f",$p["price"])."€" : $p["price"]) ?></div>
+										<?php /*<a href="<?php echo $p["cart_add_url"] ?>" class="<?php if ($p["saleable"]) { ?>btn-cart-add-green<? } else { ?>btn-esti-ask-red<?php } ?>" rel="nofollow"></a>*/ ?>
+									</div>
+								</td>
+								<td>&nbsp;</td>
+						<?php } ?>
+							</tr>
+							</tbody>
+						</table>
+						
+					</div>
+					
+<?php require(SITE . "blocks-right.php") ?>
+					<div class="zero"></div>
+					
+					<div class="blocks-bottom">
+					
+						<div id="product-desc" class="grey-block pdt-desc">
+							<div class="block-pdt-title">Fiche du produit <strong><?php echo to_entities($p["name"]) ?></strong>:</div>
+							<?php echo $p["descc"] ?>
+							<br/>
+							<br/>
+							<?php echo $p["descd"] ?>
+						<?php if ($p["doc_url_count"] > 0) { ?>
+							<br/>
+							<br/>
+							<div class="block-pdt-title">Documentation complèmentaire</div>
+							<?php for($i = 0; $i < $p["doc_url_count"]; $i++) { ?>
+							<a href="<?php echo $p["doc_url"][$i] ?>" target="_blank"><img src="<?php echo $res_url ?>ressources/images/pictos/picto-pdf.png"/></a>
+							<?php } ?>
+						<?php } ?>
+						<?php if ($p["ref_count"] > 0) { ?>
+							<br/>
+							<br/>
+							<div class="block-pdt-title">Modèle(s) disponible(s)</div>
+						<?php } ?>
+						</div>
+						
+					<?php /* ?>
+						<div id="product-discounts" class="red-outer-block discounts">
+							<div class="red-inner-block">
+								<div class="title">Promotions:</div>
+									Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+									exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+									Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+								</div>
+						</div>
+					<?php */ ?>
+						
+					<?php if ($p["ref_count"] > 0) { ?>
+						<div class="zero"></div>
+						<div id="product-refs" class="cart-table">
+							<table cellspacing="0" cellpadding="0">
+								<thead>
+								<tr>
+									<th>Réf. TC</th>
+									<th>Libellé</th>
+								<?php foreach($custom_cols as $colName) { ?>
+									<th><?php echo to_entities($colName) ?></th>
+								<?php } ?>
+									<th>Prix HT</th>
+									<th>Quantité</th>
+									<th>Ajouter au panier</th>
+								</tr>
+								</thead>
+								<tbody>
+								<?php foreach($p["refs"] as $ref) {?>
+									<tr>
+										<td class="first"><?php echo $ref["id"] ?></td>
+										<td><?php echo to_entities($ref["label"]) ?></td>
+									<?php foreach($ref["content"] as $colValue) { ?>
+										<td><?php echo to_entities($colValue) ?></td>
+									<?php } ?>
+										<td><?php echo sprintf("%.2f",$ref["price"]) ?>€</td>
+										<td class="quantity"><div class="vmaib"><input type="text" name="qty" value="1"/><div class="add"></div><div class="sub"></div></div></td>
+										<td class="cart-add"><a href="#" class="btn-cart-add-ref-green-3d vmaib" title="Ajouter au panier"></a></td>
+									</tr>
+								<?php } ?>
+								</tbody>
+							</table>
+							<div class="zero"></div>
+						</div>
+					<?php } ?>
+						
+					<?php if ($p["comments_count"] > 0) { ?>
+						<div id="product-comments" class="comments">
+							<h2>Demandes pour &laquo;<strong><?php echo $p["name"] ?></strong>&raquo;</h2>
+							<div class="zero"></div>
+							<ul class="list grey">
+							<?php for($i = 0; $i < $p["comments_count"]; $i++) { ?>
+								<li class="comment<?php if ($i == 0) { ?> first<? } elseif($i == $p["comments_count"]) { ?> last<?php } ?>">
+									<?php echo to_entities($p["comments"][$i]) ?>
+								</li>
+							<?php } ?>
+							</ul>
+						</div>
+					<?php } ?>
+					
+					</div>
+					
+				</div>
+<?php require(SITE . "foot.php") ?>

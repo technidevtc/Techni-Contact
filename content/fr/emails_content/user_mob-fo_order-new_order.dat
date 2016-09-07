@@ -1,0 +1,33 @@
+<p>
+	HELLO_TERM <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de passer commande sur notre site internet <a href="FO_URL">Mobaneo.com</a>.<br/>
+  Nous vous en remercions.<br/>
+	<br/>
+	Votre commande a été enregistrée sous le numéro <b>ORDER_ID</b>.<br/>
+	<br/>
+	Vous avez choisi le mode de règlement suivant : <b>ORDER_PAYMENT_TYPE</b><br/>
+	<br/>
+	<i>Voici le récapitulatif de votre commande :</i><br/>
+	<br/>
+	ORDER_COMPLETE_CONTENT<br/>
+	<br/>
+	Pour toute question relative à votre commande, <b>vous pouvez nous contacter au 01 83 62 96 95</b> (appel local).<br/>
+	<br/>
+	Toute l'équipe <a href="FO_URL">Mobaneo.com</a> vous remercie pour votre confiance et vous souhaite une bonne DAYTIME_TERM.
+</p>
+
+<p style="font-size: 11px">
+	<b>Mobaneo est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 83 62 96 95 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL">FO_URL</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

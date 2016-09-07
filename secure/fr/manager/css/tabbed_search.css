@@ -1,0 +1,54 @@
+#tabbed_searchLayer{ position: fixed; top: 140px; left: 0px; z-index: 2;}
+#tabbed_searchLayerList{float: left; background-color: #303030; width: 1200px; min-height: 100px; position: relative; color: #ffffff }
+#tabbed_searchLayerList div {margin: 5px; padding: 5px;}
+#tabbed_searchLayerList div ul li{margin-bottom: 5px; padding: 5px; background-color: whitesmoke}
+#tabbed_searchLayerOnglet{
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 3px;
+  font-weight: bold;
+  color: #ffffff;
+  border-radius: 0 0 5px 5px;
+  background-color: #ff0000;
+  cursor: pointer;
+  -webkit-transform-origin: 100% 0;
+  -moz-transform-origin: 100% 0;
+  -opera-transform-origin: 100% 0;
+  -ms-transform-origin: 100% 0;
+  transform-origin: 100% 0;
+  -webkit-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -opera-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+}
+.tabbed-search-boxBis{float: right;
+    color: #FFFFFF;
+    font: italic bold 13px Arial,Helvetica,sans-serif;
+    height: 25px;
+    margin: 5px 0 0;
+    position: relative;
+    width: 120px;
+}
+.tabbed-search-box{float: right;}
+#tabbed-search-form input {
+    background: url("../css/themes/apple_pie/images/search_bar.png") no-repeat scroll 0 0 transparent;
+}
+input.tabbed_search{
+    border: 0 none;
+    color: #000000;
+    font-size: 0.96em;
+    height: 20px;
+    padding: 2px 10px 3px 23px;
+    vertical-align: -4px;
+    width: 190px;
+}
+#tabbed_search_show_results{
+  overflow: auto;
+  max-height: 450px;
+}
+
+#tabbed-search-input-AC-box{
+  position: fixed;
+}

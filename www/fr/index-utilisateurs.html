@@ -1,0 +1,168 @@
+﻿<?php
+if(!defined('PREVIEW')) require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+$db = DBHandle::get_instance();
+
+$title = " Qui sont les utilisateurs de Techni-Contact ? – Techni-Contact ";
+$meta_desc = " Techni-Contact a déjà délivré plus de 1 million de devis à ses utilisateurs ;  Entreprises, collectivités et professionnels. ";
+$breadcrumb_label = ' Qui sont les utilisateurs de Techni-Contact ?  ';
+require(SITE . "head.php");
+
+function string_to_url($string) {
+     $search = array('à', 'ä', 'â', 'é', 'è', 'ë', 'ê', 'ï', 'ì', 'î', 'ù', 'û', 'ü', 'ô', 'ö', '&', ' ', '?', '!', 'ç', ';', '/');
+     $replace = array('a', 'a', 'a', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'u', 'u', 'u', 'o', 'o', '', '-', '', '', 'c', '', '-');
+     return urlencode(str_replace($search, $replace, strtolower($string)));
+}
+
+?>
+
+<div class="white-bg padding-top-20">
+		<div class="blocks-left">
+		<?php		
+				include_once('paginate.php');
+				$sql ="SELECT COUNT(*) FROM annuaire_client WHERE etat='1'  ";
+				if(isset($_GET['lettre'])){
+					$lettre = $_GET['lettre'];
+					$sql .= " AND  societe  LIKE '".$lettre."%' ";
+				}else {
+					$sql .= "  ";
+				}
+				
+				$res = mysql_query($sql);
+				$row = mysql_fetch_row($res);
+				$total = $row[0];
+				mysql_free_result($res);
+				$epp = 10; // nombre d'entrées à afficher par page (entries per page)
+				$nbPages = ceil($total/$epp); // calcul du nombre de pages $nbPages (on arrondit à l'entier supérieur avec la fonction ceil())
+					
+					$sql_ann_que = "SELECT date_create FROM annuaire_questionnaire WHERE id ='$id_quest' ";
+					$req_ann_que = mysql_query($sql_ann_que);
+					$data_ann_que= mysql_fetch_object($req_ann_que);
+		?>
+		
+			<div class="blue-title">Qui sont les utilisateurs de Techni-Contact ?  </div>
+			<div class="zero"></div>
+			<div id="help">
+			<br /><br />
+				<div class="blue-title" style="letter-spacing: -0.1px">
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=a">A</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=b">B</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=c">C</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=d">D</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=e">E</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=f">F</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=g">G</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=h">H</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=i">I</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=j">J</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=k">K</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=l">L</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=m">M</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=n">N</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=o">O</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=p">P</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=q">Q</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=r">R</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=s">S</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=t">T</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=u">U</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=v">V</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=w">W</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=x">X</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=y">Y</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?lettre=z">Z</a> | 
+				  <a class="color-blue" href="index-utilisateurs.html?page=0&lettre=0">[0-9]</a>    
+				</div>
+			</div>
+			<br />
+			<div style="margin-bottom: 30px;">
+				<p>Les utilisateurs ayant fait confiance à <strong>Techni-contact</strong> ont désormais la possibilité de mettre en avant leur activité sur notre site internet.</p>
+				<p>Ces entreprises nous ont aidé à grandir, à nous de leur rendre la pareille. </p>
+				<p>Découvrez qui sont les sociétés ayant pu obtenir des devis pour les équipements dont elles avaient besoin.</p>
+			</div>
+			<?php
+				
+				
+				if(!empty($_POST['go_page'])){
+				$current = $_POST['go_page'];
+				}else{
+				$current = 1;
+				}
+				if (isset($_GET['p']) && is_numeric($_GET['p'])) {
+					$page = $_GET['p'];
+					if ($page >= 1 && $page <= $nbPages) {
+						$current=$page;
+					} else if ($page < 1) {
+						$current=1;
+					} else {
+						$current = $nbPages;
+					}
+				}
+				$start = ($current * $epp - $epp);
+				$h =0;
+				
+				$sql_client  =  "SELECT id,societe,secteur,date_create,lead_id,logo,client_id,question_activite,etat
+							     FROM   annuaire_client WHERE etat='1' ";
+				
+				if(isset($_GET['lettre'])){
+					$lettre = $_GET['lettre'];
+					$sql_client .= " AND  societe  LIKE '".$lettre."%'  ";
+				}else {
+					$sql_client .= "   ";
+				}
+				$sql_client .= "  ORDER BY CONCAT(date_update,date_create) DESC LIMIT $start, $epp ";
+				
+				$req_client  =  mysql_query($sql_client);
+				while($data_client = mysql_fetch_object($req_client)){
+					$descc_net   = strip_tags($data_client->question_activite);
+					$descc_final =  substr($descc_net, 0, 80);
+					if(empty($descc_final)){
+					$descc_final ='-';
+					}
+					$url_final = string_to_url($data_client->societe);
+					/*$sql_ann_client = "SELECT question_activite
+									   FROM annuaire_questionnaire
+									   WHERE lead_id='".$data_client->lead_id."'";
+					$req_ann_client =  mysql_query($sql_ann_client);
+					$data_ann_client=  mysql_fetch_object($req_ann_client);*/
+					echo '
+							<div class="border_users">
+								<div id="content_all_index">';
+									if(!empty($data_client->logo)){ 
+									
+					echo '		 	<div class="img_logo">
+									<a href="'.URL.'utilisateurs/'.$data_client->id.'-'.$data_client->client_id.'-'.$url_final.'.html">
+										<img src="'.$data_client->logo.'" width="100" />
+									</a>
+									</div>';
+									}else {
+					echo '			<div class="img_logo"> - </div>';
+									}
+					echo'
+									
+									<div style="overflow: hidden; padding: 35px;">
+									<div class="name_societe"><a href="'.URL.'utilisateurs/'.$data_client->id.'-'.$data_client->client_id.'-'.$url_final.'.html">'.$data_client->societe.'</a></div>
+									<div class="desc_index">'.$descc_final.'</div>';
+									if(!empty($data_client->secteur)){
+					echo'		    <div class="secteur">'.$data_client->secteur.'</div>';
+									}else{
+					echo'		    <div class="secteur"> - </div>';				
+									}
+									
+					echo'			<div class="date"><strong>Mise à jour de la fiche :</strong><br />'.date("d/m/Y",strtotime($data_client->date_create)).'</div>
+									</div>
+								</div>
+							</div>
+						 ';
+				
+				}
+			
+			?>
+			<div id="main-wrapper">
+			<?php echo  paginate('index-utilisateurs.html?lettre='.$lettre, '&p=', $nbPages, $current); ?>
+			</div>
+			</div>
+			
+				
+<?php require(SITE . "blocks-right.php"); ?>
+</div>
+<?php require(SITE . "foot.php"); ?>

@@ -1,0 +1,83 @@
+/* Common */
+.label { position: absolute; }
+.field { position: absolute; }
+.button { position: absolute; }
+.description { position: absolute; font-size: 11px; font-style: italic; white-space: nowrap; overflow: hidden; }
+.PerfReqLabel { font-weight: bold; float: right; zoom: 1; }
+.InfosError { font-weight: bold; color: #D00000; zoom: 1; }
+.zero { clear: both; }
+
+/* HN.JSTable */
+.CommonTable { width: 100%; border-collapse: collapse; background-color: #FFFFFF; font: normal 11px Tahoma, Arial, Helvetica, sans-serif; color: #000000; }
+.CommonTable th { height: 20px; color: #000000; text-align: center; cursor: default; padding: 0;  }
+
+.CommonTable th div.inner-th { background-color: #D6D2C2; border-bottom: 1px solid #CBC7B8; padding-bottom: 1px; height: 18px; }
+.CommonTable th div.over { background-color: #FCC247; border-bottom-color: #F8B31F; }
+.CommonTable th div.inner-th div.inner-th-div { background-color: #EBEADB; border-bottom: 1px solid #E2DECD; padding: 3px 0px 1px 2px; height: 13px; }
+.CommonTable th div.inner-th div.over { background-color: #FAF8F3; border-bottom-color: #F9A900; }
+.CommonTable th div.inner-th div.inner-th-div span.separator { width: 0px; height: 13px; border-left: 1px solid #C7C5B2; border-right: 1px solid #FFFFFF; float: right; }
+.CommonTable th div.inner-th div.inner-th-div span.over { visibility: hidden; }
+
+.CommonTable tr { background-color: #FFFFFF; cursor: pointer; }
+.CommonTable tr.over { background-color: #CCCCCC; }
+.CommonTable td { height: 22px; color: #000000; margin: 0; padding: 1px 2px; text-align: center; border-bottom: 1px solid #AAAAAA; }
+.CommonTable td input.edit { width: 100%; height: 16px; font: normal 11px Tahoma, Arial, Helvetica, sans-serif; color: #000000; margin: 0; padding: 3px 2px 0 2px; text-align: center; border: 0; }
+
+.sort-order { width: 9px; height: 5px; display: -moz-inline-box; display: inline-block; vertical-align: bottom; margin: 0 0 3px 2px; visibility: hidden; }
+.sort-asc { background: transparent url(arrows-order.png) no-repeat }
+.sort-desc { background: transparent url(arrows-order.png) no-repeat -9px 0px; }
+
+/* HN.PageSwitcher */
+.PageSwitcher { float: right; }
+.vBulletin { height: 19px; font: normal 10px Verdana, Arial, Helvetica, sans-serif; color: #51473D; background: #FAF8F3; border: 1px solid #AFAEA5; padding: 1px; }
+.vBulletin div { padding: 3px 4px 4px 4px; float: left; height: 12px; display: none;}
+.vBulletin div.current { font-weight: bold; color: #000000; background-color: #EBEADB; display: inline; }
+.vBulletin div.position { padding: 2px 4px 5px 4px; font-family: Trebuchet MS, Verdana, Arial, Helvetica, sans-serif; background: url(gradient_tcat.gif) #D6D2C2; display: inline; }
+.vBulletin a { font: normal 10px Verdana, Arial, Helvetica, sans-serif; color: #51473D; }
+.vBulletin a:hover { color: #C8C5B7; }
+
+/* HN.Window */
+.window_title_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; height: 23px; background: url(../images/dot-bg.jpg); }
+.window_title_bar .close_img { float: right; padding: 0px; margin: 4px; width: 16px; height: 14px; border: 0; }
+.window_title_bar .close_img_up { background: url(../images/window_close_up.gif) no-repeat; }
+.window_title_bar .close_img_down { background: url(../images/window_close_down.gif) no-repeat; }
+.window_title_bar .valid_img { float: right; padding: 0px; margin: 4px; width: 80px; height: 14px; border: 0; }
+.window_title_bar .valid_img_up { background: url(../images/window_valid_up.gif) no-repeat; }
+.window_title_bar .valid_img_down { background: url(../images/window_valid_down.gif) no-repeat; }
+.window_title_bar .cancel_img { float: right; padding: 0px; margin: 4px; width: 80px; height: 14px; border: 0; }
+.window_title_bar .cancel_img_up { background: url(../images/window_cancel_up.gif) no-repeat; }
+.window_title_bar .cancel_img_down { background: url(../images/window_cancel_down.gif) no-repeat; }
+.window_title_bar .move_img { float: left; margin: 2px; width: 17px; height: 17px; background: url(../images/window_move.gif) no-repeat; }
+.window_title_bar .titletext { padding: 3px; cursor: default; }
+
+.window_subtitle_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; display: block; padding: 4px 0px; background: url(../images/dot-bg.jpg); }
+.window_bg { border: 1px solid #999999; padding: 10px; margin: 10px; }
+.window_bg_small { border: 1px solid #999999; padding: 5px; margin: 5px; }
+
+/* HN.FamiliesBrowser */
+.family-window { width: 784px; height: 400px; background-color: #FCFCFF; }
+.family-window-bg {  }
+.family-window-bg .menu { float: none; width: 780px; height: 16px; text-align: center; background: #A00100; font: 13px Arial, Helvetica, sans-serif; color: white; padding: 6px 2px; margin: 4px 0; }
+.family-window-bg .menu a { font-weight: normal; background: #cd2d2c; color: white; text-decoration: none; padding: 2px 3px; }
+.family-window-bg .menu a:hover { background: #FFFFFF; color: #A00100; }
+.family-window-bg .menu a.current { background: #A00100; color: #FFFFFF; outline: none; }
+.family-window-bg .menu a.current:hover { text-decoration: underline; }
+
+.family-window-bg .cols { width: 784px; height: 341px; background-color: #FFFFFF; overflow: scroll; }
+.family-window-bg .colg { float: left; width: 190px; text-align: left; padding-bottom: 2px; background-color: #FFFFFF; }
+.family-window-bg .colg .titre { text-align: center; display: block; background: #637382; font: bold 12px Arial, Helvetica, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: white; padding: 5px 13px; }
+.family-window-bg .colg .sf { padding-top: 3px; }
+.family-window-bg .colg .sf a { display: block; color: #3d4b58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; font-weight: bold; padding: 3px 0 5px 20px; background: url(../images/flecheUn.gif) no-repeat left bottom; }
+.family-window-bg .colg .sf a:hover { text-decoration: underline; }
+.family-window-bg .colg .sf a.currentFolded { background-color: #FFDD82; }
+.family-window-bg .colg .sf a.currentUnfolded { background: #FFDD82 url(../images/flecheDeux.gif) no-repeat left bottom; }
+.family-window-bg .colg .sf a.notCurrentUnfolded { background: url(../images/flecheDeux.gif) no-repeat left bottom; }
+
+.family-window-bg .colc { float: left; width: 570px; text-align: left; background-color: #FFFFFF; padding: 0 4px; }
+.family-window-bg .colc .ssf { background: url(../images/flecheTrois.gif) no-repeat left bottom; padding-bottom: 3px; }
+.family-window-bg .colc .ssf a { float: left; width: 264px; display: block; color: #3D4B58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; padding: 0 0 0 10px; margin: 2px 0 1px 8px; border-left: solid 2px #889c48; background: #f6f6f6; }
+.family-window-bg .colc .ssf a.current { background-color: #C6D6D8; padding: 0 0 0 10px; }
+.family-window-bg .colc .ssf a:hover { background-color: #C6D6D8; text-decoration: none; }
+.family-window-bg .colc .ssf a.current:hover { background-color: #889C48; color: #FFFFFF; }
+.family-window-bg .colc h1 { font: bold 12px Arial, Helvetica, sans-serif; letter-spacing: 1px; color: #272727; text-decoration: none; padding: 8px 2px; border-bottom: solid 3px #c6d6d8; margin: 0; }
+

@@ -1,0 +1,43 @@
+<?php 
+	require_once('extranet_v3_functions.php'); 
+	require_once('check_session_extranet_v3.php');
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Statistiques globales - Extranet Techni-contact.com</title>
+  <meta name="description" content="Statistiques globales - Techni-contact.com Extranet">
+  
+	<?php require_once('extranet_v3_header_tags.html'); ?>
+	
+	<script type="text/javascript" src="<?php echo EXTRANET_URL.'ressourcesv3/js/stats.js'; ?>"></script>
+	<script type="text/javascript" src="<?php echo EXTRANET_URL.'ressourcesv3/js/barchart/Chart.min.js'; ?>"></script>
+	
+</head>
+<body ng-app="ZTechnicoApp">
+	<div id="container_global">
+		<div id="global_header">
+			<?php require_once('extranet_v3_header_top.html'); ?>
+		</div>
+		<div id="container_middle_global">
+			<div id="content_left">
+				<?php require_once('extranet_v3_left_menu.html'); ?>
+			</div>
+			<div id="content_middle_global">
+				<div id="content_middle">
+					<?php require_once('extranet_v3_stats_global_center.html'); ?>
+				</div>
+				<div id="content_footer">
+					<?php require_once('extranet_v3_footer.html'); ?>
+				</div>
+			</div>
+		</div>
+		
+		<?php
+			require_once('extranet_v3_footer_advertiser_restrictionmsg.php');
+		?>
+		
+	</div>
+</body>
+</html>

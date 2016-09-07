@@ -1,0 +1,450 @@
+<?php
+
+/*================================================================/
+
+	Techni-Contact V2 - MD2I SAS
+	http://www.techni-contact.com
+
+	Auteur : Hook Network SARL - http://www.hook-network.com
+	Date de création : 20 décembre 2004
+
+	Mises à jour :
+		31 mai 2005 : = réécriture avec nouveau système des rangs
+		29 octobre 2007 : Nettoyage code (norme XHTML) + ajout styles css + ajout gestion automatique des langues étrangères
+
+	Fichier : /secure/manager/index.php
+	Description : Accueil administration de l'application Web
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos(dirname(__FILE__), "technico")+1) + 1) . "config.php";
+
+$title  = 'Accueil';
+$navBar = '<div align="center">MANAGER DE VOTRE SITE WEB TECHNI CONTACT</div>';
+
+define('MD2I_ADMIN', true);
+
+require(ADMIN . 'head.php');
+
+if($result = & $handle->query("select count(id) from advertisers", __FILE__, __LINE__))
+	list($nbAdvertisers) = $handle->fetch($result);
+else
+	$nbAdvertisers = "-";
+
+
+if($result = & $handle->query("select count(id) from products_fr where active = 1", __FILE__, __LINE__))
+	list($nbProducts) = $handle->fetch($result);
+else
+	$nbProducts = "-";
+  
+
+if($user->rank == HOOK_NETWORK || $user->rank == COMMADMIN)
+	$logs = & last15($handle);
+
+if($user->rank != CONTRIB)
+{
+	if($result = & $handle->query("select id from products_add where type = 'c'", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			$add = '<br /> - <a href="products/add_wait.php?' . $sid . '">' . $nb . ' en attente de validation de création</a>';
+		}
+	}
+    
+	if($result = & $handle->query("select id from products_add where type = 'm'", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			$mod = '<br /> - <a href="products/edit_wait.php?' . $sid . '">' . $nb . ' en attente de validation de modification</a>';
+		}
+	}
+    
+	$extranet = '';
+	$from_extranet = false;
+	if($result = & $handle->query("select id from products_add_adv where type = 'c' and reject = 0", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			$from_extranet = true;
+			$extranet = '<br /> - Extranet : <a href="products/add_wait.php?' . $sid . '&from=adv">' . $nb . ' en attente de validation de création</a>';
+		}
+	}
+    
+	if($result = & $handle->query("select id from products_add_adv where type = 'm' and reject = 0", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			if(!$from_extranet)
+			{
+				//                $extranet .= '<br>Extranet :';
+				$from_extranet = true;
+			}
+			$extranet .= '<br /> - Extranet : <a href="products/edit_wait.php?' . $sid . '&from=adv">' . $nb . ' en attente de validation de modification</a>';
+		}
+	}
+    
+	if($result = & $handle->query("select id from sup_requests", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			if(!$from_extranet)
+			{
+				//              $extranet .= '<br>Extranet :';
+			}
+			$extranet .= '<br /> - Extranet : <a href="products/sup_wait.php?' . $sid . '">' . $nb . ' en attente de validation de suppression</a>';
+		}
+	}
+	
+	$extranet_a = '';
+	$from_extranet_a = false;
+	if($result = & $handle->query("select id from advertisers_adv", __FILE__, __LINE__))
+	{
+		if(($nb = $handle->numrows($result, __FILE__, __LINE__)) > 0)
+		{
+			$from_extranet_a = true;
+			$extranet_a = '<br /> - Extranet : <a href="advertisers/edit_wait.php?' . $sid . '&from=adv">' . $nb . ' en attente de validation de modification</a>';
+		}
+	}
+}
+
+$handle->close();
+
+if(!isset($add)){ $add = ''; }
+if(!isset($mod)){ $mod = ''; }
+if(!isset($del)){ $del = ''; }
+
+?>
+
+<div id="page-layout">
+  <div id="page-content">
+    <div id="page-content-wrapper">
+
+<?php
+if($user->rank == HOOK_NETWORK)
+{
+	include(ADMIN . 'hook.php');
+?>
+<div class="titreRestricted">Zone d'action pour les techniciens</div>
+<br />
+<div class="bg">
+<?php
+	if(isset($_GET['action']))
+	{
+		switch($_GET['action'])
+		{
+			case RESET_SQL_LOG :
+				if(resetLog(SQL_LOG_FILE)) { print '<div class="confirm">Fichier ' . SQL_LOG_FILE . ' remis à zéro.</div>'; }
+				else { print '<div class="error">Erreur lors de la remise à zéro du fichier ' . SQL_LOG_FILE . '.</div>'; }
+				break;
+				
+			case CAT_SQL_LOG :
+				if(!catLog(SQL_LOG_FILE)) { print '<div class="error">Fichier Log ' . SQL_LOG_FILE . ' vide.</div>'; }
+				break;
+				
+			case RESET_PHP_LOG :
+				if(resetLog(PHP_LOG_FILE)) { print '<div class="confirm">Fichier ' . PHP_LOG_FILE . ' remis à zéro.</div>'; }
+				else { print '<div class="error">Erreur lors de la remise à zéro du fichier ' . PHP_LOG_FILE . '.</div>'; }
+				break;
+				
+			case CAT_PHP_LOG :
+				if(!catLog(PHP_LOG_FILE)) { print '<div class="error">Fichier ' . PHP_LOG_FILE . ' vide.</div>'; }
+				break;
+				
+			default :
+			print '<div class="error">Action inconnue.</div>';
+		}
+		print('<br /><br />');
+	} // fin isset action
+?>
+	<ul>
+		<li><a href="index.php?action=<?=CAT_SQL_LOG . '&' . $sid?>">Afficher le Log SQL</a> / <a href="index.php?action=<?=RESET_SQL_LOG . '&' . $sid?>">Remettre à zéro le Log SQL</a></li>
+		<li><a href="index.php?action=<?=CAT_PHP_LOG . '&' . $sid?>">Afficher le Log PHP</a> / <a href="index.php?action=<?=RESET_PHP_LOG . '&' . $sid?>">Remettre à zéro le Log PHP</a></li>
+		<li><a href="hook.php?<?=$sid?>&action=sql">Optimisation des bases SQL</a></li>
+		<li><a href="hook.php?<?=$sid?>&action=idr">Intégrité des relations</a></li>
+	</ul>
+</div>
+<br/>
+<br/>
+<?php
+}  // fin droits gestion configuration
+?>
+<div class="titreStandard">Gestion Commerciale</div>
+<br />
+<div class="bg">
+	
+	<br/>
+	<table border="0" class="action-table" cellpadding="2" cellspacing="0">
+		<thead>
+		<tr>
+			<th colspan="4">Business g&eacute;n&eacute;r&eacute;</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td><a href="commandes/?<?=$sid?>"><img src="ressources/commandes.gif" border="0" alt="commandes"/></a></td>
+			<td><a href="devis/?<?=$sid?>"><img src="ressources/devis.gif" border="0" alt="devis"/></a></td>
+			<td><a href="contacts/leads.php"><img src="ressources/contacts.gif" border="0" alt="contacts"/></a></td>
+			<td><a href="stats/?<?=$sid?>"><img src="ressources/stats.gif" border="0" alt="stats"/></a></td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br/>
+	<table border="0" class="action-table" cellpadding="2" cellspacing="0">
+		<thead>
+		<tr>
+			<th colspan="2">Recherche</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td><a href="clients/?<?=$sid?>"><img src="ressources/clients.gif" border="0"/ alt="clients"></a></td>
+			<td><a href="products/find.php?<?=$sid?>"><img src="ressources/produit.gif" border="0" alt="produit"/></a></td>
+		</tr>
+		</tbody>
+	</table>
+	
+</div>
+<br/>
+<div class="bg" style="text-align: center">
+	
+	<br/>
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th colspan="3">Gestion - Divers</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td class="w175"><a href="products-flagship/index.php?<?=$sid?>">Gestion des produits phares</a></td>
+			<td class="w175"><a href="tva/?<?=$sid?>">Gestion des Taux de TVA</a></td>
+			<td class="w175"><a href="config/?<?=$sid?>">Options  par d&eacute;faut</a></td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br/>
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th colspan="3">Demandes de catalogues</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td class="w175"><a href="catalogues/?<?=$sid?>">Derni&egrave;re &eacute;dition</a></td>
+			<td class="w175"><a href="demandes/?<?=$sid?>">Prochaine &eacute;dition</a></td>
+			<td class="w175"><a href="demandes/s.php?<?=$sid?>">Filtrage concurrence </a></td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br/>
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th>Demandes de contact</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td><a href="export/contacts.php?<?=$sid?>">Export des demandes de contact</a></td>
+		</tr>
+		</tbody>
+	</table>
+
+</div>
+<br/>
+<div class="titreStandard">Gestion Editoriale</div>
+<br/>
+<div class="bg">
+	
+	<br/>
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th colspan="3">R&eacute;f&eacute;rentiel</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td class="w270"><a href="advertisers/?<?=$sid?>">Annonceurs et fournisseurs</a><?php echo '('.$nbAdvertisers.') '.$extranet_a; ?></td>
+			<td class="w270"><a href="families/?<?=$sid?>">Familles et sous-familles </a></td>
+		</tr>
+		<tr>
+			<td class="w270"><a href="families/pdt-overwrite.php?<?=$sid?>">Priorités produits/familles</a></td>
+			<td class="w270"><a href="mini-stores/mini-stores.php?">Mini-boutiques</a></td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br/>
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th>Fiches produits</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td>
+				<ul>
+					<li><a href="products/?<?=$sid?>">Base de donn&eacute;es des produits</a>
+					<?='(' . $nbProducts . ') &nbsp; ' . $add .' &nbsp; '. $mod .' &nbsp; '. $del . $extranet?>
+					<br />
+					<br />
+					</li>
+					<li><a href="products/find.php?<?=$sid?>">Trouver un produit</a></li>
+				</ul>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br />
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th>Imports/Export</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td>
+				<ul>
+					<li><a href="import/imports.php?<?=$sid?>">Module d'importation</a></li>
+					<li><a href="export/exports.php?<?=$sid?>">Module d'exportation</a></li>
+				</ul>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br />
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th>Remises/Promotions</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td>
+				<ul>
+					<li><a href="discounts-constraints/index.php?<?=$sid?>">Remises/Promotions</a></li>
+				</ul>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+	
+	<br />
+	<table border="0" class="section-table" cellpadding="5" cellspacing="3">
+		<thead>
+		<tr>
+			<th>Formulaires</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td>
+				<ul>
+					<li><a href="form-content/index.php?<?=$sid?>">Formulaire de contact général</a></li>
+				</ul>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+	
+</div>
+<br/>
+<div class="bg">
+  <ul>
+    <li>(ancien module) <a href="stats/old/?<?=$sid?>">Pages vues produits</a></li>
+    <li>(ancien module) <a href="newsletter/?<?=$sid?>">Lettre d'information</a></li>
+  </ul>
+</div>
+<?php
+
+if($user->rank == HOOK_NETWORK || $user->rank == COMMADMIN)
+{
+	// Administrateur
+?>
+<br/>
+<br/>
+<div class="titreRestricted">Administration de l'application</div>
+<br/>
+<div class="bg">
+	<ul>
+		<li><a href="users/?<?=$sid?>">Base de données des utilisateurs de l\'application</a></li>
+		<li><a href="files/?<?=$sid?>">Edition des fichiers divers</a></li>
+		<li><a href="files/cat.php?<?=$sid?>">Couvertures / Exemplaires / Dates de sortie des catalogues</a></li>
+		<li><a href="files/bibli.php?<?=$sid?>">Bibliothèque d\'images</a></li>
+		<li><a href="google.php?<?=$sid?>">Référencement Google</a></li>
+		<li><a href="extranetinfo.php?<?=$sid?>">Utilisation annonceurs / extranet</a></li>
+	</ul>
+	
+	Les 15 dernières actions :
+	<br/>
+	<br/>
+	<table border="0" cellspacing="0" cellpadding="0" class="logs-table">
+		<thead>
+		<tr>
+			<th>Date</th>
+			<th>Session</th>
+			<th>Action</th>
+		</tr>
+		</thead>
+		<tbody>
+<?php
+	for($i = 0; $i < count($logs); ++$i)
+	{
+?>
+			<tr>
+				<td><?=date('d/m/Y H:i:s', $logs[$i][0])?></td>
+				<td><?=htmlentities($logs[$i][1])?></td>
+				<td><?=htmlentities(substr($logs[$i][2], 0, 100))?> ...</td>
+			</tr>
+<?php
+	}
+?>
+		</tbody>
+	</table>
+<?php
+	$logsTable = array('logs' => '', 'elogs' => 'extranet');
+    
+	foreach($logsTable as $k => $v)
+	{
+		print '<br/><form method="post" action="' . $k . '.php?' . session_name() . '=' . session_id() . '">Voir toutes les actions ' . $v . ' du <select name="d">';
+		for($i = 1; $i <= 31; ++$i)
+		{
+			$sel = ($i == date('d')) ? 'selected' : '';
+			print '<option value="'.$i.'" '.$sel.'>'.$i.'</option>';
+		}
+		
+		print '</select> <select name="m">';
+		for($i = 1; $i <= 12; ++$i)
+		{
+			$sel = ($i == date('m')) ? 'selected' : '';
+			print '<option value="'.$i.'" '.$sel.'>'.$i.'</option>';
+		}
+		
+		print '</select> <select name="y">';
+		for($i = 2005; $i <= date('Y'); ++$i)
+		{
+			$sel = ($i == date('Y')) ? 'selected' : '';
+			print '<option value="'.$i.'" '.$sel.'>'.$i.'</option>';
+		}
+		
+		print '</select> <input type="button" value="Go" onClick="this.form.submit(); this.disabled = true"/></form>';
+	}
+	print '</div><br/><br/>';
+}
+
+require(ADMIN . 'tail.php');
+?>
+
+    </div>
+  </div>
+</div>

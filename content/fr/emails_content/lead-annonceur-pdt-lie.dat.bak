@@ -1,0 +1,51 @@
+<p>Bonjour CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</p>
+
+<p>Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <a href="MAINPRODUCT_URL">MAINPRODUCT_NAME</a>.</p>
+
+<p>Nous pensons que le produit ci-dessous pourrait aussi vous intéresser, ainsi que les coordonnées de son fournisseur.</p>
+
+<p><b>Fiche du produit <a href="LINKEDPRODUCT_URL">LINKEDPRODUCT_NAME</a> :</b></p>
+
+<p><img src="LINKEDPRODUCT_IMAGE" alt=""/><br/>
+<b>LINKEDPRODUCT_NAME</b><br/>
+LINKEDPRODUCT_FASTDESC<br/>
+ID fiche produit: LINKEDPRODUCT_ID<br/>
+Description : LINKEDPRODUCT_DESCRIPTION<br/>
+Description Technique : LINKEDPRODUCT_DETAILEDDESCRIPTION<br/>
+Prix : LINKEDPRODUCT_PRICEDATA</p>
+
+<br/>
+<p><b>Coordonnées du fournisseur de <a href="LINKEDPRODUCT_URL">LINKEDPRODUCT_NAME</a> :</b></p>
+
+<p><b>LINKEDPRODUCT_ADVERTISER_NAME</b><br/>
+LINKEDPRODUCT_ADVERTISER_ADDRESS<br/>
+LINKEDPRODUCT_ADVERTISER_COMPLEMENT<br/>
+LINKEDPRODUCT_ADVERTISER_PC – LINKEDPRODUCT_ADVERTISER_CITY<br/>
+LINKEDPRODUCT_ADVERTISER_COUNTRY<br/>
+Téléphone : LINKEDPRODUCT_ADVERTISER_PHONE<br/>
+Fax : LINKEDPRODUCT_ADVERTISER_FAX<br/>
+Contact : LINKEDPRODUCT_ADVERTISER_CONTACT LINKEDPRODUCT_ADVERTISER_EMAIL<br/>
+LINKEDPRODUCT_ADVERTISER_URL</p>
+
+<p>Toute l'équipe <a href="SITE_MAIN_URL">Techni-Contact.com</a> vous remercie pour votre confiance.</p>
+
+<p>
+<b>Techni-Contact vous informe</b><br/>
+<i><a href="http://blog.techni-contact.com/?utm_source=email&utm_medium=email&utm_campaign=mail-client/">Découvrez notre blog</a> : législation professionnelle, guides d’achat et actualités du site</i><br/>
+<i><a href="http://feeds2.feedburner.com/LeBlogDeTechni-contactcom">S'abonner</a> directement à notre blog</i><br/>
+</p>
+
+<p>
+<b>Techni-Contact est édité par</b><br/>
+Md2i<br/>
+253 rue Gallieni<br/>
+F-92774 BOULOGNE BILLANCOURT cedex<br/>
+Tel : 0.811.06.07.07 (appel local)<br/>
+Fax: 01 72 08 01 18<br/>
+<a href="SITE_MAIN_URL">http://www.techni-contact.com</a><br/>
+<br/>
+SAS au capital de 160.000 €<br/>
+SIRET : 392 772 497 000 39<br/>
+TVA n° FR12 392 772 497<br/>
+R.C. NANTERRE B 392 772 497<br/>
+</p>

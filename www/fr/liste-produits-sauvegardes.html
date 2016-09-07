@@ -1,0 +1,158 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),"/",stripos(dirname(__FILE__),"technico") + 1) + 1)."config.php";
+require(ICLASS."CUserSession.php");
+
+$db = $handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+
+if($session->logged){
+  header("Location: " . COMPTE_URL . "saved-products-list.html");
+	exit();
+}
+
+$breadcrumb_label = "Votre sélection produits ";
+require(SITE."head.php");
+require ('star-rater.php');
+
+$savedProductsList = new ProductsSavedList();
+$savedProducts = $savedProductsList->getList();
+
+
+?>
+<script type="text/javascript">
+  HN.TC.GVars.userLogged = <?php echo $session->logged ? 'true': 'false'; ?>;
+  HN.TC.GVars.savedProductsList = <?php echo json_encode($savedProducts) ?>;
+</script>
+      <div id="body" class="white-bg">
+        <div class="blocks-left">
+          <?php if(!empty($savedProducts)){ ?>
+          <div class="bigger-blue-title">Votre sélection produits <?php if(!empty($savedProducts)) echo '('.count($savedProducts).')'; ?></div>
+          <div class="margin-top-5"></div>
+          
+          <div class="grey-block">
+            <div class="saved-products-list-info fl">Retrouvez ici l'ensemble des produits que vous souhaitez mettre de coté pour demander un devis ou commander plus tard. <br>Ces produits seront <strong>archivés durant 48H.</strong><br> Pour les archiver de façon permanente, vous pouvez créer un compte gratuit.</div>
+            <div class="btn-save-product-selection fr" onclick="javascript:HN.TC.ShowCreateAccountForm('show')"></div>
+            <div class="zero"></div>
+          </div>
+<?
+
+
+$product = Doctrine_Query::create()
+  ->select("p.*,IFNULL(rc.price+rc.ecotax, p.price) AS price,  pfr.name as name, pfr.fastdesc as fastdesc, pfr.ref_name as ref_name, pf.id family AS catID, a.category AS adv_cat, pfr.delai_livraison AS delivery_time,
+    a.delai_livraison AS adv_delivery_time, (IFNULL(rc.price, p.price) REGEXP '^[1-9]{1}[0-9]*((\\.|,)[0-9]+){0,1}$') AS hasPrice,
+    rc.id AS ref_idtc,
+      (IFNULL(rc.price, p.price) REGEXP '^[1-9]{1}[0-9]*((\\.|,)[0-9]+){0,1}$' AND a.category = ".__ADV_CAT_SUPPLIER__.") AS saleable,
+      (p.as_estimate + a.as_estimate) as product_as_estimate,
+      (select count(idProduct) from references_content where idProduct = p.id) as nb_refs")
+  ->from('Products p')
+  ->innerJoin('p.product_fr pfr')
+  ->innerJoin('p.families pf')
+  ->innerJoin('p.advertiser a')
+  ->leftJoin('p.references rc')
+  ->whereIn('p.id', $savedProducts)
+  ->fetchArray();
+//var_dump($product);
+foreach($product as $pdt):
+  // Shipping fee
+    $res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ );
+    while ($rec = $db->fetch($res)) {
+      $$rec[0] = $rec[1];
+    }
+  $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." € HT") : "N/D") : $pdt["shipping_fee"]." € HT";
+  if (empty($pdt["delivery_time"])) $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+  $pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+  $pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif";;
+  $pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+  
+  // getting notation and commentaries
+  $notations = ProductNotation::get('id_product = '.$pdt['id'], 'inactive = 0');
+  if(!empty ($notations)){
+    $a=0;
+    foreach ($notations as $notation){
+      $sumNote += $notation['note'];
+      $a++;
+    }
+    $pdt['average_note'] = round($sumNote/$a);
+    $pdt['nb_comments'] = $a;
+  }
+  //pp($pdt);    
+  ?>
+          
+       <div class="grey-block">
+        <div class="fl cat3-prod-list-pic">
+          <div class="picture fl">
+            <div class="cat3-picture-border">
+              <a href="<?php echo $pdt["url"]; ?>"><img src="<?php echo $pdt["pic_url"]; ?>" alt="" class="vmaib"/></a><div class="vsma"></div>
+              <div class="cat3-product-show"></div>
+            </div>
+              <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ ) { ?>
+                <div class="conseils-d-experts">
+                  <img alt="Bénéficiez du conseil d'experts sur ce produit" src="<?php echo URL; ?>ressources/images/picto-supplier.png" class="vmaib fl">
+                  <span class="fr">Bénéficiez du conseils<br />d'experts sur ce produit</span>
+                  </div>
+              <?php }else{ ?>
+                <div class="plusieurs-devis">
+                  <img alt="Gagnez du temps en recevant plusieurs devis" src="<?php echo URL; ?>ressources/images/picto-advertiser.png" class="vmaib fl">
+                  <span class="fr">Gagnez du temps,<br /> en recevant plusieurs devis</span>
+                  </div>
+              <?php } ?>
+          </div>
+          
+          <div class="fr cat3-prod-list-infos">
+
+            <h2><a class="blue-small-title blue-smaller-title" href="<?php echo $pdt["url"]; ?>"><?php echo $pdt["name"] ?></a></h2>
+            <?php echo $pdt["fastdesc"]; ?>
+            <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ ) { ?>
+            <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" />Livraison: <?php echo $pdt["delivery_time"]; ?></p>
+              <?php if(!$pdt_set_as_estimate) { ?>
+              <p class="cat3-checked-line"><img src="<?php echo URL; ?>ressources/images/green-check.png" alt="" />Frais de port: <strong><?php echo $pdt["shipping_fee"]; ?></strong></p>
+              <?php }?>
+           <?php } ?>
+            <?php if(!empty ($pdt['average_note'])) {
+              echo '<span class="cat3-checked-line"><img src="'.URL.'ressources/images/picto-avis.png" alt="picto-avis" /> Avis client ';
+              showStarRater($pdt['average_note']);
+              echo ' <a class="color-blue ShowProductFeedback" href="'.$pdt["id"].'">Lire les avis</a></span>';
+            } ?>
+        </div>
+        </div>
+        <div class="fr cat3-prod-list-relations">
+          <div class="cat3-price">
+            <?php $pdt["price"] = $pdt["nb_refs"] == 0 ? 'sur devis' : $pdt["price"];
+            echo ($pdt["hasPrice"] ? (($pdt_set_as_estimate || $pdt["nb_refs"] == 0) ? 'Sur devis' : 'à partir de : <span>'.sprintf("%.02f",$pdt["price"])."€ HT</span>") : 'à partir de : <span>'.$pdt["price"].'</span>'); ?>
+          </div>
+          <div class="cat3-action">
+            <?php if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__ ) :?>
+              <a href="<?php echo $pdt["cart_add_url"]; ?>" class="<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { echo $pdt["nb_refs"] == 1 ? 'btn-cart-add-small-single' : 'btn-cart-add-big-pink'; } else { ?>btn-esti-ask-orange<?php } ?>"  data-adv-type="1"></a>
+              <a href="<?php echo $pdt["cart_add_url"]; ?>"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>" class="ask-estimate-link"><div class="puce puce-4"></div>Demander un devis</a>
+            
+            <?php else : ?>
+              <a href="<?php echo $pdt["cart_add_url"]; ?>" class="btn-esti-ask-orange" ></a>
+            <?php endif; ?>
+            
+
+            <div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+              <?php $productList = new ProductsSavedList();
+              if($productList->isProductInSavedList($pdt['id'])) :?>
+                <a href="saveProductList:remove-<?php echo $pdt['id']; ?>" class="btn-users-product-list"><div class="delete-item"></div></a>
+              <?php endif; ?>
+            </div>
+            <div class="zero"></div>
+            
+          </div>
+        </div>
+        <div class="zero"></div>
+    </div>
+         <?php endforeach; ?> 
+          
+    <?php }else {?>
+
+    Votre liste de produits sauvegardés est vide…
+    <?php }?>
+
+        </div>
+        <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+        <div id="cat3-show-product-infos-dialog"></div>
+<?php require(SITE."blocks-right.php"); ?>
+      </div>
+
+<?php require(SITE."foot.php"); ?>

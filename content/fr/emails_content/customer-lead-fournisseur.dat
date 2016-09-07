@@ -1,0 +1,37 @@
+<table style="width: 800px" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="padding-right: 10px; font: normal 12px arial,sans-serif; vertical-align: top">
+      <p>
+        HELLO_TERM <b>M. CUSTOMER_LASTNAME</b><br/>
+        <br/>
+        Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <b><a href="MAINPRODUCT_URL">MAINPRODUCT_NAME</a></b>.<br/>
+        Je vous en remercie.<br/>
+        <br/>
+        Je suis BOUSER_NAME et je suis désormais en charge de votre devis.<br/>
+        <br/>
+        Je vous enverrai une proposition personnalisée dans les plus brefs délais<br/>
+        S'il manque des éléments ou pour affiner vos besoins, je me permettrai de prendre contact avec vous.<br/>
+        <br/>
+        Je reste à votre disposition aux coordonnées suivantes; n'hésitez pas à me solliciter :<br/>
+        BOUSER_NAME<br/>
+        BOUSER_PHONE<br/>
+        BOUSER_EMAIL<br/>
+        <br/>
+        Votre demande a été archivée dans votre compte client gratuit, rubrique "Mes demandes".<br/>
+        <br/>
+        Merci encore pour votre confiance. Je vous souhaite une bonne DAYTIME_TERM<br/>
+        <br/>
+        BOUSER_NAME<br/>
+        BOUSER_PHONE<br/>
+      </p>
+    </td>
+    <td style="width: 160px; vertical-align: top">
+      RECOMMENDED_PRODUCTS_BLOCK
+    </td>
+  </tr>
+</table>
+<p>Suivez Techni-Contact sur les réseaux </p>
+<div>
+<a href="https://www.linkedin.com/company/techni-contact-md2i"><img src="http://www.techni-contact.com/ressources/images/picto-linkedin.jpg"></a>&nbsp;&nbsp;
+<a href="https://www.facebook.com/pages/Techni-Contact/168499622954"><img src="http://www.techni-contact.com/ressources/images/picto-facebook.jpg"></a>
+</div>

@@ -1,0 +1,263 @@
+<?php
+	//Activated menu element 
+	
+	$actual_url_array		= explode('?', basename($_SERVER['REQUEST_URI']));
+	$actual_url				= $actual_url_array[0];
+	
+	//The category of users to block
+	$category_block_menu	= array(3, 4, 5);
+
+	switch($actual_url){
+	
+		//Contacts
+		case 'extranet-v3-contacts-not-read.html':
+			$global_left_menu = 'menu_contacts_elemen1';
+		break;
+		
+		case 'extranet_v3_contacts_read_notread.html':
+			$global_left_menu = 'menu_contacts';
+		break;
+		
+		
+		case 'extranet-v3-contacts-processing.html':
+			$global_left_menu = 'menu_contacts_elemen2';
+		break;
+		
+		case 'extranet-v3-contacts-archived.html':
+			$global_left_menu = 'menu_contacts_elemen3';
+		break;
+		
+		case 'extranet-v3-contacts-deleted.html':
+			$global_left_menu = 'menu_contacts_elemen5';
+		break;
+		
+		case 'extranet-v3-contacts-all.html': 
+		//case 'extranet-v3-contacts-detail.html':
+			$global_left_menu = 'menu_contacts_elemen4';
+		break;
+		
+		//To active the parent one
+		case 'extranet-v3-contacts-detail.html':
+			$global_left_menu = 'menu_contacts_';
+		break;
+		
+		
+		//Produits
+		case 'extranet-v3-products.html':
+		case 'extranet-v3-products-add.html':
+		case 'extranet-v3-products-edit.php':
+			$global_left_menu = 'menu_products_elemen1';
+		break;
+		
+		case 'extranet-v3-products-draft.html':
+		case 'extranet-v3-products-draft-add.html':
+		case 'extranet-v3-products-draft-edit.html':
+			$global_left_menu = 'menu_products_elemen2';
+		break;
+		
+		case 'extranet-v3-products-sent.html':
+			$global_left_menu = 'menu_products_elemen3';
+		break;
+		
+		
+		//Statistiques
+		case 'extranet-v3-stats.html':
+			$global_left_menu = 'menu_stats_elemen1';
+		break;
+		
+		case 'extranet-v3-stats-products.html':
+		case 'extranet-v3-stats-products-detail.html':
+			$global_left_menu = 'menu_stats_elemen2';
+		break;
+		
+		case 'extranet-v3-stats-category.html':
+		case 'extranet-v3-stats-category-detail.html':
+			$global_left_menu = 'menu_stats_elemen3';
+		break;
+		
+		
+		//Coordonnées
+		case 'extranet-v3-informations.html':
+			$global_left_menu = 'menu_informations';
+		break;
+		
+		
+		//Factures
+		case 'extranet-v3-invoices.html':
+			$global_left_menu = 'menu_invoices';
+		break;
+		
+
+		//Support
+		case 'extranet-v3-support.html':
+			$global_left_menu = 'menu_support';
+		break;
+		
+		
+		//Home
+		default :
+			$global_left_menu = 'home';
+		break;
+	
+	}
+	
+?>
+
+<nav id="left_menu" role="navigation">
+	<ul id="sidebar">
+
+		<li <?php if(strcmp($global_left_menu,'home')=='0'){ echo('class="active"');} ?>>
+			<a href="<?php echo EXTRANET_URL; ?>">
+				<i class="fa fa-home">
+				</i>
+				<span>
+					Tableau de bord
+				</span>
+			</a>
+		</li>
+		
+		<li <?php if(strpos($global_left_menu, "menu_contacts")!==false){ echo('class="active"');} ?>>
+			<a href="<?php echo EXTRANET_URL.'extranet_v3_contacts_read_notread.html'; ?>">
+				<i class="fa fa-user">
+				</i>
+				<span>
+					Contacts
+				</span>
+			</a>
+			
+			<ul>
+				<li <?php if(strcmp($global_left_menu,'menu_contacts_elemen1')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-contacts-not-read.html'; ?>">
+						<span>Non lus</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_contacts_elemen2')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-contacts-processing.html'; ?>">
+						<span>En traitement</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_contacts_elemen3')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-contacts-archived.html'; ?>">
+						<span>Archiv&eacute;s</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_contacts_elemen5')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-contacts-deleted.html'; ?>">
+						<span>Corbeille</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_contacts_elemen4')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-contacts-all.html'; ?>">
+						<span>Tous</span>
+					</a>
+				</li>
+			</ul>
+		</li>
+		
+		
+		<?php
+			if(!in_array($_SESSION['extranet_user_category'], $category_block_menu)){
+		?>
+			<li <?php if(strpos($global_left_menu, "menu_products")!==false){ echo('class="active"');} ?>>
+				<a href="<?php echo EXTRANET_URL.'extranet-v3-products.html'; ?>">
+					<i class="fa fa-shopping-cart">
+					</i>
+					<span>
+						Produits
+					</span>
+				</a>
+				
+				<ul>
+					<li <?php if(strcmp($global_left_menu,'menu_products_elemen1')=='0'){ echo('class="active"');} ?>>
+						<a href="<?php echo EXTRANET_URL.'extranet-v3-products.html'; ?>">
+							<span>Mes produits</span>
+						</a>
+					</li>
+					<li <?php if(strcmp($global_left_menu,'menu_products_elemen2')=='0'){ echo('class="active"');} ?> style="height: 28px;">
+						<a href="<?php echo EXTRANET_URL.'extranet-v3-products-draft.html'; ?>" style="height: 28px;">
+							<span style="float:left;">Mes brouillons&nbsp;</span>
+							<span id="user_draft_count" style="display: none; padding:0 2px;"></span>
+						</a>
+					</li>
+					<li <?php if(strcmp($global_left_menu,'menu_products_elemen3')=='0'){ echo('class="active"');} ?> style="height: 28px;">
+						<a href="<?php echo EXTRANET_URL.'extranet-v3-products-sent.html'; ?>" style="height: 28px;">
+							<span style="float:left;">Soumissions &agrave; TC&nbsp;</span>
+							<span id="user_products_pending_count"  style="display: none; padding:0 2px;"></span>
+						</a>
+					</li>
+				</ul>
+			</li>
+		<?php
+			}//end if block category
+		?>
+		
+		
+		<li <?php if(strpos($global_left_menu, "menu_stats")!==false){ echo('class="active"');} ?>>
+			<a href="<?php echo EXTRANET_URL.'extranet-v3-stats.html'; ?>">
+				<i class="fa fa-line-chart">
+				</i>
+				<span>
+					Statistiques
+				</span>
+			</a>
+			
+			<ul>
+				<li <?php if(strcmp($global_left_menu,'menu_stats_elemen1')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-stats.html'; ?>">
+						<span>Globales</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_stats_elemen2')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-stats-products.html'; ?>">
+						<span>Par produit</span>
+					</a>
+				</li>
+				<li <?php if(strcmp($global_left_menu,'menu_stats_elemen3')=='0'){ echo('class="active"');} ?>>
+					<a href="<?php echo EXTRANET_URL.'extranet-v3-stats-category.html'; ?>">
+						<span>Par cat&eacute;gorie</span>
+					</a>
+				</li>
+			</ul>
+		</li>
+		
+		
+		<?php
+			if(!in_array($_SESSION['extranet_user_category'], $category_block_menu)){
+		?>
+			<li <?php if(strcmp($global_left_menu,'menu_informations')=='0'){ echo('class="active"');} ?>>
+				<a href="<?php echo EXTRANET_URL.'extranet-v3-informations.html'; ?>">
+					<i class="fa fa-info-circle">
+					</i>
+					<span>
+						Coordonn&eacute;es
+					</span>
+				</a>
+			</li>
+		<?php
+			}//end if block category
+		?>		
+		
+		
+		
+		<li <?php if(strcmp($global_left_menu,'menu_invoices')=='0'){ echo('class="active"');} ?>>
+			<a href="extranet-v3-invoices.html">
+				<i class="fa fa-file-text">
+				</i>
+				<span>
+					Factures
+				</span>
+			</a>
+		</li>
+		
+		<li <?php if(strcmp($global_left_menu,'menu_support')=='0'){ echo('class="active"');} ?>>
+			<a href="extranet-v3-support.html">
+				<i class="fa fa-support">
+				</i>
+				<span>
+					Support
+				</span>
+			</a>
+		</li>
+		
+	</ul>
+</nav>

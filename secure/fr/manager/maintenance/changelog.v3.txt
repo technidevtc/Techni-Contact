@@ -1,0 +1,130 @@
+LISTE DES DERNIERS CHANGEMENTS
+--------------------------------------------------------------------------------
+
+Extranet : Correction d'un bug empêchant l'affichage du détail d'un produit. Ajout du code permettant d'uploader des images produits avec les nouveaux formats
+Manager : La date de création d'un devis n'est maintenant plus celle du panier dont il est issu d'origine, mais celle de son passage en état "devis".
+
+17/07/2009
+----------------------------------------
+Général Listing : pour les listing de produits (famille niveau 3 + détail recherche + produits fournisseur) :
+  + Changement du compte des produits pour prendre en compte ceux uniquement affiché après filtrage
+  + les flèches de tri par prix ne sont plus affichées s'il y a moins de 2 produits présents ayant un prix
+  + le bloc de filtre par tranche de prix est maintenant affiché ou non en fonction des produits affichés avec les filtres type de produit en cours
+  + le numéro de page est maintenant conservé pour tous les types de filtre
+  + correction d'un bug faisant disparaitre le bloc "type de produit" après un clique sur "Les produits en vente directe"
+  + suppression du ",1" dans l'url si la page 1 est affichée
+  + mise en nofollow des liens de tri par prix
+  + dans la liste des pages, la page actuelle n'est plus un lien mais un simple texte noir
+
+08/07/2009 - 13/07-2009
+----------------------------------------
+Général : Activation de l'auto-complétion
+Général : Rajout du module d'envoi à un collègue d'un devis. Envoi un mail avec un lien vers le devis, si le collègue a un compte et est identifié, ses coordonnées s'afficheront dans le devis
+Général : Ajout d'une page présentant tous les produits d'un fournisseur. Cette page est accessible via la page d'un produit
+Recherche : Correction d'un bug empêchant de trouver un produit par son identifiant
+Lead : Correction d'un petit bug empêchant l'affichage des coordonnées d'un annonceur après une demande
+Lead : Rajout d'un lien sur l'url du site et l'email d'un annonceur quand ses informations sont affichées après une demande de lead
+Général : alignement de l'autocomplétion sur la droite (s'étend vers la gauche)
+Catalogues : Ajout d'un formulaire basé sur celui de demande de lead avec checkbox et radio en ajax
+Catalogues : Ajout de l'enregistrement en base de donnée des coordonnées (comme site v2) + correction d'un bug empêchant l'enregistrement correct des coordonnées
+
+01/07/2009 - 07/07-2009
+----------------------------------------
+Etapes commande : Rajout d'une nouvelle page (copie de l'étape 1) pour changer ses coordonnées sans quitter le processus de commande, accessible depuis l'étape 2
+Etapes commande : Ajout page gestion paiement par carte bleu non effectué avec possibilité de changer de mode de paiement
+Etapes commande : Mise en place des différentes mentions sur la page de confirmation suivant le type de paiement
+Home : Ajout des liens au nuage de tag
+Bloc de droite : Rewording "nos catalogues"
+Alerte emails : commenté en attendant le développement du module
+Familles : Affichage du bandeau de réassurance spécifique à la famille niveau 3 supprimé de la page produit
+Produit : Ajout du bloc viral "envoyer cette fiche produit à un collègue"
+Produit : Ajout d'une page pour impression en reprenant certain style du site actuellement en production (du code a toutefois nécessairement été changé)
+Produit : Correction d'un bug empêchant l'affichage des mentions de réassurance spécifiques à l'annonceur/fournisseur sur le bloc de droite
+Produit : Correction d'un bug faisant afficher le mauvais bouton d'ajout au panier/demande de devis dans les produits du meme fournisseur
+Général : Correction d'un bug provoquant la non duplication des liens vers les fiches produits sur les images et la mention "voir la fiche produit" dans tous les blocs produits des classes "pdt-vb" et "pdt-hb"
+Recherche : ajout de la recherche par identifiant produit
+Général : Changement de la mention "gratuit" en "N/D" si pas de frais de port possible + correction du calcul des frais de port
+Lead : Correction du lien produit
+Lead success : Changement de wording
+Création de compte (step 1 commande) : Changement des messages spécifique d'erreur de saisie des emails/mot de passe (notamment si l'email existe déjà)
+Panier : Ajout icones devis et panier dans le bloc "Quelle différence..."
+Etape commande/devis 1 : Changement de wording
+Etape commande/devis 3 : Ajout message JS lorsqu'aucun mode de paiement n'est sélectionné + ajout CGV et message JS si la case n'est pas cochée
+Login : Ajout d'un message JS d'erreur si login/email non valide
+Gestion devis : correction wording
+Formulaire : correction wording
+
+29/06/2009 - 30/06/2009
+----------------------------------------
+Recherche : Correction des liens vers les fiches produits sur les résultats principaux
+Produit : Correction du zoom quand une seule image est présente + rajout du zoom via un clique sur l'image directement
+Produit : Affichage de l'image "produit partenaire" dans le cadre de demande de lead quand il s'agit d'un produit annonceur
+Produit : Affichage du message d'aide spécifique à l'annonceur/fournisseur si celui ci est présent
+Produit : Affichage du prix indicatif si prix simple présent ou de la mention "sur devis" aucun prix n'est présent
+Produit : Changement css prix
+Panier : Affichage du délai de livraison
+Détail Devis : Affichage du délai de livraison
+
+22/06/2009 - 25/06/2009
+----------------------------------------
+Intégration du premier document debug lot 6 A moins quelques points à préciser
+
+18/06/2009 - 21/06/2009
+----------------------------------------
+Compte contact : Ajout page succès demande de contact
+  + ajout envoi mail à md2i avec informations devis/commande
+Contact : Ajout page succès
+  + ajout envoi mail à md2i avec informations
+  + ajout remplissage automatique des champs si cookie
+  + ajout reverso form
+Lead : Changement des mails clients
+  + ajout réassurance à droite
+  + réorganisation formulaire et changement champs
+  + ajout bloc contact téléphonique si annonceur
+Général : Changement bloc réassurance de droite avec pictos
+Général : Ajout mentions réassurance footer
+Panier : Ajout mentions réassurance
+Devis : Ajout envoi mail client
+Commande : Changement envoi mail client
+
+17/06/2009
+----------------------------------------
+Compte : Correction lien Télécharger le devis sur la liste des devis
+Compte : Affichage du statut de la commande sur la liste des commandes
+Compte : Ajout de la sélection automatique du bons n° de devis/ n° de commande dans le formulaire de contact lors d'un clique sur tous les liens "nous contacter pour ce devis/cette commande"
+Compte : Correction des boutons "Télécharger ce devis" et "Passer commande" sur une page devis
+Compte : Correction du lien "Imprimer cette commande" sur une page commande
+Général : Correction d'un bug qui empêcher les commentaires d'être sauvegardé en ajax correctement
+Recherche : Changement de la facon de déterminer si un produit est en vente en ligne
+Familles : Correction de la sélection "les plus pertinents"
+Recherche : Changement de l'algorithme de filtrage/classement pour bénéficier des améliorations de celui du listing des familles
+Recherche : Ajout des fonctionnalité d'ajout au panier et de demande de lead sur les boutons
+Général : Ajout d'un petit layer explicatif apparaissant lors du survol de la mention "Qu'est-ce que c'est" des produits annonceurs
+
+16/06/2009
+----------------------------------------
+Général : Changement slogan header
+Général : Changement mentions sous header
+Produit : Affichage des photos/documents disponibles
+Produit : Mise en place javascript zoom image
+Produit : Ajout fonctionnalité javascript pour les différents type de demande de lead (sans lien pour optimiser le référencement)
+Process commande/devis : Ajout des coordonnées de facturation + checkbox javascript
+Process devis : ajout des fonctions sur les boutons imprimer/sauver
+Process devis : ajout sauvegarde automatique du devis quand arrivé à l'étape 3
+Process commande : Mise à jour de l'affichage du résumé de commande sur la page de confirmation
+Fichiers PDF : correction des bons de commandes, commandes et devis
+
+
+12/06/2009
+----------------------------------------
+Retour de la barre de test avec consultation des mails et changelog
+[__ Front Office __]
+Général : Ajout de la fonctionnalité de demande de lead sur les boutons "demander devis" via javascript
+Général : Mise à jour du bloc "ils nous font confiance"
+Général : Mise en variable du slogan dans le header
+Familles : Correction d'un bug faisant qu'un produit annonceur ayant avec un prix pouvait avoir un bouton "ajouter au panier" associé
+Panier : Ajout des images produits / Suppression de la description rapide
+Compte client : Ajout du remplisage automatique de la liste des commandes/devis pour le formulaire de contact
+Compte client : Ajout du code d'envoi de mail pour le formulaire de contact
+Compte client : Correction des titres/meta
+Compte client : Correction d'un bug sur une page devis qui n'activait pas les fonctionnalités du panier (changement quantité..)

@@ -1,0 +1,23 @@
+<p>
+	HELLO_TERM <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de créer <a href="SITE_ACCOUNT_URL_LOGIN?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">un compte</a> sur notre site <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">Techni-Contact.com</a> et nous vous en remercions.<br/>
+	<br/>
+	Votre numéro client est : <b>CUSTOMER_ID</b>. <br/>
+        <br/>
+        Ce numéro est à nous communiquer pour toute demande concernant vos commandes ou vos devis.<br/>
+        <br/>
+	Ce compte <strong>gratuit est un puissant outil</strong> qui vous permet : 
+</p>
+<ul>
+	<li>De suivre le traitement de vos demandes de devis ou d’information</li>
+	<li>De suivre vos commandes</li>
+	<li>De gérer vos devis</li>
+	<li>De communiquer directement avec notre équipe et nos partenaires</li>
+        <li>De gérer vos informations personnelles</li>
+</ul>
+<p>
+
+	Nous vous souhaitons une bonne DAYTIME_TERM.<br />
+</p>
+

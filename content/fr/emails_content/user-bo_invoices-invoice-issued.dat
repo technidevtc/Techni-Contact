@@ -1,0 +1,39 @@
+<p>
+  Bonjour M. CLIENT_LASTNAME<br/>
+  
+  INVOICE_DUE_MESSAGE_FIRST_MESSAGE
+  <br />
+  Votre facture n°INVOICE_ID d'un montant de INVOICE_TOTAL_TTC € est disponible en pièce jointe ou en cliquant sur le lien ci-dessous :<br />
+  <br />
+  <a href="INVOICE_PDF_LINK">Voir facture</a><br/>
+  <br />
+  INVOICE_DUE_MESSAGE<br/>
+  <br />
+  Cette facture est disponible dans votre espace client. <br />
+  <br />
+  N'hésitez pas à nous contacter pour renseignement complémentaire concernant cette facture :<br />
+  <br />
+  Service Comptabilité :<br />
+  01 55 60 29 29<br />
+  <br />
+  Cordialement.
+</p>
+<p>Suivez Techni-Contact sur les réseaux </p>
+<div>
+<a href="https://www.linkedin.com/company/techni-contact-md2i"><img src="http://www.techni-contact.com/ressources/images/picto-linkedin.jpg"></a>&nbsp;&nbsp;
+<a href="https://www.facebook.com/pages/Techni-Contact/168499622954"><img src="http://www.techni-contact.com/ressources/images/picto-facebook.jpg"></a>
+</div>
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

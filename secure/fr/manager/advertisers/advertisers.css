@@ -1,0 +1,111 @@
+h3 { margin: 0 0 10px 0; padding: 0; width: 200px; border-bottom: 1px solid black; }
+h4 { margin: 0 0 3px 0; padding: 0; font: 10px verdana, helvetica, sans-serif; text-decoration: underline; }
+hr { margin: 6px 0px 4px 0px; padding: 0; }
+.zero { clear:both; }
+.PerfReqLabel { font-weight: bold; float: right; zoom: 1; }
+.prop {  }
+.prop label { display: block; float: left; min-width: 150px; }
+.group-opt { margin: 0; padding: 5px; width: 500px; }
+
+.ui-tabs-hide { display:none; }
+.ui-tabs-nav { padding-left: 6px; float: left; margin: 0; }
+.ui-tabs-nav li { display: inline; float: left; clear: none; padding: 0; list-style: none }
+.ui-tabs-nav a { display: block; margin: 0 1px 0 0; padding: 2px 4px 2px; width: 120px; text-decoration: none!important; border: 1px solid #a0a0a0; font: 11px verdana, helvetica, sans-serif; color: #000000; background: #def9e3; }
+.ui-tabs-nav span { padding: 2px 13px 2px; color: #ffffff; background: #333333; }
+.ui-tabs-nav a:hover,
+.ui-tabs-nav a:hover span { background: #f0f0f0; border-color: #808080; }
+.ui-tabs-nav .ui-tabs-selected a { position: relative; z-index: 1; background: #dbe2ec; border-color: #404040; border-bottom-color: #dbe2ec; font-weight: bold; }
+.ui-tabs-nav .ui-tabs-selected a span { margin-bottom: 0; color: #ffffff; background: #181818; border-bottom: 1px solid #181818; cursor: default; }
+.ui-tabs-nav .ui-tabs-disabled a,
+.ui-tabs-nav .ui-tabs-disabled a span { background:#161616; color:#333; border-color:#161616; cursor:default; }
+.ui-tabs-container { background: #e9eff8; border: 1px solid #202020; clear: both; position: relative; top: -1px; padding: 10px 10px 8px 10px; *padding-top: 3px; *margin-top: -24px; clear: left; }
+
+#modprices-historic { background-color: #ffffff; border-collapse: collapse; border: 1px solid #000000; font: 10px verdana, helvetica, sans-serif; }
+#modprices-historic th { background-color: #f0f0f0; }
+#modprices-historic td { border-style: solid; border-width: 1px 0px; border-color: #000000; }
+#modprices-historic .date { width: 130px; }
+#modprices-historic .mod { width: 100px; }
+#modprices-historic .undo { width: 40px; }
+#modprices-historic .undo img { cursor: pointer; }
+#modprices-historic td.date { text-align: center; }
+#modprices-historic td.mod { text-align: right; }
+#modprices-historic td.undo { text-align: center; }
+
+.section {
+  background:none repeat scroll 0 0 #EAEAEA;
+  border:1px solid #C0C0C0;
+  padding:8px;
+  -moz-border-radius:3px 3px 3px 3px;
+  margin: 10px 0;
+}
+.section .title {
+  font-size:1.2em;
+  font-weight:bold;
+  margin-bottom: 5px;
+}
+.required-field-table { font: normal 10px verdana, helvetica, sans-serif; border: 1px solid #000000; border-collapse: collapse; background-color: #ffffff }
+.required-field-table th { height: 17px; padding: 1px 5px; background: #f0f0f0 }
+.required-field-table td { height: 17px; padding: 1px 5px; text-align: center; border: 1px solid #000000; border-width: 1px 0 }
+.required-field-table .label { text-align: left }
+
+.custom-field-table { width: 100%; font: normal 10px verdana, helvetica, sans-serif; border: 1px solid #000000; border-collapse: collapse; background-color: #ffffff }
+.custom-field-table tr.selected { background: #ffd9a7 }
+.custom-field-table th { height: 17px; padding: 1px; background: #f0f0f0 }
+.custom-field-table td { height: 17px; padding: 1px; text-align: center; border: 1px solid #000000; border-width: 1px 0 }
+.custom-field-table .name { width: 105px }
+.custom-field-table .label { width: 105px }
+.custom-field-table .type { width: 115px }
+.custom-field-table .required { width: 40px }
+.custom-field-table .value-list { width: 190px }
+.custom-field-table .value-default { width: 105px }
+.custom-field-table .validation-type { width: 115px }
+.custom-field-table .length { width: 35px }
+.custom-field-table .actions { width: 80px }
+.custom-field-table .actions .icon { display: inline; float: left; width: 16px; height: 16px; margin: 0 4px; background-repeat: no-repeat; cursor: pointer }
+.custom-field-table .actions .icon-up { background: url(arrow_up.png) }
+.custom-field-table .actions .icon-down { background: url(arrow_down.png) }
+.custom-field-table .actions .icon-edit { margin: 0 5px 0 10px; background: url(table_edit.png) }
+.custom-field-table .actions .icon-del { background: url(table_delete.png) }
+
+.invoicing-customization { }
+.invoicing-customization fieldset { padding: 4px 8px 8px; border: 2px groove threedface }
+.invoicing-customization textarea { width: 910px; height: 50px }
+.invoicing-customization .customization-list { display: none }
+
+.credit-settings .RazCredit-historic { font: 10px verdana, helvetica, sans-serif; border-collapse: collapse; border: 1px solid #000000; background: #ffffff; }
+.credit-settings .RazCredit-historic th { background: #f0f0f0 }
+.credit-settings .RazCredit-historic td { border-style: solid; border-width: 1px 0px; border-color: #000000 }
+.credit-settings .RazCredit-historic .date { width: 130px }
+.credit-settings .RazCredit-historic .type { width: 100px }
+.credit-settings .RazCredit-historic .detail { width: 300px }
+.credit-settings .RazCredit-historic .undo { width: 40px }
+.credit-settings .RazCredit-historic .undo img { cursor: pointer }
+.credit-settings .RazCredit-historic td.date { text-align: center }
+.credit-settings .RazCredit-historic td.type { text-align: center }
+.credit-settings .RazCredit-historic td.detail { text-align: left }
+.credit-settings .RazCredit-historic td.undo { text-align: center }
+
+.invoicing-settings td { padding: 1px 5px }
+.invoicing-settings .is-historic { font: 10px verdana, helvetica, sans-serif; border-collapse: collapse; border: 1px solid #000000; background: #ffffff; }
+.invoicing-settings .is-historic th { background: #f0f0f0 }
+.invoicing-settings .is-historic td { border-style: solid; border-width: 1px 0px; border-color: #000000 }
+.invoicing-settings .is-historic .date { width: 130px }
+.invoicing-settings .is-historic .type { width: 100px }
+.invoicing-settings .is-historic .detail { width: 300px }
+.invoicing-settings .is-historic .undo { width: 40px }
+.invoicing-settings .is-historic .undo img { cursor: pointer }
+.invoicing-settings .is-historic td.date { text-align: center }
+.invoicing-settings .is-historic td.type { text-align: center }
+.invoicing-settings .is-historic td.detail { text-align: left }
+.invoicing-settings .is-historic td.undo { text-align: center }
+
+
+.grey-block { clear:both; border: 1px solid #e4e4e4; background: #fcfcfc url(block-bg-grey-150.gif) repeat-x }
+a.btn-red { display: block; padding: 5px; font: bold 12px arial, sans-serif; color: #ffffff; text-align: center; background: #9d0503 url(dot-bg.png) repeat-x }
+a.btn-red:hover { text-decoration: underline }
+#btn-add-custom-field { float: left; width: 150px; height: 20px; margin: 5px 0; background: url(btn-add-cf-up.png) no-repeat; cursor: pointer }
+#btn-add-custom-field.down { background: url(btn-add-cf-down.png) no-repeat }
+#btn-save { float: right; width: 200px; margin: 5px 0 0 }
+
+#send-bop-codes-dialog { display: none }
+#mod-pdt-margin-dialog { display: none }

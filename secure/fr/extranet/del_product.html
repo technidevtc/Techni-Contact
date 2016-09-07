@@ -1,0 +1,69 @@
+<?php
+
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 18 juillet 2005
+
+ Fichier : /secure/extranet/del_product.html
+ Description : Demande de suppression d'un produit
+
+/=================================================================*/
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+include('language_local.php');
+
+$title = PRODUCT_DEL_TITLE;
+
+define('WHERE', WHERE_PRODUCTS_CARD);
+$nav   = '<a href="index.html?SESSION">' . HEAD_HOMEPAGE . '</a> &raquo; <a href="products.html?SESSION">' . HEAD_PRODUCT_LIST . '</a> &raquo; ' . PRODUCT_DEL_HEAD_TITLE;
+
+require(EXTRANET . 'head.php');
+
+function & loadProduct(& $handle, $id, $idA)
+{
+    $ret = false;
+
+    if(($res = & $handle->query('select p.id, s.id, p.name, p.fastdesc from products_fr p left join sup_requests s on p.id = s.idProduct where p.id = \'' . $handle->escape($id) . '\' and p.idAdvertiser = \'' . $handle->escape($idA) . '\' and p.active = 1' , __FILE__, __LINE__))
+       && $handle->numrows($res, __FILE__, __LINE__) == 1)
+    {
+        $ret = & $handle->fetch($res);
+    }
+    
+    return $ret;
+
+}
+
+if(!isset($_GET['id']) || !preg_match('/^[0-9]{1,8}$/', $_GET['id']) || !($data = & loadProduct($handle, $_GET['id'], $user->id)))
+{
+    print('<div class="centre"><div class="bloc"><div class="bloc-titre"><center>' . PRODUCT_DEL_ERROR_ID . '</center></div></div></div>');
+}
+else if($data[1] != '')
+{
+    print('<div class="centre"><div class="bloc"><div class="bloc-titre"><center>' . PRODUCT_DEL_ERROR_ALREADY . '</center></div></div></div>');
+}
+else
+{
+    if($handle->query('insert into sup_requests (idProduct, timestamp) values(\'' . $handle->escape($_GET['id']) . '\', ' . date('U') . ')', __FILE__, __LINE__))
+    {
+        $extra = (trim($data[3]) != '') ? ' - ' . $data[3] : '';
+        ExtranetLog($handle, $_SESSION['login'], $_SESSION['ip'], 'Demande de suppression du produit ' . $data[2] . $extra . ' [ID : ' . $_GET['id'] . ']');
+
+        print('<div class="centre"><div class="bloc"><div class="bloc-titre"><center>' . PRODUCT_DEL_OK . '</center></div></div></div>');
+    }
+    else
+    {
+        print('<div class="centre"><div class="bloc"><div class="bloc-titre"><center>' . PRODUCT_DEL_ERROR . '</center></div></div></div>');
+
+    }
+}
+
+
+require(EXTRANET . 'tail.php');
+
+?>
+

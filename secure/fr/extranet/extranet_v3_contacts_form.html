@@ -1,0 +1,458 @@
+<script type="text/javascript" src="<?php echo EXTRANET_URL.'ressourcesv3/js/contacts.js'; ?>"></script>
+<script type="text/javascript">
+
+	//$(function() {
+	$( document ).ready(function() {
+		$("#f_date_debut").datepicker({
+			showOn: "both",
+			//buttonImage: "<?php echo(EXTRANET_URL.'ressourcesv3/images/datepicker/calendar.png'); ?>",
+			//buttonImageOnly: true,
+			//buttonText: "Date debut",
+			//dateFormat: 'yy-mm-dd',
+			nextText: 'Suivant',
+			prevText: 'Pr\351c\351dent',
+			showAnim: 'slideDown',
+			
+			onSelect: function(input, inst) {
+				$("#f_mois").find('option').removeAttr("selected");
+				$("#f_mois_debut").find('option').removeAttr("selected");
+				$("#f_mois_fin").find('option').removeAttr("selected");
+				//$("#f_date_debut").val('');
+				$("#f_date_jours").val('');
+				//$("#f_date_fin").val('');
+			}
+		});
+		//$("#datepicker").datepicker("setDate", new Date());
+		
+		$( "#f_date_fin" ).datepicker({
+			showOn: "both",
+			//buttonImage: "<?php echo(EXTRANET_URL.'ressourcesv3/images/datepicker/calendar.png'); ?>",
+			buttonImageOnly: false,
+			//buttonText: "Date fin",
+			//dateFormat: 'yy-mm-dd',
+			nextText: 'Suivant',
+			prevText: 'Pr\351c\351dent',
+			showAnim: 'slideDown',
+			
+			onSelect: function(input, inst) {
+				$("#f_mois_debut").find('option').removeAttr("selected");
+				$("#f_mois_fin").find('option').removeAttr("selected");
+				$("#f_mois").find('option').removeAttr("selected");
+				//$("#f_date_debut").val('');
+				$("#f_date_jours").val('');
+				//$("#f_date_fin").val('');
+			}
+		});
+		
+		$( "#f_date_jours" ).datepicker({
+			showOn: "both",
+			//buttonImage: "<?php echo(EXTRANET_URL.'ressourcesv3/images/datepicker/calendar.png'); ?>",
+			//buttonImageOnly: true,
+			//buttonText: "Date par jour",
+			//dateFormat: 'yy-mm-dd',
+			nextText: 'Suivant',
+			prevText: 'Pr\351c\351dent',
+			showAnim: 'slideDown',
+			
+			onSelect: function(input, inst) {
+				$("#f_mois_debut").find('option').removeAttr("selected");
+				$("#f_mois_fin").find('option').removeAttr("selected");
+				$("#f_mois").find('option').removeAttr("selected");
+				$("#f_date_debut").val('');
+				$("#f_date_fin").val('');
+			}
+		});
+		
+		contact_activate_listner_search_input();
+		contacts_lunnch_search();
+	});
+		
+
+</script>
+
+<form action="#" method="POST">
+	<input type="hidden" id="fps" value="1" />
+	<input type="hidden" id="fpp" value="10" />
+	<input type="hidden" id="fetat" value="" />
+	
+	<select id="f_contacts_type" onchange="contacts_lunnch_search()" class="form-control" style="display: none;">
+		<option value="read-not-read" <?php if(strcmp($global_left_menu,'menu_contacts')==0){ echo('selected="true"'); } ?>>
+			Lus et non lus
+		</option>
+		<option value="all" <?php if(strcmp($global_left_menu,'menu_contacts_elemen4')==0){ echo('selected="true"'); } ?>>
+			Tous
+		</option>
+		<option value="not-read" <?php if(strcmp($global_left_menu,'menu_contacts_elemen1')==0){ echo('selected="true"'); } ?>>
+			Nos lus
+		</option>
+		<option value="processing" <?php if(strcmp($global_left_menu,'menu_contacts_elemen2')==0){ echo('selected="true"'); } ?>>
+			En traitement
+		</option>
+		<option value="archived" <?php if(strcmp($global_left_menu,'menu_contacts_elemen3')==0){ echo('selected="true"'); } ?>>
+			Archiv&eacute;
+		</option>
+		<option value="deleted" <?php if(strcmp($global_left_menu,'menu_contacts_elemen5')==0){ echo('selected="true"'); } ?>>
+			Supprim&eacute;
+		</option>
+	</select>
+			
+		<div class="form-left"  style="margin-top: 4px; margin-left: 20px; width: 33%;">
+			<label for="f_search">
+				Rechercher un contact
+			</label>
+			<br />
+				<input type="search" id="f_search" name="f_search" value="" alt="Rechercher (Soci&eacute;t&eacute;, nom, email, ID contact)" title="Rechercher (Soci&eacute;t&eacute;, nom, email, ID contact)" placeholder="Soci&eacute;t&eacute;, nom, email, ID contact" class="form-control" style="width: 210px;height: 33px;margin-top: 1px;" />
+					
+					<input type="button" value="Go" class="btn btn-primary" style="padding:3px 10px 2px 10px; margin-left:2px; margin-top: -3px;" onclick="contacts_lunnch_search()" />
+			
+		</div><!-- end .form-left -->
+		
+		
+			<div class="form-middle"  style="margin-top: 6px;">
+				<div>
+					<label for="f_date_jours">Par jour</label>
+					<div>
+						<input type="text" id="f_date_jours" placeholder="JJ/MM/AAAA" name="f_date_jours" value="" alt="Date d&eacute;but" title="Date d&eacute;but" class="form-control" style="width: 140px; height: 33px;margin-bottom: 10px;" />
+					</div>
+				</div>
+				
+				<div>
+					<div class="form-left" style="margin-right: 45px;">
+						<label for="f_date_debut">De</label>
+						<div>
+							<input type="text" id="f_date_debut" name="f_date_debut" placeholder="JJ/MM/AAAA"  value="" alt="Date fin" title="Date fin" class="form-control" style="width: 140px; height: 33px;" />
+						</div>
+					</div>
+				
+					<div style="overflow: hidden;">
+						<label for="f_date_fin">à</label>
+						<div>
+							<input type="text"  id="f_date_fin" name="f_date_fin" placeholder="JJ/MM/AAAA" value="" alt="Date fin" title="Date fin" class="form-control" style="width: 140px; height: 33px;" />
+						</div>
+					</div>
+				</div>
+			</div>
+
+		<div>
+			<div class="form-middle" style=" width: 270px;">
+			<div>
+			<div class="form-element-left"  style="width: 100%;">
+				<label for="f_date_debut">
+					Par mois :
+				</label>
+			</div>
+			<div>
+			
+			
+			<select class="form-control" name="f_mois" id="f_mois" onchange="delete_selected_debut_fin()">
+				<option value=""></option>
+			<?php
+			$date_years = date(Y);
+			$date_month = date(m);
+			?>
+			<?php
+			for($i=$date_month;$i>=1;$i--){
+			
+				if($i == 1) $moth='Janvier';
+				if($i == 2) $moth='Février';
+				if($i == 3) $moth='Mars';
+				if($i == 4) $moth='Avril';
+				if($i == 5) $moth='Mai';
+				if($i == 6) $moth='Juin';
+				if($i == 7) $moth='Juillet';
+				if($i == 8) $moth='Août';
+				if($i == 9) $moth='Septembre';
+				if($i == 10) $moth='Octobre';
+				if($i == 11) $moth='Novembre';
+				if($i == 12) $moth='Décembre';
+			
+				echo '<option value="'.$date_years.'-'.$i.'">'.$moth.' '.$date_years.'</option>';
+			}
+			?>
+				
+				<option value="2015-12">Décembre 2015</option>
+				<option value="2015-11">Novembre 2015</option>
+				<option value="2015-10">Octobre 2015</option>
+				<option value="2015-9">Septembre 2015</option>
+				<option value="2015-8">Août 2015</option>
+				<option value="2015-7">Juillet 2015</option>
+				<option value="2015-6">Juin 2015</option>
+				<option value="2015-5">Mai 2015</option>
+				<option value="2015-4">Avril 2015</option>
+				<option value="2015-3">Mars 2015</option>
+				<option value="2015-2">Février 2015</option>
+				<option value="2015-1">Janvier 2015</option>								
+				
+				<option value="2014-12">Décembre 2014</option>
+				<option value="2014-11">Novembre 2014</option>
+				<option value="2014-10">Octobre 2014</option>
+				<option value="2014-9">Septembre 2014</option>
+				<option value="2014-8">Août 2014</option>
+				<option value="2014-7">Juillet 2014</option>
+				<option value="2014-6">Juin 2014</option>
+				<option value="2014-5">Mai 2014</option>
+				<option value="2014-4">Avril 2014</option>
+				<option value="2014-3">Mars 2014</option>
+				<option value="2014-2">Février 2014</option>
+				<option value="2014-1">Janvier 2014</option>
+				
+				<option value="2013-12">Décembre 2013</option>
+				<option value="2013-11">Novembre 2013</option>
+				<option value="2013-10">Octobre 2013</option>
+				<option value="2013-9">Septembre 2013</option>
+				<option value="2013-8">Août 2013</option>
+				<option value="2013-7">Juillet 2013</option>
+				<option value="2013-6">Juin 2013</option>
+				<option value="2013-5">Mai 2013</option>
+				<option value="2013-4">Avril 2013</option>
+				<option value="2013-3">Mars 2013</option>
+				<option value="2013-2">Février 2013</option>
+				<option value="2013-1">Janvier 2013</option>
+				
+				<option value="2012-12">Décembre 2012</option>
+				<option value="2012-11">Novembre 2012</option>
+				<option value="2012-10">Octobre 2012</option>
+				<option value="2012-9">Septembre 2012</option>
+				<option value="2012-8">Août 2012</option>
+				<option value="2012-7">Juillet 2012</option>
+				<option value="2012-6">Juin 2012</option>
+				<option value="2012-5">Mai 2012</option>
+				<option value="2012-4">Avril 2012</option>
+				<option value="2012-3">Mars 2012</option>
+				<option value="2012-2">Février 2012</option>
+				<option value="2012-1">Janvier 2012</option>
+				<?php
+				/*
+				<option value="<?= $date_years ?>-8">Août <?= $date_years ?></option>
+				<option value="<?= $date_years ?>-9">Septembre <?= $date_years ?></option>
+				<option value="<?= $date_years ?>-10">Octobre <?= $date_years ?></option>
+				<option value="<?= $date_years ?>-11">Novembre <?= $date_years ?></option>
+				<option value="<?= $date_years ?>-12">Décember <?= $date_years ?></option>
+				*/
+				?>
+			
+			</select>
+			</div>
+			</div>
+		</div>
+		</div>
+
+		<br /><br /><br /><br />
+		
+		
+		<div style="overflow: hidden;margin-top: -6px;">
+		<div style="width: 140px; float: left; margin-right: 10px;">
+			<div  style="width: 100%;">
+				<label for="f_date_debut">
+					De :
+				</label>
+			</div>
+			<select class="form-control" name="f_mois_debut" id="f_mois_debut" onchange="delete_selected()">
+				<option value=""></option>
+				<?php
+				for($i=$date_month;$i>=1;$i--){
+				
+					if($i == 1) $moth='Janvier';
+					if($i == 2) $moth='Février';
+					if($i == 3) $moth='Mars';
+					if($i == 4) $moth='Avril';
+					if($i == 5) $moth='Mai';
+					if($i == 6) $moth='Juin';
+					if($i == 7) $moth='Juillet';
+					if($i == 8) $moth='Août';
+					if($i == 9) $moth='Septembre';
+					if($i == 10) $moth='Octobre';
+					if($i == 11) $moth='Novembre';
+					if($i == 12) $moth='Décembre';
+				
+					echo '<option value="'.$date_years.'-'.$i.'">'.$moth.' '.$date_years.'</option>';
+				}
+				?>
+				<option value="2015-12">Décembre 2015</option>
+				<option value="2015-11">Novembre 2015</option>
+				<option value="2015-10">Octobre 2015</option>
+				<option value="2015-9">Septembre 2015</option>
+				<option value="2015-8">Août 2015</option>
+				<option value="2015-7">Juillet 2015</option>
+				<option value="2015-6">Juin 2015</option>
+				<option value="2015-5">Mai 2015</option>
+				<option value="2015-4">Avril 2015</option>
+				<option value="2015-3">Mars 2015</option>
+				<option value="2015-2">Février 2015</option>
+				<option value="2015-1">Janvier 2015</option>				
+				
+				<option value="2014-12">Décembre 2014</option>
+				<option value="2014-11">Novembre 2014</option>
+				<option value="2014-10">Octobre 2014</option>
+				<option value="2014-9">Septembre 2014</option>
+				<option value="2014-8">Août 2014</option>
+				<option value="2014-7">Juillet 2014</option>
+				<option value="2014-6">Juin 2014</option>
+				<option value="2014-5">Mai 2014</option>
+				<option value="2014-4">Avril 2014</option>
+				<option value="2014-3">Mars 2014</option>
+				<option value="2014-2">Février 2014</option>
+				<option value="2014-1">Janvier 2014</option>
+				
+				<option value="2013-12">Décembre 2013</option>
+				<option value="2013-11">Novembre 2013</option>
+				<option value="2013-10">Octobre 2013</option>
+				<option value="2013-9">Septembre 2013</option>
+				<option value="2013-8">Août 2013</option>
+				<option value="2013-7">Juillet 2013</option>
+				<option value="2013-6">Juin 2013</option>
+				<option value="2013-5">Mai 2013</option>
+				<option value="2013-4">Avril 2013</option>
+				<option value="2013-3">Mars 2013</option>
+				<option value="2013-2">Février 2013</option>
+				<option value="2013-1">Janvier 2013</option>
+				
+			
+				<option value="2012-12">Décembre 2012</option>
+				<option value="2012-11">Novembre 2012</option>
+				<option value="2012-10">Octobre 2012</option>
+				<option value="2012-9">Septembre 2012</option>
+				<option value="2012-8">Août 2012</option>
+				<option value="2012-7">Juillet 2012</option>
+				<option value="2012-6">Juin 2012</option>
+				<option value="2012-5">Mai 2012</option>
+				<option value="2012-4">Avril 2012</option>
+				<option value="2012-3">Mars 2012</option>
+				<option value="2012-2">Février 2012</option>
+				<option value="2012-1">Janvier 2012</option>
+				
+				<!--<option value="2015-8">Août 2015</option>
+				<option value="2015-9">Septembre 2015</option>
+				<option value="2015-10">Octobre 2015</option>
+				<option value="2015-11">Novembre 2015</option>
+				<option value="2015-12">Décembre 2015</option>
+				-->
+				
+			</select>
+		</div>
+		
+		
+		<div>
+			<div style="width: 100%;">
+				<label for="f_date_debut">
+					à :
+				</label>
+			</div>
+			<select class="form-control" name="f_mois_fin" id="f_mois_fin" onchange="delete_selected()">
+				<option value=""></option>
+				<?php
+				for($i=$date_month;$i>=1;$i--){
+			
+				if($i == 1) $moth='Janvier';
+				if($i == 2) $moth='Février';
+				if($i == 3) $moth='Mars';
+				if($i == 4) $moth='Avril';
+				if($i == 5) $moth='Mai';
+				if($i == 6) $moth='Juin';
+				if($i == 7) $moth='Juillet';
+				if($i == 8) $moth='Août';
+				if($i == 9) $moth='Septembre';
+				if($i == 10) $moth='Octobre';
+				if($i == 11) $moth='Novembre';
+				if($i == 12) $moth='Décembre';
+			
+				echo '<option value="'.$date_years.'-'.$i.'">'.$moth.' '.$date_years.'</option>';
+				}
+			?>
+
+				<option value="2015-12">Décembre 2015</option>
+				<option value="2015-11">Novembre 2015</option>
+				<option value="2015-10">Octobre 2015</option>
+				<option value="2015-9">Septembre 2015</option>
+				<option value="2015-8">Août 2015</option>
+				<option value="2015-7">Juillet 2015</option>
+				<option value="2015-6">Juin 2015</option>
+				<option value="2015-5">Mai 2015</option>
+				<option value="2015-4">Avril 2015</option>
+				<option value="2015-3">Mars 2015</option>
+				<option value="2015-2">Février 2015</option>
+				<option value="2015-1">Janvier 2015</option>			
+
+				
+				<option value="2014-12">Décembre 2014</option>
+				<option value="2014-11">Novembre 2014</option>
+				<option value="2014-10">Octobre 2014</option>
+				<option value="2014-9">Septembre 2014</option>
+				<option value="2014-8">Août 2014</option>
+				<option value="2014-7">Juillet 2014</option>
+				<option value="2014-6">Juin 2014</option>
+				<option value="2014-5">Mai 2014</option>
+				<option value="2014-4">Avril 2014</option>
+				<option value="2014-3">Mars 2014</option>
+				<option value="2014-2">Février 2014</option>
+				<option value="2014-1">Janvier 2014</option>
+				
+				<option value="2013-12">Décembre 2013</option>
+				<option value="2013-11">Novembre 2013</option>
+				<option value="2013-10">Octobre 2013</option>
+				<option value="2013-9">Septembre 2013</option>
+				<option value="2013-8">Août 2013</option>
+				<option value="2013-7">Juillet 2013</option>
+				<option value="2013-6">Juin 2013</option>
+				<option value="2013-5">Mai 2013</option>
+				<option value="2013-4">Avril 2013</option>
+				<option value="2013-3">Mars 2013</option>
+				<option value="2013-2">Février 2013</option>
+				<option value="2013-1">Janvier 2013</option>
+				
+			
+				<option value="2012-12">Décembre 2012</option>
+				<option value="2012-11">Novembre 2012</option>
+				<option value="2012-10">Octobre 2012</option>
+				<option value="2012-9">Septembre 2012</option>
+				<option value="2012-8">Août 2012</option>
+				<option value="2012-7">Juillet 2012</option>
+				<option value="2012-6">Juin 2012</option>
+				<option value="2012-5">Mai 2012</option>
+				<option value="2012-4">Avril 2012</option>
+				<option value="2012-3">Mars 2012</option>
+				<option value="2012-2">Février 2012</option>
+				<option value="2012-1">Janvier 2012</option>
+				
+				<!--<option value="2015-8">Août 2015</option>
+				<option value="2015-9">Septembre 2015</option>
+				<option value="2015-10">Octobre 2015</option>
+				<option value="2015-11">Novembre 2015</option>
+				<option value="2015-12">Décembre 2015</option>
+				-->
+			</select>
+		</div>
+		
+		</div>
+		<!-- end .form-middle -->
+		
+		<br />
+		
+		<!-- end .form-middle -->
+		
+		<div class="form-right" style="margin-right: 21%;">
+			<div class="form-element-left" style="padding-top: 0;">
+				<input type="button" id="f_filtrer" value="Fitrer par date" alt="Fitrer" title="Fitrer" onclick="contacts_lunnch_search()" class="btn-primary btn" style="padding: 3px 15px 3px 15px; margin-top: 3px;" />
+			</div>
+			<div class="form-element-right"></div>
+		</div>
+</form>
+
+<script>
+	function delete_selected(){
+		$("#f_mois").find('option').removeAttr("selected");
+		$("#f_date_debut").val('');
+		$("#f_date_jours").val('');
+		$("#f_date_fin").val('');
+	}
+	
+	function delete_selected_debut_fin(){
+		$("#f_mois_debut").find('option').removeAttr("selected");
+		$("#f_mois_fin").find('option').removeAttr("selected");
+		$("#f_date_debut").val('');
+		$("#f_date_jours").val('');
+		$("#f_date_fin").val('');
+		
+	}
+</script>
+

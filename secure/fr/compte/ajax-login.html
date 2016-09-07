@@ -1,0 +1,70 @@
+<?php
+require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos(dirname(__FILE__), "technico")+1) + 1) . "config.php";
+require(ICLASS . 'CUserSession.php');
+require(ICLASS . 'CCustomerUser.php');
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+
+$redirectionsAllowed = array(
+    'commandes' => 'order-list.html',
+    'devis' => 'estimate-list.html'
+);
+
+$emailLogin = (!empty ($_GET['email']) && preg_match('/^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$/', $_GET['email'])) ? $_GET['email'] : '';
+$loginRedirectGet = (!empty ($_GET['redirect']) && !empty ($redirectionsAllowed[$_GET['redirect']])) ? $_GET['redirect'] : '';
+$idCommand = (!empty ($_GET['idc'])) ? $_GET['idc'] : '';
+$idCommandPost = (!empty ($_GET['idCommand'])) ? $_GET['idCommand'] : '';
+$loginRedirectPost = (!empty ($_GET['redirect']) && !empty ($redirectionsAllowed[$_GET['redirect']])) ? $redirectionsAllowed[$_GET['redirect']] : '';
+
+if ($_SERVER['REQUEST_METHOD'] == 'GET' && !empty($_GET['callback'])) {
+	$login = isset($_GET["login"]) ? substr(trim($_GET["login"]), 0, 255) : "";
+	$pass  = isset($_GET["pass"]) ? $_GET["pass"] : "";
+
+        //  OD 2011/08/17 http://www.hook-network.com/storm/tasks/2010/09/22/activation-automatique-du-compte-lorsque-r%C3%A9cup%C3%A9ration-du-password
+        $customerUserID = CustomerUser::getCustomerIdFromEmail($login ,$handle);
+        if ($customerUserID) {
+        $CustomerUser = new CustomerUser($handle, $customerUserID);
+
+          if(strcasecmp($CustomerUser->origin, 'A') == 0){
+            $CustomerUser->actif = 1;
+            $CustomerUser->save();
+          }
+        }
+
+	$customerID = CustomerUser::canLogin($login, $pass, $handle);
+	// Log in
+	if ($customerID) {
+		$session->login($customerID);
+	}
+	else {
+		$errorstring = "Nous n\'avons pas pu vous identifier.\\nMerci de rentrer des e-mail et mot de passe valides.\\n";
+	}
+
+
+if ($session->logged) {
+	$pageAfterLogin = $session->pageAfterLogin;
+	$session->pageAfterLogin = COMPTE_URL."index.html";
+	if (empty($pageAfterLogin))
+		$pageAfterLogin = $session->pageAfterLogin;
+	if(!empty($loginRedirectPost))
+          $pageAfterLogin = $loginRedirectPost;
+        $argsAfterLogin = !empty($idCommandPost) ? '?idc='.$idCommandPost : '';
+	$userFirstName = $CustomerUser->prenom;
+        $userName = $CustomerUser->nom;
+        $_SESSION['login'] = true;
+        $session->userName = $userName;
+        $session->userFirstName = $userFirstName;
+        $session->userEmail = $login;
+}
+$o['error']=$errorstring;
+$o['data'] = $pageAfterLogin.$argsAfterLogin;
+
+mb_convert_variables("UTF-8","ASCII,UTF-8,ISO-8859-1,CP1252",$o);
+  $return = $_GET["callback"]."({'error':'".$o['error']."','data':'".$session->logged."'})";
+
+  print $return;
+
+}
+ //print $_GET["callback"]."({'uid': '".$_SERVER['REQUEST_METHOD']."', 'username': 'Chroder', 'name': 'Christopher Nadeau'})";
+ 

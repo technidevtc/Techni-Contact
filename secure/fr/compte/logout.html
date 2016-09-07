@@ -1,0 +1,13 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS . "CUserSession.php");
+
+$handle = DBHandle::get_instance();
+$session = & new UserSession($handle);
+$session->logout();
+
+header("Location: " . COMPTE_URL . "login.html");
+exit();
+
+?>
+

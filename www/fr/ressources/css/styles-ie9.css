@@ -1,0 +1,9 @@
+/* 
+    Document   : styles-ie9
+    Created on : 14 févr. 2012, 17:31:24
+    Author     : Hook
+    Description:
+        Hacks IE9 lacks
+*/
+
+#header-menu a.last{ padding: 8px 3px 0 4px; filter: none }

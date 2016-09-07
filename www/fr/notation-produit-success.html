@@ -1,0 +1,31 @@
+<?php
+if(!defined('PREVIEW'))
+  require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$title = "Notez nos produits";
+$pageName = "Notez nos produits";
+
+require(SITE . "head.php");
+
+?>
+<div id="body" class="white-bg">
+					<div class="blocks-left">
+						<div class="blue-title">Notez nos produits</div>
+						<div class="zero"></div>
+						<div id="product-notation">
+                                                  <br />
+                                                  <br />
+                                                  Votre avis nous a bien été transmis.<br />
+                                                  <br />
+                                                  Merci pour votre participation.<br />
+                                                  <br />
+                                                  <div class="btn-prev-step" onClick="document.location.href = '<?php echo URL ?>'">
+                                                    <span>Retourner à l'accueil</span>
+                                                  </div>
+                                                </div>
+					</div>
+  
+					
+<?php require(SITE . "blocks-right.php") ?>
+</div>
+<?php require(SITE . "foot.php") ?>

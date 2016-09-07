@@ -1,0 +1,2490 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require("../../includes/fr/classV3/phpmailer_2014/PHPMailerAutoload.php");
+require("../../includes/fr/classV3/phpmailer_2014/Email_functions_external_mail_send.php");
+require(SITE.'misc-send-request.php');
+require(ADMIN.'generator.php');
+
+$db = $handle = DBHandle::get_instance();
+
+include(LANG_LOCAL_INC."includes-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."www-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."common-".DB_LANGUAGE."_local.php");
+include(LANG_LOCAL_INC."infos-".DB_LANGUAGE."_local.php");
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+
+// default lead type is 3 since v3
+$lead_type = 3;
+$page_title = $lead_type_string = "Demande de devis gratuit";
+
+$lead_pdtID = isset($_POST["pdtID"]) ? $_POST["pdtID"] : (isset($_GET["pdtID"]) ? $_GET["pdtID"] : "0");
+$lead_catID = isset($_POST["catID"]) ? $_POST["catID"] : (isset($_GET["catID"]) ? $_GET["catID"] : "0");
+$lead_category = isset($_POST["cat"]) ? $_POST["cat"] : (isset($_GET["cat"]) ? $_GET["cat"] : "a");
+$lead_category = $lead_category == 'f' ? 'f' : 'a';
+
+// Common timestamp for the whole script
+$timestamp = time();
+
+// no pdt ID specified, use a default product for ab testing purpose
+if (!$lead_pdtID) {
+  if ($lead_category == 'f') { //http://www.techni-contact.com/produits/539-2847135-panneaux-electoraux.html SUPPLIER
+    $lead_pdtID = 2847135;
+    $lead_catID = 539;
+  } else { //http://www.techni-contact.com/produits/2830-724303-videoprojecteurs-canon.html ADVERTISER
+    $lead_pdtID = 724303;
+    $lead_catID = 2830;
+  }
+}
+
+$pdt = loadProduct($lead_pdtID, $lead_catID);
+
+if (!preg_match('/^[1-4]$/', $lead_type) || !$pdt || ($pdt["category"] == __ADV_CAT_SUPPLIER__ && $lead_category != 'f') || ($pdt["category"] != __ADV_CAT_SUPPLIER__ && $lead_category != 'a')) {
+  header("Location: ".URL."404.php");
+  exit();
+}
+
+// get BOUser infos
+if(!empty ($pdt['idCommercial'])){
+  $boUserObj = new BOUser();
+  $boUser = $boUserObj->get('id ='.$pdt['idCommercial']);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Var telling us if the user tried to validate from this same page
+$valid_form = $_SERVER["REQUEST_METHOD"] == 'POST' && isset($_POST["nom"]);
+
+// Arrays for customers and errors information
+$error = array();
+$infos = array(
+  "nom" => "",
+  "prenom" => "",
+  "societe" => "",
+  "fonction" => "",
+  //"salaries" => "",
+  "secteur" => "",
+  "naf" => "",
+  "siret" => "",
+  "adresse" => "",
+  "cadresse" => "",
+  "cp" => "",
+  "ville" => "",
+  "pays" => "",
+  "telephone" => "",
+  "produits" => "",
+  "fax" => "",
+  "email" => "",
+  "url" => "",
+  "precisions" => ""
+);
+
+// Not Required Fields vars
+$notRequiredFields = explode(",", $pdt["notRequiredFields"]);
+if (empty($notRequiredFields)) $notRequiredFields = array();
+$notReqFields = array_flip($notRequiredFields);
+
+// Custom Fields vars
+$customFields = unserialize($pdt["customFields"]);
+if (empty($customFields)) $customFields = array();
+$cf_count = count($customFields);
+$cfv = array(); // Custom Fields Values
+
+if ($valid_form) { // User validate the form
+  ////////////////////////////////////////////////////////////////////////////////
+  // Checking User infos validity
+  ////////////////////////////////////////////////////////////////////////////////
+
+  //mb_convert_variables("ISO-8859-1","UTF-8",$_POST);
+
+  $infos["nom"] = isset($_POST["nom"]) ? substr(trim($_POST["nom"]), 0, 255) : '';
+  $infos["prenom"] = isset($_POST["prenom"]) ? substr(trim($_POST["prenom"]), 0, 255) : '';
+  $infos["societe"] = isset($_POST["societe"]) ? substr(trim($_POST["societe"]), 0, 255) : '';
+  $infos["fonction"] = isset($_POST["fonction"]) ? substr(trim($_POST["fonction"]), 0, 255) : '';
+  //$infos["salaries"] = isset($_POST["salaries"]) ? substr(trim($_POST["salaries"]), 0, 255) : '';
+  $infos["secteur"] = isset($_POST["secteur"]) ? substr(trim($_POST["secteur"]), 0, 255) : '';
+  $infos["naf"] = isset($_POST["naf"]) ? substr(trim($_POST["naf"]), 0, 255) : '';
+  $infos["siret"] = isset($_POST["siret"]) ? substr(trim($_POST["siret"]), 0, 255) : '';
+  $infos["adresse"] = isset($_POST["adresse"]) ? substr(trim($_POST["adresse"]), 0, 255) : '';
+  $infos["cadresse"] = isset($_POST["cadresse"]) ? substr(trim($_POST["cadresse"]), 0, 255) : '';
+  $infos["cp"] = isset($_POST["cp"]) ? substr(trim($_POST["cp"]), 0, 255) : '';
+  $infos["ville"] = isset($_POST["ville"]) ? substr(trim($_POST["ville"]), 0, 255) : '';
+  $infos["pays"] = isset($_POST["pays"]) ? substr(trim($_POST["pays"]), 0, 255) : '';
+  $infos["telephone"] = isset($_POST["telephone"]) ? substr(trim($_POST["telephone"]), 0, 255) : '';
+  $infos["produits"] = isset($_POST["produits"]) ? trim($_POST["produits"]) : '';
+  $infos["fax"] = isset($_POST["fax"]) ? substr(trim($_POST["fax"]),   0, 255) : '';
+  $infos["email"] = isset($_POST["email"]) ? substr(trim($_POST["email"]), 0, 255) : '';
+  //$infos["infos_sup"] = isset($_POST["infos_sup"]) ? substr(trim($_POST["infos_sup"]), 0, 2047) : '';
+  $infos["url"] = isset($_POST["url"]) ? substr(trim($_POST["url"]), 0, 255) : '';
+  $infos["precisions"] = isset($_POST["precisions"]) ? substr(trim($_POST["precisions"]), 0, 2047) : '';
+  if ($infos["precisions"] == FORM_PERSONNAL_INFOS_WARNING) $infos["precisions"] = "";
+
+
+  // Always required fields
+  if (empty($infos["nom"])) $error["nom"] = true;
+  else setCookie('nom', $infos["nom"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["prenom"])) $error["prenom"] = true;
+  else setCookie('prenom', $infos["prenom"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (!preg_match(REGEX_TEL, $infos["telephone"])) $error["telephone"] = true;
+  else setCookie('telephone', $infos["telephone"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos["email"])) $error["email"] = true;
+  else setCookie('email', $infos["email"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+  
+  // Fields that may be required
+  if (empty($infos["fonction"]) && !isset($notReqFields["fonction"])) $error["fonction"] = true;
+  else setCookie('fonction', $infos["fonction"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["societe"]) && !isset($notReqFields["societe"])) $error["societe"] = true;
+  else setCookie('societe', $infos["societe"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["adresse"])/* && !isset($notReqFields["nb_salaries"])*/) $error["adresse"] = true;
+  else setCookie('adresse', $infos["adresse"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["cadresse"]) && !isset($notReqFields["complement"])) $error["cadresse"] = true;
+  else setCookie('cadresse', $infos["cadresse"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["cp"]) && !isset($notReqFields["cp"])) $error["cp"] = true;
+  else setCookie('cp', $infos["cp"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["ville"]) && !isset($notReqFields["ville"])) $error["ville"] = true;
+  else setCookie('ville', $infos["ville"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["pays"]) && !isset($notReqFields["pays"])) $error["pays"] = true;
+  else setCookie('pays', $infos["pays"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  /*if (empty($infos["salaries"]) && !isset($notReqFields["nb_salaries"])) $error["salaries"] = true;
+  else setCookie('salaries', $infos["salaries"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);*/
+
+  if (empty($infos["siret"]) && !isset($notReqFields["num_siret"])) $error["siret"] = true;
+  else setCookie('siret', $infos["siret"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  // restraining activity sector and naf
+  $terms = preg_replace('/\s+de\s+/', ' ', $infos['societe']);
+  $terms = preg_split('/[\s,]+/', $terms);
+  $ActivitySector = Doctrine_Core::getTable('ActivitySectorSurqualification');
+//  $ActivitySector->batchUpdateIndex();
+  $array_results = array();
+  foreach ($terms as $term) {
+    $term = Utils::toDashAz09($term);
+
+    if (!empty($term) && ($result = $ActivitySector->search($term))) {
+      $q = Doctrine_Query::create()
+        ->from('ActivitySector as')
+        ->leftJoin('as.Surqualifications ass')
+        ->where('ass.id = ?', $result[0]['id']);
+
+      $array_results[$result[0]['id']] = $result[0]['id'];
+      $sector = $q->fetchArray();
+      
+      $results[] = $result;
+    }
+  }
+  
+  if(count($array_results) == 1){
+    $infos["secteur"] = $sector[0]['sector'];
+    $infos["secteur_qualifie"] = $sector[0]['Surqualifications'][0]['qualification'];
+    $infos["naf"] = $sector[0]['Surqualifications'][0]['naf'];
+  }
+  // restraining activity sector and naf
+
+  if (empty($infos["secteur"]) && !isset($notReqFields["secteur_activite"])) $error["secteur"] = true;
+  else setCookie('secteur', $infos["secteur"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (empty($infos["naf"]) && !isset($notReqFields["code_naf"])) $error["naf"] = true;
+  else setCookie('naf', $infos["naf"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+
+  // never required fields
+  //setCookie('fax', $infos["fax"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+  setCookie('secteur_qualifie', $infos["secteur_qualifie"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+  //setCookie('infos_sup', $infos["infos_sup"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+  
+  if(!empty($infos['fax']))
+    if (!preg_match("/^[0-9+-. ()]{8,30}$/", $infos["fax"])) $error["fax"] = true;
+    else setCookie('fax', $infos["fax"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  if (!empty($infos["url"])) {
+    if (!preg_match('/^((http|https|ftp):\/\/)?(([A-Z0-9][A-Z0-9_-]*)(\.[A-Z0-9][A-Z0-9_-]*)+)(:(\d+))?\/?$/i', $infos["url"]))
+      $error["url"] = true;
+    else {
+      if (!preg_match('/^(http|https|ftp):\/\//i', $infos["url"])) $infos["url"] = 'http://'.$infos["url"];
+      if (strrpos($infos["url"] , '/') != strlen($infos["url"])-1) $infos["url"] .= '/';
+      setCookie('url', $infos["url"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+    }
+  }
+  else setCookie('url', $infos["url"], $timestamp + 24 * 3600 * 365, '/', DOMAIN);
+
+  // Custom Fields
+  for ($i = 0; $i < $cf_count; $i++) {
+    $cf = &$customFields[$i];
+
+    $cf_value = trim($_POST[$cf["name"]]);
+    $cf["length"] = (int)$cf["length"];
+    if ($cf["length"] > 0) $cf_value = substr($cf_value, 0, $cf["length"]);
+    $valueList = explode(",", $cf["valueList"]);
+    if ($cf["type"] == "select" && !in_array($cf_value, $valueList)) $error[$cf["name"]] = true;
+    if (!empty($cf_value)) {
+      switch ($cf["validationType"]) {
+        case "integer":
+          if (!preg_match('`^[0-9]+$`', $cf_value))
+            $error[$cf["name"]] = true;
+          break;
+        case "date":
+          if (!preg_match('`^[0-3]?[0-9]{1})(\/|-|\s)[0-2]?[0-9]{1}(\/|-|\s)[0-9]{4,4}$`', $cf_value))
+            $error[$cf["name"]] = true;
+          break;
+        case "email":
+          if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $cf_value))
+            $error[$cf["name"]] = true;
+          break;
+        case "url":
+          if (!preg_match('/^((http|https|ftp):\/\/)?(([A-Z0-9][A-Z0-9_-]*)(\.[A-Z0-9][A-Z0-9_-]*)+)(:(\d+))?\/?$/i', $cf_value))
+            $error[$cf["name"]] = true;
+          break;
+        default: break;
+      }
+    }
+    elseif ($cf["required"])
+      $error[$cf["name"]] = true;
+
+    $cfv[$cf["name"]] = $cf_value;
+  }
+  
+  ////////////////////////////////////////////////////////////////////////////////
+  // Temporary lead recording
+  ////////////////////////////////////////////////////////////////////////////////
+  $session = new UserSession();
+  $sid = $session->getID();
+
+  $contactAbortedTable = Doctrine_Core::getTable('ContactsAborted');
+  $contactAborted = $contactAbortedTable->findOneBySid($sid);
+  if(!$contactAborted){
+    $insertContactAborted = new ContactsAborted;
+    $insertContactAborted->sid = $sid;
+    $insertContactAborted->create_time = $timestamp;
+    $insertContactAborted->save();
+  }
+  
+  $contact_aborted = $infos;
+  $contact_aborted['tel'] = $infos['telephone'];
+  unset($contact_aborted['telephone']);
+  unset($contact_aborted['produits']);
+  unset($contact_aborted['secteur_qualifie']);
+  $contact_aborted['idProduct'] = $pdt['id'];
+  $contact_aborted['idFamily'] = $pdt['cat_id'];
+  $contact_aborted['idAdvertiser'] = $pdt['adv_id'];
+  $contact_aborted['timestamp'] = $timestamp;
+  $contact_aborted['recall_mail_sent'] = 0;
+
+  if ($contactAborted->recall_mail_sent != 1) { // let's not change anything if a mail was already sent
+    $record = Doctrine_Query::create()
+      ->update('ContactsAborted');
+      foreach($contact_aborted as $k => $v)
+        $record->set($k, '?', isset($v) ? $v : ""); // avoid a fatal error when $v is null
+      $record->where('sid = ?', $sid);
+    $record->execute();
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Requests processing
+  ////////////////////////////////////////////////////////////////////////////////
+
+  if ( empty($error) && !isset($_POST["onlyCheck"]) ) {
+    
+    $user_id = CustomerUser::getCustomerIdFromLogin($infos["email"], $handle);
+    
+    //require(ICLASS.'_ClassEmail.php');
+    // As the lead is ok, deleting the contactAborted entry
+    $contactNotAborted = Doctrine_Query::create()
+          ->delete('ContactsAborted')
+          ->where('sid = \''.$sid.'\'')
+          ->execute();
+
+    // month start and end timestamps
+    $month_start = mktime(0,0,0,date('m'),1,date('Y'));
+    $month_end = mktime(0,0,0,date('m')+1,1,date('Y'));
+
+    $pdt["leadID"] = generateID(1, 16777215, 'id', 'contacts', $handle);
+
+    // adv campaign ID
+    $campaignID = !empty($_COOKIE["campaignID"]) ? $_COOKIE["campaignID"] : 0;
+    setCookie('campaignID', "", $timestamp+86400*15, '/', DOMAIN);
+
+    $queries = array();
+    ////////////////////////////////////////////////////////////////////////////////
+    // MAIN LEAD (ml)
+    ////////////////////////////////////////////////////////////////////////////////
+    $ml["income_total"] = 0;
+    $ml = getLeadInvoice($infos, $pdt["oadv_id"]);
+    $ml["income_total"] += $ml["income"];
+    $ml["query"] = array(
+      "id" => $pdt["leadID"],
+      "idProduct" => $pdt["id"],
+      "idFamily" => $pdt["cat_id"],
+      "idAdvertiser" => $pdt["oadv_id"],
+      "type" => $lead_type,
+      "nom" => $db->escape(strtoupper($infos["nom"])),
+      "prenom" => $db->escape(strtoupper($infos["prenom"])),
+      "fonction" => $db->escape(strtoupper($infos["fonction"])),
+      "societe" => $db->escape(strtoupper($infos["societe"])),
+      //"salaries" => $db->escape($infos["salaries"]),
+      "secteur" => $db->escape(strtoupper($infos["secteur"])),
+      "qualification" => $db->escape(strtoupper($infos["secteur_qualifie"])),
+      "naf" => $db->escape($infos["naf"]),
+      "siret" => $db->escape($infos["siret"]),
+      "adresse" => $db->escape(strtoupper($infos["adresse"])),
+      "cadresse" => $db->escape(strtoupper($infos["cadresse"])),
+      "cp" => $db->escape($infos["cp"]),
+      "ville" => $db->escape(strtoupper($infos["ville"])),
+      "pays" => $db->escape(strtoupper($infos["pays"])),
+      "tel" => $db->escape($infos["telephone"]),
+      "fax" => $db->escape($infos["fax"]),
+      "email" => $db->escape($infos["email"]),
+      "url" => $db->escape($infos["url"]),
+      "precisions" => $db->escape($infos["precisions"]),
+      "timestamp" => $timestamp,
+      "gen" => 0,
+      "cread" => 0,
+      "sent" => (!empty($infos["email"]) ? 1 : 0),
+      "invoice_status" => $ml["invoice_status"],
+      "income" => $ml["income"],
+      "income_total" => 0,
+      "parent" => 0,
+      "campaignID" => $campaignID,
+      "customFields" => $db->escape(serialize($cfv)),
+      "id_user_commercial" => $pdt["idCommercial"],
+      "origin" => empty($campaignID) ? "Internaute" : "Probance"
+    );
+
+    
+    // main product partner infos
+    $ml_adv_infos = "";
+    // show infos if the partner is supplier or if the lead is visible for him
+    if ($pdt["category"] == __ADV_CAT_SUPPLIER__ || $ml["invoice_status"] & __LEAD_VISIBLE__) {
+      if(is_file(ADVERTISERS_LOGOS_INC.$pdt["adv_id"].'.jpg'))
+        $ml_adv_infos .= '<div class="lead-success-logo-partner"><img class="vmaib" src="'.ADVERTISERS_LOGOS_URL.$pdt["adv_id"].'.jpg" alt="" /><div class="vsma"></div></div><div class="zero"></div>';
+      $ml_adv_infos .= "<strong>".$pdt["nom1"]."</strong><br/>".
+      $pdt["adresse1"]."<br/>".
+      $pdt["adresse2"]."<br/>".
+      $pdt["cp"]." à ".$pdt["ville"]."<br/>".
+      $pdt["pays"]."<br/>".
+      "Téléphone : ".$pdt["tel1"]."<br/>".
+      "Fax : ".$pdt["fax1"]."<br/>".
+      "Contact : ".$pdt["contact"]." ".(!empty($pdt["email"]) ? "<a href=\"mailto:".$pdt["email"]."\">".$pdt["email"]."</a>" : "")."<br/>".
+      (!empty($pdt["adv_url"]) ? "<a href=\"".$pdt["adv_url"]."\">".$pdt["adv_url"]."</a><br/>" : "");
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // SECONDARY LEADS (sl)
+    ////////////////////////////////////////////////////////////////////////////////
+
+    // Patch MARIAN
+    $idProductPatch = $pdt["oadv_id"];
+    $listAdvPatch = array();
+    // END PATCH MARIAN
+
+    $sl_advCount = $lplCount = 0;
+    if ($pdt["noLeads2out"] == 0) {
+      
+      // secondary leads from linked products
+      $lpl = array();
+      $res = $db->query("SELECT idProductLinked FROM productslinks WHERE idProduct = ".$pdt["id"], __FILE__, __LINE__);
+      //if( && )
+      while ($row = $db->fetch($res)) {
+        if ($lpdt = loadProduct($row[0])) {
+          if (!in_array($lpdt["adv_id"], $listAdvPatch) && $lpdt["adv_id"] != $idProductPatch) {
+            $listAdvPatch[] = $lpdt["adv_id"];
+            $lpl[] = $lpdt;
+          }
+        }
+      }
+      $lplCount = count($lpl);
+
+      $sl_advList = array();
+      if ($lplCount) { // secondary leads from linked products
+        for ($k = 0; $k < $lplCount; $k++) {
+          $lpdt = &$lpl[$k];
+          $sl = getLeadInvoice($infos, $lpdt["adv_id"]);
+          $lpdt["leadID"] = generateID(1, 16777215, 'id', 'contacts', $handle);
+          $lpdt["lead_status"] = $sl["invoice_status"];
+          $sl_advList[$lpdt["adv_id"]][] = &$lpdt;
+          $sl["query"] = $ml["query"];
+          $sl["query"]["id"] = $lpdt["leadID"];
+          $sl["query"]["idProduct"] = $lpdt["id"];
+          $sl["query"]["idFamily"] = $lpdt["cat_id"];
+          $sl["query"]["idAdvertiser"] = $lpdt["adv_id"];
+          $sl["query"]["invoice_status"] = $sl["invoice_status"];
+          $sl["query"]["income"] = $sl["income"];
+          $sl["query"]["income_total"] = 0;
+          $sl["query"]["parent"] = $pdt["leadID"];
+          $ml["income_total"] += $sl["income"];
+          $sl['query']['create_time'] = $timestamp;
+
+//          var_dump('secondary leads from linked products');
+
+            $adv["mails_list"] = array();
+            if (!empty($lpdt["email"])) $adv["mails_list"][$lpdt["leadID"]] = array('mail' => $lpdt["email"], 'adv_type' => (int) $lpdt["category"], 'lead_id' => $lpdt["leadID"], 'lead_status' => $sl["invoice_status"]);//update 09/03/2011
+            if (!empty($lpdt["econtact"])) $adv["mails_list"][] = array('mail' => $lpdt["econtact"], 'adv_type' => (int) $lpdt["category"], 'lead_id' => $lpdt["leadID"], 'lead_status' => $sl["invoice_status"]);//update 09/03/2011
+            $contacts = unserialize($lpdt["contacts"]);
+            if (empty($contacts)) $contacts = array();
+            foreach ($contacts as $contact) if (!empty($contact["email"])) $adv["mails_list"][] = array('mail' => $contact["email"], 'adv_type' => $lpdt["category"], 'lead_id' => $lpdt["leadID"], 'lead_status' => $sl["invoice_status"]);//update 09/03/2011
+
+          $sl_advList[$lpdt["adv_id"]][0]['mails_list'] = $adv["mails_list"];
+          $queries[] = "INSERT INTO `contacts` (`".implode("`,`",array_keys($sl["query"]))."`) VALUES ('".implode("','",$sl["query"])."')";
+
+        }
+      }
+      else { // secondary leads from same category
+        if ($pdt["category"] != __ADV_CAT_SUPPLIER__) {
+          $res = $db->query("
+            SELECT DISTINCT
+              a.id as adv_id, a.nom1, a.category, a.adresse1, a.cp, a.ville, a.pays, a.tel1, a.fax1, a.adresse2,
+              a.contact, a.email, a.econtact, a.contacts, a.url as adv_url, a.from_web,
+              eu.webpass
+            FROM advertisers a
+            INNER JOIN extranetusers eu ON a.id = eu.id
+            INNER JOIN products p ON a.id = p.idAdvertiser
+            INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1 AND pfr.deleted != 1
+            INNER JOIN products_families pf ON p.id = pf.idProduct AND pf.idFamily = ".$pdt["cat_id"]."
+            LEFT JOIN auto_reject_links arl ON arl.idAdvertiser = a.id AND arl.idProduct = ".$pdt["id"]." AND arl.idFamily = ".$pdt["cat_id"]."
+            WHERE
+              a.id != ".$pdt["adv_id"]." AND
+              a.actif = 1 AND
+              a.noLeads2in = 0 AND
+              a.category != ".__ADV_CAT_SUPPLIER__."
+              AND arl.idProduct IS NULL", __FILE__, __LINE__);
+
+
+          while ($adv = $db->fetchAssoc($res)) {
+            $sl = getLeadInvoice($infos, $adv["adv_id"]);
+            $adv["leadID"] = generateID(1, 16777215, 'id', 'contacts', $handle);
+            $adv["lead_status"] = $sl["invoice_status"];
+            $adv["cat_name"] = $pdt["cat_name"];
+            
+            $sl["query"] = $ml["query"];
+            $sl["query"]["id"] = $adv["leadID"];
+            $sl["query"]["idProduct"] = 0;
+            $sl["query"]["idFamily"] = $pdt["cat_id"];
+            $sl["query"]["idAdvertiser"] = $adv["adv_id"];
+            $sl["query"]["invoice_status"] = $sl["invoice_status"];
+            $sl["query"]["income"] = $sl["income"];
+            $sl["query"]["income_total"] = 0;
+            $sl["query"]["parent"] = $pdt["leadID"];
+            $ml["income_total"] += $sl["income"];
+
+            $sl['query']['create_time'] = $timestamp;
+            $queries[] = "INSERT INTO `contacts` (`".implode("`,`",array_keys($sl["query"]))."`) VALUES ('".implode("','",$sl["query"])."')";
+
+            $adv["mails_list"] = array();
+            
+            if (!empty($adv["email"]))
+              $adv["mails_list"][$adv["leadID"]] = array(
+                'mail' => $adv["email"],
+                'adv_type' => (int) $adv["category"],
+                'lead_id' => $adv["leadID"],
+                'lead_status' => $sl["invoice_status"]
+              );//update 09/03/2011
+            if (!empty($adv["econtact"]))
+              $adv["mails_list"][] = array(
+                'mail' => $adv["econtact"],
+                'adv_type' => (int) $adv["category"],
+                'lead_id' => $adv["leadID"],
+                'lead_status' => $sl["invoice_status"]
+              );//update 09/03/2011
+            $contacts = unserialize($adv["contacts"]);
+            if (empty($contacts))
+                $contacts = array();
+            foreach ($contacts as $contact) {
+              if (!empty($contact["email"]))
+                $adv["mails_list"][] = array(
+                  'mail' => $contact["email"],
+                  'adv_type' => $adv["category"],
+                  'lead_id' => $adv["leadID"],
+                  'lead_status' => $sl["invoice_status"]
+                );//update 09/03/2011
+            }
+            $sl_advList[] = $adv;
+
+          }
+        }
+      }
+      $sl_advCount = count($sl_advList);
+    }
+
+    $ml["query"]["income_total"] = $ml["income_total"];
+    $ml['query']['create_time'] = $timestamp;
+    array_unshift($queries, "INSERT INTO `contacts` (`".implode("`,`",array_keys($ml["query"]))."`) VALUES ('".implode("','",$ml["query"])."')");
+
+    foreach($queries as $query) {
+      //print $query."<br/>";
+      $db->query($query, __FILE__, __LINE__);
+    }
+
+    // Criteo Data Tracking Tag Generation
+    $criteo = array(
+      'pdt_ids' => array($pdt['id']),
+      'pdt_prices' => array($ml['income_total']),
+      'pdt_quantities' => array(1)
+    );
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // CONTACT SUCCESS INFOS
+    ////////////////////////////////////////////////////////////////////////////////
+    // custom fields
+    $cfvs = "";
+    foreach ($cfv as $cfk => $cfd)
+      $cfvs .= "<div class=\"sousTitreBloc\">".$cfk." : <span class=\"coord2\">".$cfd."</span></div>\n";
+
+    // secondary lead partner infos
+    $sl_linked_pdt_infos = $sl_same_cat_infos = "";
+    
+    if ($sl_advCount) {
+      if ($lplCount) { // linked products are present
+        $key = 0;
+        foreach ($sl_advList as $lpdtList) {
+          $adv = &$lpdtList[0]; // first product used for adv infos
+          
+          // only show infos if the partner is a supplier or if he is an advertiser and the lead is visible for him
+          if ($adv["category"] == __ADV_CAT_SUPPLIER__
+          || (($adv["category"] == __ADV_CAT_ADVERTISER__ || $adv["category"] == __ADV_CAT_ADVERTISER_NOT_CHARGED__)
+           && ($adv["lead_status"] & __LEAD_VISIBLE__))) {
+            
+            $even = $key%2 == 0 ? true : false;
+            
+            $sl_linked_pdt_infos .= '<div class="adv-lead-success '.($even == true ? 'fl' : 'fr').'" >
+              <br/>';
+            $l = count($lpdtList);
+            $sl_linked_pdt_infos .= "Produit".($l>1?"s":"")." :";
+            for ($k=0;$k<$l;++$k) { // links to every products from this adv
+              $lpdt = &$lpdtList[$k];
+              $sl_linked_pdt_infos .= ($k?($k<$l-1?", ":" et "):" ")."<b><a href=\"".URL."produits/".$lpdt["cat_id"]."-".$lpdt["id"]."-".$lpdt["ref_name"].".html\">".$lpdt["name"]."</a></b>";
+            }
+            $sl_linked_pdt_infos .= "<br/><br/>\n".
+            "<b>Fourni par :</b><br/>";
+            if(is_file(ADVERTISERS_LOGOS_INC.$lpdt["adv_id"].'.jpg'))
+               $sl_linked_pdt_infos .= '<div class="lead-success-logo-partner"><img class="vmaib" src="'.ADVERTISERS_LOGOS_URL.$lpdt["adv_id"].'.jpg" alt="'.$adv["nom1"].'" /><div class="vsma"></div></div><div class="zero"></div>';
+            $sl_linked_pdt_infos .= "<br/>".
+            "<b>".$adv["nom1"]."</b><br/>".
+            $adv["adresse1"]."<br/>".
+            (empty($adv["adresse2"]) ? "" : $adv["adresse2"]."<br/>").
+            $adv["cp"]." ".$adv["ville"]."<br/>".
+            $adv["pays"]."<br/>".
+            "Téléphone : ".$adv["tel1"]."<br/>".
+            "Fax : ".$adv["fax1"]."<br/>".
+            "Contact : ".$adv["contact"]." ".(!empty($adv["email"])?"<a href=\"mailto:".$adv["email"]."\">".$adv["email"]."</a>":"")."<br/>".
+            (empty($adv["adv_url"]) ? "" : $adv["adv_url"]."<br/>").
+                    "</div>".($even != true ? '<div class="zero"></div>': '');
+            $key++;
+          }
+        }
+        if($even == true)
+          $sl_linked_pdt_infos .= '<div class="zero"></div>';
+      }
+      else { // no linked product -> same cat secondary leads
+        foreach ($sl_advList as $adv) {
+          
+          // only show infos if the partner is a supplier or if he is an advertiser and the lead is visible for him
+          if ($adv["category"] == __ADV_CAT_SUPPLIER__
+          || (($adv["category"] == __ADV_CAT_ADVERTISER__ || $adv["category"] == __ADV_CAT_ADVERTISER_NOT_CHARGED__)
+           && ($adv["lead_status"] & __LEAD_VISIBLE__))) {
+            
+            $sl_same_cat_infos .= "<br/>".
+            "<b>".$adv["nom1"]."</b><br/>".
+            $adv["adresse1"]."<br/>".
+            (empty($adv["adresse2"]) ? "" : $adv["adresse2"]."<br/>").
+            $adv["cp"]." ".$adv["ville"]."<br/>".
+            $adv["pays"]."<br/>".
+            "Téléphone : ".$adv["tel1"]."<br/>".
+            "Fax : ".$adv["fax1"]."<br/>".
+            "Contact : ".$adv["contact"]." ".(!empty($adv["email"])?"<a href=\"mailto:".$adv["email"]."\">".$adv["email"]."</a>":"")."<br/>".
+            (empty($adv["adv_url"]) ? "" : $adv["adv_url"]."<br/>");
+          }
+        }
+      }
+    }
+    $sl_adv_infos = "";
+    if (!empty($sl_linked_pdt_infos) || !empty($sl_same_cat_infos)) {
+      $sl_adv_infos .= "<br/><br/><span class=\"color-blue\">Afin de vous faire bénéficier de devis comparatifs, votre besoin a aussi été transmi(s) aux fournisseur(s) suivant(s) :  </span><br/>";
+      if (!empty($sl_linked_pdt_infos))
+        $sl_adv_infos .= /*"Voici leurs coordonnées et le(s) produit suceptible(s) de répondre à votre demande:<br/>".*/$sl_linked_pdt_infos;
+      else
+        $sl_adv_infos .= /*"Voici leurs coordonnées :<br/>".*/$sl_same_cat_infos;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // MAILS
+    ////////////////////////////////////////////////////////////////////////////////
+    // Customer and Main Product Data
+    $CustomerMailData = array(
+      "CUSTOMER_REQUESTTYPE" => $lead_type_string,
+      "CUSTOMER_LASTNAME" => $infos["nom"],
+      "CUSTOMER_FIRSTNAME" => $infos["prenom"],
+      "CUSTOMER_JOB" => $infos["fonction"],
+      "CUSTOMER_PHONE" => $infos["telephone"],
+      "CUSTOMER_FAX" => $infos["fax"],
+      "CUSTOMER_FAX2" => $infos["fax"],
+      "CUSTOMER_EMAIL" => $infos["email"],
+      "CUSTOMER_EMAIL2" => $infos["email"],
+      "CUSTOMER_COMPANY_NAME" => $infos["societe"],
+      //"CUSTOMER_COMPANY_WORKFORCE" => $infos["salaries"],
+      "CUSTOMER_COMPANY_URL" => $infos["url"],
+      "CUSTOMER_COMPANY_URL2" => $infos["url"],
+      "CUSTOMER_COMPANY_SECTOR" => $infos["secteur"],
+      "CUSTOMER_COMPANY_NAF" => $infos["naf"],
+      "CUSTOMER_COMPANY_SIREN" => $infos["siret"],
+      "CUSTOMER_COMPANY_ADDRESS" => $infos["adresse"],
+      "CUSTOMER_COMPANY_COMPLEMENT" => $infos["cadresse"],
+      "CUSTOMER_COMPANY_PC" => $infos["cp"],
+      "CUSTOMER_COMPANY_CITY" => $infos["ville"],
+      "CUSTOMER_COMPANY_COUNTRY" => $infos["pays"],
+      "CUSTOMER_CUSTOM_FIELDS" => $cfvs,
+      "SITE_MAIN_URL" => URL
+      //"Customer-Company-DeleveryNote" => $infos["infos_sup"],
+    );
+
+    $MainProductMailData = array(
+      "MAINPRODUCT_ID" => $pdt["id"],
+      "MAINPRODUCT_IDTC" => $pdt["idTC"],
+      "MAINPRODUCT_CAT_ID" => $pdt["cat_id"],
+      "MAINPRODUCT_NAME" => $pdt["name"],
+      "MAINPRODUCT_REFNAME" => $pdt["ref_name"],
+      "MAINPRODUCT_FAMILYID" => $pdt["cat_id"],
+      "MAINPRODUCT_FASTDESC" => $pdt["fastdesc"],
+      "MAINPRODUCT_DESCRIPTION" => $pdt["descc"],
+      "MAINPRODUCT_DETAILEDDESCRIPTION" => empty($pdt["descd"]) ? "" : $pdt["descd"],
+      "MAINPRODUCT_URL" => URL."produits/".$pdt["cat_id"]."-".$pdt["id"]."-".$pdt["ref_name"].".html",
+      "MAINPRODUCT_IMAGE" => is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif",
+      "MAINPRODUCT_PRICEDATA" => GetPriceData($handle, $pdt),
+      "MAINPRODUCT_ADVERTISER_ID" => $pdt["adv_id"],
+      "MAINPRODUCT_ADVERTISER_NAME" => $pdt["nom1"],
+      "MAINPRODUCT_ADVERTISER_CATEGORY" => $pdt["category"],
+      "MAINPRODUCT_ADVERTISER_ADDRESS" => $pdt["adresse1"],
+      "MAINPRODUCT_ADVERTISER_PC" => $pdt["cp"],
+      "MAINPRODUCT_ADVERTISER_CITY" => $pdt["ville"],
+      "MAINPRODUCT_ADVERTISER_COUNTRY" => $pdt["pays"],
+      "MAINPRODUCT_ADVERTISER_PHONE" => $pdt["tel1"],
+      "MAINPRODUCT_ADVERTISER_FAX" => $pdt["fax1"],
+      "MAINPRODUCT_ADVERTISER_COMPLEMENT" => empty($pdt["adresse2"]) ? "" : $pdt["adresse2"],
+      "MAINPRODUCT_ADVERTISER_CONTACT" => empty($pdt["contact"]) ? "" : $pdt["contact"],
+      "MAINPRODUCT_ADVERTISER_EMAIL" => empty($pdt["email"]) ? "" :  $pdt["email"],
+      "MAINPRODUCT_ADVERTISER_URL" => empty($pdt["adv_url"]) ? "" :  $pdt["adv_url"],
+      "MAINPRODUCT_ADVERTISER_WEBPASS" => $pdt["webpass"],
+      "MAINPRODUCT_ORIGINAL_ADVERTISER_ID" => $pdt["oadv_id"],
+      "MAINPRODUCT_ORIGINAL_ADVERTISER_NAME" => $pdt["oadv_name"],
+      "MAINPRODUCT_PRECISIONS" => $infos["precisions"],
+      "MAINPRODUCT_GENERATEDCONTACTID" => $pdt["leadID"],
+      'MAINPRODUCT_INCOME_TOTAL' => $ml['income_total'],
+      "MAINPRODUCT_ADVERTISER_SHOWINFOSONLINE" => (int)$pdt["show_infos_online"],
+      "ML_ADV_INFOS" => $ml_adv_infos,
+      "SL_ADV_INFOS" => $sl_adv_infos,
+      "BOUSER_NAME" => $boUser[0]['name'],
+      "BOUSER_EMAIL" => $boUser[0]['email'],
+      "BOUSER_PHONE" => $boUser[0]['phone']
+    );
+
+    // Recap Com Mail
+    $recap_com = "";
+
+    // Depending on the contact email
+    switch ($pdt["email"]) {
+      case "rsamson@centralweb.fr" : // CENTRAL WEB
+
+        //update 09/03/2011
+        // Ne pas notifier à central web les leads non Facturés
+        if($ml['invoice_status'] != __LEAD_INVOICE_STATUS_NOT_CHARGED__ && $ml['invoice_status'] != __LEAD_INVOICE_STATUS_DOUBLET__){
+          $recap_com .= "L'utilisateur <b>n'a pas été prévenu</b> par email car l'annonceur de ce produit est un partenaire CENTRAL WEB.<br/>\n";
+          $recap_com .= "Une requête POST HTTP <b>a été effectuée</b> sur le serveur <b>CENTRAL WEB</b>.<br/>\n";
+          if (!MakeCWSocketConnection($infos, $pdt["name"], $lead_type, $pdt["nom1"], $pdt["leadID"]))
+            $recap_com .= "<b>Toutefois la requête semble ne pas s'être déroulée correctement.</b><br/>\n";
+          }
+        break;
+
+      default : // By default, mail the customer
+        $ml_adv_infos_mail = "";
+        if (!empty($ml_adv_infos)) {
+          $ml_adv_infos_mail .= '
+          Votre demande est archivée dans votre <a href="'.COMPTE_URL.'login.html">compte client gratuit</a><br />
+          <br />
+          Vous pourrez aussi depuis ce compte communiquer directement avec nos partenaires.<br />
+          <br />
+          Votre demande a été transmise au fournisseur suivant dont voici les coordonnées :<br /><br />';
+          $ml_adv_infos_mail .= $ml_adv_infos;
+          $ml_adv_infos_mail .= '<br /><br />S\'il tarde à vous faire un devis, n\'hésitez pas à revenir vers lui directement.';
+
+        } else {
+
+            $ml_adv_infos_mail .= 'Votre demande est archivée dans votre <a href="'.COMPTE_URL.'login.html">compte client gratuit</a>
+              <br /><br />
+              Vous pourrez aussi depuis ce compte communiquer directement avec nos partenaires.
+              <br /><br />
+              Votre demande a été transmise au fournisseur suivant dont voici les coordonnées :
+              <br /><br />
+            ';
+
+            $ml_adv_infos_mail .= "<strong>Désolé, ce partenaire ne peut répondre à votre demande.</strong><br/>
+            <br/>
+            Les raisons peuvent être les suivantes :<br/><br/>
+            <ul>
+              <li>Ne fait plus ce produit ne l'a plus en stock ou en catalogue</li>
+              <li>Ne travaille qu'avec les professionnels</li>
+              <li>Ne couvre pas votre secteur géographique</li>
+            </ul>";
+        }
+        // adding tracking to every http links (products links)
+        $ml_adv_infos_mail = array("ML_ADV_INFOS" => $ml_adv_infos_mail);
+        $tracking = "?utm_source=email&utm_medium=email&utm_campaign=mail-ar-lead-annonceur";
+        $sl_adv_infos_mail = array("SL_ADV_INFOS" => preg_replace("/<a([^>]+)href=\"(http[^\"]+)\"([^>]*)>/", "<a$1href=\"$2".$tracking."\"$3>", $sl_adv_infos));
+        
+        /*$mailContent = array(
+            'email' => "demande-recherche@techni-contact.com",
+            'subject' => "Un internaute souhaite une ".$object,
+            'headers' => "From: Formulaire de recherche TC <web@techni-contact.com>\n"."Reply-To: ".$infos['email']."\n",
+            'template' => 'tc-contact-search-engine',
+            'data' =>array()
+        );*/
+        $idList = Nuukik::get($pdt['category'] == __ADV_CAT_SUPPLIER__ ? 124 : 123, 'products', array($pdt['id'], 'recommendation'), $user_id ? array('user' => $user_id) : array());
+
+        $recoPdtHtml = "";
+        if (!is_string($idList)) {
+          $recoPdtList = Utils::get_pdts_infos($idList['pdtIdList'], $idList['idTCList'], 'simple-block');
+          $NuukikRecoPdtlinkTracking = 
+            $pdt['category'] == __ADV_CAT_SUPPLIER__ ?
+              "?utm_source=nuukik&utm_medium=email&utm_campaign=reco-nuukik-mail-ar-lead-f&campaignID=999994" :
+              "?utm_source=nuukik&utm_medium=email&utm_campaign=reco-nuukik-mail-ar-lead-a&campaignID=999993";
+          $recoPdtHtml = Nuukik::get_mail_html($recoPdtList, $NuukikRecoPdtlinkTracking);
+        }
+
+        $mailContent = array(
+            'email' => $infos["email"],
+            'subject' => "Votre ".$lead_type_string." pour le produit ".$pdt["name"],
+            'headers' => "From: Service client Techni-Contact <web@techni-contact.com>\n",
+            'template' => $pdt["category"] == __ADV_CAT_SUPPLIER__ ? "customer-lead-fournisseur" : "customer-lead-annonceur",
+            'data' => array_merge($MainProductMailData, $CustomerMailData, $ml_adv_infos_mail, $sl_adv_infos_mail, array('RECOMMENDED_PRODUCTS_BLOCK' => $recoPdtHtml))
+        );
+        $mail = new Email($mailContent);
+      /*  $mail->Build(
+          "Votre ".$lead_type_string." pour le produit ".$pdt["name"],
+          "",
+          $pdt["category"] == __ADV_CAT_SUPPLIER__ ? "lead-fournisseur" : "lead-annonceur",
+          "From: Service client Techni-Contact <web@techni-contact.com>\n",
+          array_merge($MainProductMailData, $CustomerMailData, $ml_adv_infos_mail, $sl_adv_infos_mail),
+          "user"
+        );*/
+        $mail->send();
+		$header_name	  = "Récupération lead bloqué";
+		$header_from      = utf8_decode($header_name);
+		
+		$header_from_name_new	= $header_from;
+		$header_from_email	= 'notif-intern-recup-vpc-lead-bloques@techni-contact.com';
+
+		$header_send1_name	= '';
+		//$header_send1_email	= 't.henryg@techni-contact.com';
+		//$header_send1_email	= 'outarocht.zakaria@gmail.com';
+		$header_send1_email	= 'notif-intern-recup-vpc-lead-bloques@techni-contact.com';
+		
+		$header_send2_name	= '';
+		$header_send2_email	= '';
+		
+		$header_reply1_name	= '';
+		$header_reply1_email= '';
+		
+		$header_copy2_name	= '';
+		$header_copy2_email	= '';
+		
+		$header_copy1_email	= '';
+		$header_copy1_name	= '';
+		$header_copy1_email	= '';
+		
+		$subject_name = 'Lead bloqué récupérable par VPC - '.$pdt["name"].' ';
+		$subject      = utf8_decode($subject_name);
+		
+		$sql_check  = "SELECT flb.id ,name ,ref_name , blocked_activated
+					   FROM   families_leads_blocked_for_tc_sales flb , families_fr ffr
+					   WHERE  ffr.id  = flb.idFamily
+					   AND    flb.idFamily = '".$pdt["cat_id"]."' ";
+		$req_check  =  mysql_query($sql_check);
+		$row_check  =  mysql_num_rows($req_check);
+		
+		if($row_check > 0){
+		$data_check =  mysql_fetch_object($req_check);
+		
+		$sql_comment  = "SELECT precisions , idAdvertiser , category
+						 FROM contacts cc , advertisers aa
+						 WHERE cc.id='".$pdt["leadID"]."'
+						 AND cc.idAdvertiser = aa.id";
+		$req_comment  =  mysql_query($sql_comment);
+		$data_comment =  mysql_fetch_object($req_comment);
+		
+		//'.URL.'/produits/'.$pdt["idFamily"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html
+		//if($rows_check > 0){
+		$message_header = "<html><head>
+						<meta http-equiv=Content-Type content=text/html; Content-Type: image/jpg charset=iso-8859-1>
+						</head>
+						<body bgcolor=#FFFFFF>";
+					$message_text	.= '<img src="http://www.techni-contact.com/media/emailings/mails-serveur-tc/logo-tc.jpg">';
+					$message_text	.= '<p>';
+					$message_text	.= 'Bonjour';
+					$message_text	.= '<br /><br />';
+					$message_text	.= 'Le lead suivant a été transmis à un partenaire ne pouvant pas y répondre.';
+					$message_text	.= '<br /><br />';
+					$message_text	.= 'Un produit VPC se trouvant dans cette famille, la demande pourrait peut-être faire l\'objet d\'un devis commercial';
+					$message_text	.= '<br /><br />';
+					$message_text	.= '<div>';
+						$message_text	.= '<div style="float:left;margin-right:15px;">';
+							$message_text	.= '<div><a href="'.URL.'produits/'.$pdt["cat_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html">
+													<img src="http://www.techni-contact.com/ressources/images/produits/thumb_big/'.$pdt["id"].'-1.jpg" />
+													</a>
+												</div>';
+						$message_text	.= '</div>';
+						
+						$message_text	.= '<div style="overflow: hidden;">';
+							
+							$message_text	.= '<div>
+													<a href="'.URL.'produits/'.$pdt["cat_id"].'-'.$pdt["id"].'-'.$pdt["ref_name"].'.html">'.$pdt["name"].'</a>
+												</div>';
+							$message_text	.= '<br />';
+							$message_text	.= '<div>
+													<a href="'.URL.'familles/'.$data_check->ref_name.'.html">'.$data_check->name.'</a>
+												</div>';
+							$message_text	.= '<br />';					
+							$message_text	.= '<div style="width: 300px;">
+													'.nl2br($data_comment->precisions).'
+												</div>';
+							$message_text	.= '<br />';
+							$message_text	.= '<div>
+													<a href="'.ADMIN_URL.'contacts/lead-detail.php?id='.$pdt["leadID"].'">Voir lead</a>
+												</div>';
+						$message_text	.= '</div>';
+					
+					$message_text	.= '</div>';
+					$message_text	.= '<br /><br />';
+					
+		
+		$message_text	.= '</p>';
+		$message_bottom = "</body></html>";
+		
+		$message_to_send = $message_header . $message_text . $message_bottom;
+		if($data_check->blocked_activated == 1){
+			if($data_comment->category != 1){
+			$mail_send_etat	= php_mailer_external_send($header_from_name_new, $header_from_email, $header_send1_name, $header_send1_email, $header_send2_name, $header_send2_email, $header_reply1_email, $header_reply1_name, $header_copy1_email, $header_copy1_name, $header_copy2_email, $header_copy2_name, $subject, $message_to_send);
+			}
+		}
+		
+	    }
+		
+        $recap_com .= "Cet utilisateur <b>a été prévenu</b> par email.<br/>\n";
+
+        // Mail the advertiser if he has at least one valid email and he's not a supplier
+        if ($pdt["category"] != __ADV_CAT_SUPPLIER__) {
+          if (empty($pdt["mails_list"])) {
+            $recap_com .= "<span style=\"color: red\">L'annonceur <b>n'a pas été prévenu</b> car il n'a pas d'adresse email connue.</span>";
+          } else {
+            if ($pdt["category"] == __ADV_CAT_BLOCKED__)
+              $recap_com .= "Cet annonceur est actuellement <b>bloqué</b> et a été prévenu aux adresses suivantes :";
+            elseif($pdt["category"] == __ADV_CAT_LITIGATION__)
+              $recap_com .= "Cet annonceur est actuellement en <b>litige de paiement</b> et a été prévenu aux adresses suivantes :";
+            else
+              $recap_com .= "L'annonceur <b>a été prévenu</b> par email <b>avec lien sécurisé</b> aux adresses suivantes :";
+
+            $sql_societe  = "SELECT societe FROM contacts WHERE id='".$pdt["leadID"]."'  ";
+			$req_societe  =  mysql_query($sql_societe);
+			$data_societe =  mysql_fetch_object($req_societe);
+            $template = $pdt["category"] == __ADV_CAT_LITIGATION__ ? 'customer-lead_annonceur_litige-alerte' : 'customer-lead_annonceur-alerte'; //lead-annonceur-alerteLitigation
+            $array_var = $pdt["category"] == __ADV_CAT_LITIGATION__ ?
+              array(
+                "SITE_MAIN_URL" => URL,
+                "EXTRANET_URL" => EXTRANET_URL,
+                "ADVERTISER_NAME" => $pdt["nom1"],
+				"SOCIETE_NAME" => $data_societe->societe
+              ) :
+              array(
+                "SITE_MAIN_URL" => URL,
+                "EXTRANET_URL" => EXTRANET_URL,
+                "ADVERTISER_WEBPASS" => $pdt["webpass"],
+                "GENERATEDCONTACTID" => $pdt["leadID"],
+				"SOCIETE_NAME" => $data_societe->societe
+              );
+        
+        
+            /*******************************************************************/
+            /*******************************************************************/     
+            //Changes Start "01/12/2014"
+            //Check if the advertiser has from_web "1" or "0" to send him
+            //The complete informations of this lead in the mail  
+            
+            //Get the advertiser from_web
+            $query_adv_get_web  = "SELECT
+                          a.from_web
+                        FROM
+                          contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
+                        WHERE
+                          c.id=".$pdt["leadID"]."";
+            $res_adv_get_web = $db->query($query_adv_get_web, __FILE__, __LINE__);
+            $content_adv_get_web = $db->fetchAssoc($res_adv_get_web);
+
+
+            $template_temp1 = $template;
+    
+            if (strcmp($content_adv_get_web['from_web'],'0')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
+              //from_web is decoched so we have to send a personnalized mail
+              //That contain all the informations of the leed
+        
+              //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');
+      
+              if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
+                $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+              } else if (!empty($pdt["cat_name"])) {
+                $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+              }
+			  
+              $template_temp1 = 'customer-lead_annonceur-alerte_all_informations';
+              $array_var =  array(
+                "SITE_MAIN_URL" => URL,
+                "EXTRANET_URL" => EXTRANET_URL,
+                "ADVERTISER_WEBPASS" => $pdt["webpass"],
+                "GENERATEDCONTACTID" => $pdt["leadID"],
+                
+                "EXTRAINFO_COMPANY_NAME" => $CustomerMailData["CUSTOMER_COMPANY_NAME"],
+                "EXTRAINFO_COMPANY_ADDRESS" => $CustomerMailData["CUSTOMER_COMPANY_ADDRESS"],
+                "EXTRAINFO_COMPANY_PC" => $CustomerMailData["CUSTOMER_COMPANY_PC"],
+                "EXTRAINFO_COMPANY_CITY" => $CustomerMailData["CUSTOMER_COMPANY_CITY"],
+                "EXTRAINFO_COMPANY_COUNTRY" => $CustomerMailData["CUSTOMER_COMPANY_COUNTRY"],
+                
+                "EXTRAINFO_COMPANY_SECTOR" => $CustomerMailData["CUSTOMER_COMPANY_SECTOR"],
+                "EXTRAINFO_COMPANY_NAF" => $CustomerMailData["CUSTOMER_COMPANY_NAF"],
+                "EXTRAINFO_COMPANY_SIREN" => $CustomerMailData["CUSTOMER_COMPANY_SIREN"],
+                
+                "EXTRAINFO_LASTNAME" => $CustomerMailData["CUSTOMER_LASTNAME"],
+                "EXTRAINFO_FIRSTNAME" => $CustomerMailData["CUSTOMER_FIRSTNAME"],
+                "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
+                "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
+                "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
+                "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
+                
+              );
+      
+            }//end if test on template
+			
+            $mailContent = array(
+              'email' => '',
+              'subject' => "Demande de devis n°".$pdt["leadID"]." sur www.techni-contact.com",
+              'headers' => "From: Service client Techni-Contact <lead@techni-contact.com>\nReply-To: Service client Techni-Contact <lead@techni-contact.com>\r\n",
+              'template' => $template_temp1,
+              'data' => $array_var
+            );
+            $mail = new Email($mailContent);
+			
+			
+			
+            //Changes End "01/12/2014"
+            /*******************************************************************/
+            /*******************************************************************/
+      
+            foreach ($pdt["mails_list"] as $contact_mail) {
+              $recap_com .= "<br/> &nbsp; - ".$contact_mail."\n";
+              
+              // Ne pas notifier aux annonceurs les leads non Facturés update 09/03/2011
+              if (!($pdt["category"] == __ADV_CAT_ADVERTISER__ && ($ml['invoice_status'] == __LEAD_INVOICE_STATUS_NOT_CHARGED__ || $ml['invoice_status'] == __LEAD_INVOICE_STATUS_DOUBLET__))) {
+                $mail->email = $contact_mail; 
+                $mail->setFromGmail()->send();
+                //$mail->Save();
+              }
+            }
+          }
+        } else {
+          $recap_com .= "Cet annonceur étant un fournisseur Techni-Contact <b>il n'a pas été contacté directement</b>. Vous pouvez lui transmettre les éléments de la demande afin d'obtenir les informations demandées puis répondre au client.";
+        }
+    } // switch email
+
+    $recap_com .= "<br/><br/>\n";
+
+    // If there is a campaign
+    if (!empty($campaignID))
+      $recap_com .= "ID de la campagne source : <b>".$campaignID."</b><br/>\n<br/>\n";
+
+    if ($sl_advCount) {
+      if ($lplCount) { // linked product
+        if ($sl_advCount == 1)
+          $recap_com .= "Cette demande a généré un lead secondaire via une liaison produit auprès de l'annonceur suivant :<br/>\n";
+        else // > 1
+          $recap_com .= "Cette demande a généré ".$sl_advCount." leads secondaires via ".$lplCount." liaisons produits auprès des annonceurs suivants :<br/>\n";
+
+        $recap_com .= "<br/><br/>\n";
+        foreach ($sl_advList as $lpdtList) {
+          $adv = &$lpdtList[0]; // first product used for adv infos
+          $recap_com .= "<b><a href=\"".ADMIN_URL."advertisers/edit.php?id=".$adv["adv_id"]."\">".$adv["nom1"]."</a></b><br/>\n";
+          $l = count($lpdtList);
+          $recap_com .= " Produit".($l>1?"s":"")." :";
+          for ($k=0;$k<$l;++$k) {
+            $lpdt = &$lpdtList[$k];
+            $recap_com .= ($k?($k<$l-1?", ":" et "):" ")."<a href=\"".ADMIN_URL."products/edit.php?id=".$lpdt["id"]."\">".$lpdt["name"]."</a>";
+          }
+          $recap_com .= "<br/>\n";
+
+          if ($adv["email"] == "rsamson@centralweb.fr") {
+            //update 09/03/2011
+            // Ne pas notifier à central web les leads non Facturés
+            if($adv["mails_list"][$adv["leadID"]]['lead_status'] != __LEAD_INVOICE_STATUS_NOT_CHARGED__ && $adv["mails_list"][$adv["leadID"]]['lead_status'] != __LEAD_INVOICE_STATUS_DOUBLET__){
+              $recap_com .= "- Cet annonceur <b>n'a pas a été prévenu</b> par email car il est un partenaire CENTRAL WEB.<br/>\n";
+              $recap_com .= "- Une requête POST HTTP <b>a été effectuée</b> sur le serveur <b>CENTRAL WEB</b>.<br/>\n";
+              if (!MakeCWSocketConnection($infos, $adv["cat_name"], $lead_type, $adv["nom1"], $adv["leadID"]))
+                $recap_com .= "--> <b>Toutefois la requête semble ne pas s'être déroulée correctement.</b><br/>\n";
+            }
+          }
+          else {
+            if (empty($adv["mails_list"])) {
+              $recap_com .= "- <span style=\"color: red\">Cet annonceur <b>n'a pas été prévenu</b> car il n'a pas d'adresse email connue.</span>";
+            }
+            else {
+              $recap_com .= "- Cet annonceur <b>a été prévenu</b> par ".($l>1?$l." emails":"email")." aux adresses suivantes :\n";
+              foreach($adv["mails_list"] as $contact_mail)
+                $recap_com .= "<br/> &nbsp; &nbsp; - ".$contact_mail['mail']."\n"; //update 09/03/2011
+
+              $template = $adv["category"] == __ADV_CAT_LITIGATION__ ? 'customer-lead_annonceur_litige-alerte' : 'customer-lead_annonceur-alerte'; //lead-annonceur-alerteLitigation
+              $array_var = $adv["category"] == __ADV_CAT_LITIGATION__ ?
+                array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_NAME" => $adv["nom1"]
+                ) :
+                array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "GENERATEDCONTACTID" => $adv["leadID"]
+                );
+
+        
+              /*******************************************************************/
+              /*******************************************************************/     
+              //Changes Start "01/12/2014"
+              //Check if the advertiser has from_web "1" or "0" to send him
+              //The complete informations of this lead in the mail  
+            
+              //Get the advertiser from_web
+              $query_adv_get_web  = "SELECT
+                            a.from_web
+                          FROM
+                            contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
+                          WHERE
+                            c.create_time=".$timestamp."
+                          AND
+                            c.parent=".$pdt["leadID"]."
+                          AND
+                            c.idAdvertiser=".$adv['adv_id']."";
+                            
+              $res_adv_get_web = $db->query($query_adv_get_web, __FILE__, __LINE__);
+              $content_adv_get_web = $db->fetchAssoc($res_adv_get_web);
+              
+              $template_temp2 = $template;
+              
+              if (strcmp($content_adv_get_web['from_web'],'0')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
+                //from_web is decoched so we have to send a personnalized mail
+                //That contain all the informations of the leed
+
+      //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');
+                
+                if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
+                  $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+                } else if (!empty($pdt["cat_name"])) {
+                  $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+                }
+                
+                $template_temp2 = 'customer-lead_annonceur-alerte_all_informations';
+                $array_var =  array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "GENERATEDCONTACTID" => $adv["leadID"],
+                  
+                  "EXTRAINFO_COMPANY_NAME" => $CustomerMailData["CUSTOMER_COMPANY_NAME"],
+                  "EXTRAINFO_COMPANY_ADDRESS" => $CustomerMailData["CUSTOMER_COMPANY_ADDRESS"],
+                  "EXTRAINFO_COMPANY_PC" => $CustomerMailData["CUSTOMER_COMPANY_PC"],
+                  "EXTRAINFO_COMPANY_CITY" => $CustomerMailData["CUSTOMER_COMPANY_CITY"],
+                  "EXTRAINFO_COMPANY_COUNTRY" => $CustomerMailData["CUSTOMER_COMPANY_COUNTRY"],
+                  
+                  "EXTRAINFO_COMPANY_SECTOR" => $CustomerMailData["CUSTOMER_COMPANY_SECTOR"],
+                  "EXTRAINFO_COMPANY_NAF" => $CustomerMailData["CUSTOMER_COMPANY_NAF"],
+                  "EXTRAINFO_COMPANY_SIREN" => $CustomerMailData["CUSTOMER_COMPANY_SIREN"],
+                  
+                  "EXTRAINFO_LASTNAME" => $CustomerMailData["CUSTOMER_LASTNAME"],
+                  "EXTRAINFO_FIRSTNAME" => $CustomerMailData["CUSTOMER_FIRSTNAME"],
+                  "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
+                  "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
+                  "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
+                  
+                  "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
+                );
+              }//end if test on template
+              
+            
+              //Changes End "01/12/2014"
+              /*******************************************************************/
+              /*******************************************************************/
+              
+              // one mail per product
+              for ($k=0;$k<$l;++$k) {
+                $lpdt = &$lpdtList[$k];
+                
+                $mailContent = array(
+                    'email' => '',
+                    'subject' => "Demande de devis sur www.techni-contact.com",
+                    'headers' => "From: Service client Techni-Contact <web@techni-contact.com>\nReply-To: Service client Techni-Contact <web@techni-contact.com>\r\n",
+                    'template' => $template_temp2,
+                    'data' => $array_var
+                );
+                
+                $mail = new Email($mailContent);
+                
+                /*$mail->Build(
+                  "Demande de devis sur www.techni-contact.com",
+                  "",
+                  $template,
+                  "From: Service client Techni-Contact <web@techni-contact.com>\nReply-To: Service client Techni-Contact <web@techni-contact.com>\r\n",
+                  $array_var,
+                  "partner"
+                );*/
+
+                $contact_mail = $adv["mails_list"];
+                foreach($adv["mails_list"] as $contact_mail) {
+                  //update 09/03/2011
+                  // Ne pas notifier aux annonceurs les leads non Facturés
+                  if(!($contact_mail['adv_type'] == __ADV_CAT_ADVERTISER__ && ($contact_mail['lead_status'] == __LEAD_INVOICE_STATUS_NOT_CHARGED__ || $contact_mail['lead_status'] == __LEAD_INVOICE_STATUS_DOUBLET__))){
+                    $mail->email = $contact_mail['mail'];
+                    $mail->setFromGmail()->send();
+                    //$mail->Save();
+                  }
+                }
+              }
+            }
+          }
+          $recap_com .= "<br/><br/>\n";
+        }
+      }
+      else {
+        // Envoi auprès des annonceurs qu'un client a demandé des infos sur un des produits de la gamme d'un annonceur lié
+        if ($sl_advCount == 1)
+          $recap_com .= "Cette demande a généré un lead secondaire auprès de l'annonceur suivant :";
+        else // > 1
+          $recap_com .= "Cette demande a généré ".$sl_advCount." leads secondaires auprès des annonceurs suivants :";
+
+        $recap_com .= "<br/><br/>\n";
+        foreach ($sl_advList as $adv) {
+          //pp($adv);
+          $recap_com .= "<b>".$adv["nom1"]."</b><br/>\n";
+          if ($adv["email"] == "rsamson@centralweb.fr") {
+            //update 09/03/2011
+            // Ne pas notifier à central web les leads non Facturés
+            if($adv["mails_list"][$adv["leadID"]]['lead_status'] != __LEAD_INVOICE_STATUS_NOT_CHARGED__ && $adv["mails_list"][$adv["leadID"]]['lead_status'] != __LEAD_INVOICE_STATUS_DOUBLET__){
+              $recap_com .= "- Cet annonceur <b>n'a pas a été prévenu</b> par email car il est un partenaire CENTRAL WEB.<br/>\n";
+              $recap_com .= "- Une requête POST HTTP <b>a été effectuée</b> sur le serveur <b>CENTRAL WEB</b>.<br/>\n";
+              if (!MakeCWSocketConnection($infos, $adv["cat_name"], $lead_type, $adv["nom1"], $adv["leadID"]))
+                $recap_com .= "--> <b>Toutefois la requête semble ne pas s'être déroulée correctement.</b><br/>\n";
+            }
+          }
+          else {
+                  
+            if (empty($adv["mails_list"])) {
+              $recap_com .= "- <span style=\"color: red\">Cet annonceur <b>n'a pas été prévenu</b> car il n'a pas d'adresse email connue.</span>";
+            }
+            else {
+              $recap_com .= "- Cet annonceur <b>a été prévenu</b> par email aux adresses suivantes :\n";
+              foreach($adv["mails_list"] as $contact_mail)
+                $recap_com .= "<br/> &nbsp; &nbsp; - ".$contact_mail['mail']."\n";//update 09/03/2011
+
+              /*******************************************************************/
+              /*******************************************************************/     
+              //Changes Start "01/12/2014"
+              //Check if the advertiser has from_web "1" or "0" to send him
+              //The complete informations of this lead in the mail  
+              
+              //Check every advertiser's category 
+              if (strcmp($adv["category"],__ADV_CAT_LITIGATION__)!=0) {
+                $template = 'customer-lead_annonceur-alerte';
+              
+              } elseif (strcmp($adv["category"],__ADV_CAT_LITIGATION__)==0) {
+                $template = 'customer-lead_annonceur_litige-alerte';
+                $array_var = array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_NAME" => $adv["nom1"]
+                );
+              }
+              
+              //Get the advertiser from_web
+              $query_adv_get_web  = "SELECT
+                            a.from_web
+                          FROM
+                            contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
+                          WHERE
+                            c.create_time=".$timestamp."
+                          AND
+                            c.parent=".$pdt["leadID"]."
+                          AND
+                            c.idAdvertiser=".$adv['adv_id']."";
+                            
+              $res_adv_get_web = $db->query($query_adv_get_web, __FILE__, __LINE__);
+              $content_adv_get_web = $db->fetchAssoc($res_adv_get_web);
+
+              $template_temp3 = $template;
+              
+              if (strcmp($content_adv_get_web['from_web'],'0')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
+      //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');        
+                  //from_web is decoched so we have to send a personnalized mail
+                  //That contain all the informations of the leed
+                
+                if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
+                  $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+                } else if(!empty($pdt["cat_name"])) {
+                  $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+                }
+                
+                $template_temp3 = 'customer-lead_annonceur-alerte_all_informations';
+                $array_var =  array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "GENERATEDCONTACTID" => $adv["leadID"],
+                  
+                  "EXTRAINFO_COMPANY_NAME" => $CustomerMailData["CUSTOMER_COMPANY_NAME"],
+                  "EXTRAINFO_COMPANY_ADDRESS" => $CustomerMailData["CUSTOMER_COMPANY_ADDRESS"],
+                  "EXTRAINFO_COMPANY_PC" => $CustomerMailData["CUSTOMER_COMPANY_PC"],
+                  "EXTRAINFO_COMPANY_CITY" => $CustomerMailData["CUSTOMER_COMPANY_CITY"],
+                  "EXTRAINFO_COMPANY_COUNTRY" => $CustomerMailData["CUSTOMER_COMPANY_COUNTRY"],
+                  
+                  "EXTRAINFO_COMPANY_SECTOR" => $CustomerMailData["CUSTOMER_COMPANY_SECTOR"],
+                  "EXTRAINFO_COMPANY_NAF" => $CustomerMailData["CUSTOMER_COMPANY_NAF"],
+                  "EXTRAINFO_COMPANY_SIREN" => $CustomerMailData["CUSTOMER_COMPANY_SIREN"],
+                  
+                  "EXTRAINFO_LASTNAME" => $CustomerMailData["CUSTOMER_LASTNAME"],
+                  "EXTRAINFO_FIRSTNAME" => $CustomerMailData["CUSTOMER_FIRSTNAME"],
+                  "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
+                  "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
+                  "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
+                  
+                  "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
+                );
+              
+              } elseif (strcmp($content_adv_get_web['from_web'],'1')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
+                
+				$sql_societe  = "SELECT societe FROM contacts WHERE id='".$adv["leadID"]."'  ";
+				$req_societe  =  mysql_query($sql_societe);
+				$data_societe =  mysql_fetch_object($req_societe);
+                $template_temp3 = 'customer-lead_annonceur-alerte';
+                $array_var  =  array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "GENERATEDCONTACTID" => $adv["leadID"],
+                  "SOCIETE_NAME" => $data_societe->societe
+                );
+              
+              }//end else if test on template
+              
+            
+              //Changes End "01/12/2014"
+              /*******************************************************************/
+              /*******************************************************************/
+ 
+              $mailContent = array(
+                    'email' => '',
+                    'subject' => "Demande de devis n°".$adv["leadID"]." sur www.techni-contact.com",
+                    'headers' => "From: Service client Techni-Contact <lead@techni-contact.com>\nReply-To: Service client Techni-Contact <lead@techni-contact.com>\r\n",
+                    'template' => $template_temp3,
+                    'data' => $array_var
+                );
+        
+              $mail = new Email($mailContent);
+             /* $mail->Build(
+                "Demande de devis sur www.techni-contact.com",
+                "",
+                "lead-annonceur-alerte",
+                "From: Service client Techni-Contact <web@techni-contact.com>\nReply-To: Service client Techni-Contact <web@techni-contact.com>\r\n",
+                array(
+                  "SITE_MAIN_URL" => URL,
+                  "EXTRANET_URL" => EXTRANET_URL,
+                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "GENERATEDCONTACTID" => $adv["leadID"]
+                ),
+                "partner"
+              );*/
+
+              foreach($adv["mails_list"] as $contact_mail) {
+                //update 09/03/2011
+                // Ne pas notifier aux annonceurs les leads non Facturés
+                //pp($contact_mail);
+                if(!($contact_mail['adv_type'] == __ADV_CAT_ADVERTISER__ && ($contact_mail['lead_status'] == __LEAD_INVOICE_STATUS_NOT_CHARGED__ || $contact_mail['lead_status'] == __LEAD_INVOICE_STATUS_DOUBLET__))){//update 09/03/2011 Ne pas notifier aux annonceurs les leads non Facturés
+                  $mail->email = $contact_mail['mail'];
+                  $mail->setFromGmail()->send();
+                  //$mail->Save();
+                }
+              }
+            }
+          }
+          $recap_com .= "<br/><br/>\n";
+        }
+      }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // PRODUCT COMMENT - Add the comment in product's comments
+    ////////////////////////////////////////////////////////////////////////////////
+    do {
+      $idComment = mt_rand(1, 999999999);
+      $res = $db->query("SELECT id FROM products_comments WHERE id = ".$idComment, __FILE__, __LINE__);
+    }
+    while ($db->numrows($res, __FILE__, __LINE__) >= 1);
+    $query = "insert into products_comments (";   $query2 = "values (";
+    $query .= "id, ";               $query2 .= $idComment.", ";
+    $query .= "productID, ";            $query2 .= $pdt["id"].", ";
+    $query .= "contactID, ";            $query2 .= $pdt["leadID"].", ";
+    $query .= "timestamp, ";            $query2 .= $timestamp.", ";
+    $query .= "text, ";               $query2 .= "'".$db->escape($infos["precisions"])."', ";
+    $query .= "`show`) ";             $query2 .= (empty($infos["precisions"]) ? 0 : 1).") ";
+    $query .= $query2;
+
+    if (!($db->query($query, __FILE__, __LINE__, false)) || ($db->affected(__FILE__, __LINE__) != 1))
+      print "Fatal Error while saving the comment";
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // CATALOG - Do the global catalogs requests
+    ////////////////////////////////////////////////////////////////////////////////
+    if ($pdt["cg"] == 1 || $pdt["ci"] == 1 || $pdt["cc"] == 1) {
+      // Au moins un des catalogues rattaché à ce produit
+
+      // Recherche doublon
+      $res = $db->query("select id from demandes where societe = '".$db->escape($infos["societe"])."' and cp = '".$db->escape($infos["cp"])."'", __FILE__, __LINE__);
+      if ($db->numrows($res, __FILE__, __LINE__) == 0) {
+        // Insertion de la demande implicite
+        $idDemande = generateID(1, 16777215, 'id', 'demandes', $handle);
+
+        $query = "insert into demandes (";      $query2 = "values(";
+        $query .= "id, ";             $query2 .= $idDemande.", ";
+        $query .= "nom, ";              $query2 .= "'".$db->escape(strtoupper($infos["nom"]))."', ";
+        $query .= "prenom, ";           $query2 .= "'".$db->escape(strtoupper($infos["prenom"]))."', ";
+        $query .= "fonction, ";           $query2 .= "'".$db->escape(strtoupper($infos["fonction"]))."', ";
+        $query .= "societe, ";            $query2 .= "'".$db->escape(strtoupper($infos["societe"]))."', ";
+        //$query .= "salaries, ";           $query2 .= "'".$db->escape(strtoupper($infos["salaries"]))."', ";
+        $query .= "secteur, ";            $query2 .= "'".$db->escape(strtoupper($infos["secteur"]))."', ";
+        $query .= "naf, ";              $query2 .= "'".$db->escape($infos["naf"])."', ";
+        $query .= "siret, ";            $query2 .= "'".$db->escape($infos["siret"])."', ";
+        $query .= "adresse, ";            $query2 .= "'".$db->escape(strtoupper($infos["adresse"]))."', ";
+        $query .= "cadresse, ";           $query2 .= "'".$db->escape(strtoupper($infos["cadresse"]))."', ";
+        $query .= "cp, ";             $query2 .= "'".$db->escape($infos["cp"])."', ";
+        $query .= "ville, ";            $query2 .= "'".$db->escape(strtoupper($infos["ville"]))."', ";
+        $query .= "pays, ";             $query2 .= "'".$db->escape(strtoupper($infos["pays"]))."', ";
+        $query .= "tel, ";              $query2 .= "'".$db->escape($infos["telephone"])."', ";
+        $query .= "fax, ";              $query2 .= "'".$db->escape($infos["fax"])."', ";
+        $query .= "email, ";            $query2 .= "'".$db->escape($infos["email"])."', ";
+        $query .= "url, ";              $query2 .= "'".$db->escape($infos["url"])."', ";
+        //$query .= "infos_sup, ";          $query2 .= "'".$db->escape($infos["infos_sup"])."', ";
+        $query .= "gen, ";              $query2 .= "'".$pdt["cg"]."', ";
+        $query .= "ind, ";              $query2 .= "'".$pdt["ci"]."', ";
+        $query .= "col, ";              $query2 .= "'".$pdt["cc"]."', ";
+        $query .= "timestamp) ";          $query2 .= "'".$timestamp."')";
+        $query .= $query2;
+        $db->query($query, __FILE__, __LINE__);
+      }
+      else
+      {
+        // Mise à jour des éventuels catalogues à envoyer
+        $row = $db->fetch($res);
+        $idDemande = $row[0];
+
+        // Update
+        $eoq = "";
+        if ($pdt["cg"] == 1)  $eoq .= "gen = 1";
+        if ($pdt["ci"] == 1)  $eoq .= (empty($eoq) ? '' : ', ')."ind = 1";
+        if ($pdt["cc"] == 1)  $eoq .= (empty($eoq) ? '' : ', ')."col = 1";
+
+        $db->query("update demandes set ".$eoq.", timestamp = ".$timestamp." where id = ".$idDemande, __FILE__, __LINE__);
+      }
+    }  // fin gestion demandes implicites de catalogues
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // ACCOUNT CREATION AND UPDATE
+    ////////////////////////////////////////////////////////////////////////////////
+    // automatically create an account if email does not already exists in the db
+    if (!$user_id) {
+      $user = new CustomerUser($handle);
+      $accinfos = array(
+        "coord_livraison" => 0,
+        "login" => $infos["email"],
+        "titre" => 1,
+        "nom" => $infos["nom"],
+        "prenom" => $infos["prenom"],
+        "fonction" => $infos["fonction"],
+        "societe" => $infos["societe"],
+        //"nb_salarie" => $infos["salaries"],
+        "secteur_activite" => $infos["secteur"],
+        "secteur_qualifie" => $infos["secteur_qualifie"],
+        "code_naf" => $infos["naf"],
+        "num_siret" => $infos["siret"],
+        "adresse" => $infos["adresse"],
+        "complement" => $infos["cadresse"],
+        "ville" => $infos["ville"],
+        "cp" => $infos["cp"],
+        "pays" => $infos["pays"],
+        "infos_sup" => "",
+        "tel1" => $infos["telephone"],
+        "fax1" => $infos["fax"],
+        "titre_l" => 1,
+        "nom_l" => $infos["nom"],
+        "prenom_l" => $infos["prenom"],
+        "societe_l" => $infos["societe"],
+        "adresse_l" => $infos["adresse"],
+        "complement_l" => $infos["cadresse"],
+        "ville_l" => $infos["ville"],
+        "cp_l" => $infos["cp"],
+        "pays_l" => $infos["pays"],
+        "infos_sup_l" => "",
+        "tel2" => $infos["telephone"],
+        "fax2" => $infos["fax"],
+        "url" => $infos["url"],
+        "actif" => 1,
+        "email" => $infos["email"],
+        "origin" => 'L');
+      $user->create();
+      $user->setCoordFromArray($accinfos);
+      $user->code = "9".substr(strtoupper(Utils::toASCII(utf8_encode($user->societe))),0,4).substr($user->id,0, 6);
+      
+      $pass = $user->generatePassword();
+      $user->save($timestamp-120); // on definit un timestamp antidaté de 120 secondes pour corriger le probleme 'Connexion Table clients / contact'
+      // de la tache Hors Lot - Aout à Décembre 2010  - OD 10/12/2010
+
+      // sending mail
+      $mailContent = array(
+        'email' => $user->email,
+        'subject' => "Création de votre compte gratuit",
+        'headers' => "From: Techni-Contact – Service clients <compte-lead@techni-contact.com>\nReply-To: Techni-Contact – Service clients <compte-lead@techni-contact.com>\n",
+        'template' => "customer-creation_compte-lead",
+        'data' => array(
+          "CUSTOMER_ID" => $user->id,
+          "CUSTOMER_FIRSTNAME" => $user->prenom,
+          "CUSTOMER_LASTNAME" => $user->nom,
+          "CUSTOMER_EMAIL" => $user->email,
+          "CUSTOMER_PASSWORD" => $pass,
+          "SITE_MAIN_URL" => URL,
+          "SITE_HELP_URL" => URL."aide.html",
+          "SITE_ACCOUNT_URL_LOGIN" => COMPTE_URL."login.html"
+        )
+      );
+      $mail = new Email($mailContent);
+      $mail->send();
+      //$mail->Save();
+    }
+    else { // update account timestamp
+      $user = new CustomerUser($handle, $user_id);
+
+      // update all fields if account is a quick created account
+      if($user->tel1 == '-' && $user->adresse == '-' && $user->cp == '-' && $user->ville == '-'){
+        $user->tel1 = $infos["telephone"];
+        $user->adresse = $infos["adresse"];
+        $user->cp = $infos["cp"];
+        $user->ville = $infos["ville"];
+        $user->pays = $infos["pays"];
+        //$user->nb_salarie = $infos["salaries"];
+        $user->secteur_activite = $infos["secteur"];
+        $user->code_naf = $infos["naf"];
+        $user->num_siret = $infos["siret"];
+        $user->complement = $infos["cadresse"];
+        $user->fax1 = $infos["fax"];
+        $user->url = $infos["url"];
+      }else{ // or update any empty compulsory field
+        if(empty($user->tel1) || $user->tel1 == '-') $user->tel1 = $infos["telephone"];
+        if(empty($user->adresse) || $user->adresse == '-') $user->adresse = $infos["adresse"];
+        if(empty($user->cp) || $user->cp == '-') $user->cp = $infos["cp"];
+        if(empty($user->ville) || $user->ville == '-') $user->ville = $infos["ville"];
+        if(empty($user->pays) || $user->pays == '-') $user->pays = $infos["pays"];
+      }
+      
+      // activation of an unvisible user
+      if ($user->origin == 'A') {
+        $user->origin = 'L';
+        $user->actif = 1;
+        $pass = $user->generatePassword();
+        
+        $mailContent = array(
+          'email' => $user->email,
+          'subject' => "Création de votre compte",
+          'headers' => "From: Service client Techni-Contact <web@techni-contact.com>\n",
+          'template' => "creation-compte-lead",
+          'data' => array(
+            "CUSTOMER_ID" => $user->id,
+            "CUSTOMER_FIRSTNAME" => $user->prenom,
+            "CUSTOMER_LASTNAME" => $user->nom,
+            "CUSTOMER_EMAIL" => $user->email,
+            "CUSTOMER_PASSWORD" => $pass,
+            "SITE_MAIN_URL" => URL,
+            "SITE_HELP_URL" => URL."aide.html",
+            "SITE_ACCOUNT_URL_LOGIN" => COMPTE_URL."login.html"
+          )
+        );
+        $mail = new Email($mailContent);
+        $mail->send();
+       // $mail->Save();
+      }
+      $user->save();
+    }
+
+    // inserting call in call spool
+    //- Les «internautes» (source = internaute) ayant fait un lead non «fournisseur»
+    //- Ces internautes ne doivent pas être «Particulier» (fonction, secteur, taille salariale)
+    //- Ces internautes doivent être français (pays = France)
+    //- Ils ne doivent pas déjà avoir été contactés (appel abouti) au moins une fois par le call center depuis 1 mois.
+    if (Calls::isAddableCallForEmail($infos["email"])
+     && $pdt["category"] != __ADV_CAT_SUPPLIER__
+     && strcasecmp($ml["query"]["fonction"], "je suis un particulier")
+     //&& strcasecmp($ml["query"]["salaries"], "je suis un particulier")
+     && strcasecmp($ml["query"]["secteur"], "je suis un particulier")
+     && !strcasecmp($ml["query"]["pays"], "france")) {
+      $call = new Calls(array(
+        "id_lead" => $pdt["leadID"],
+        "id_client" => $infos["email"]
+      ));
+      $call->save();
+    }
+    
+    // Mail récapitulatif Commercial + Commercial admin
+    $mailContent = array(
+                    'email' => 'lead-web@techni-contact.com',
+                    'subject' => "[www.Techni-Contact.com] - ".$lead_type_string." auprès de l'annonceur ".$pdt["nom1"]." (Lead n°".$pdt["leadID"].")",
+                    'headers' => "From: Lead Techni-Contact <web@techni-contact.com>\n",
+                    'template' => "tc-send_demand_admin-recap",
+                    'data' => array_merge($CustomerMailData, $MainProductMailData, array("ADMIN_COMMERCIALRECAP" => $recap_com, "ADMIN_ORIGIN_USER" => "Internaute", "ADMIN_LEAD_SRC" => "Internaute", "URL" => URL))
+                  );
+    $mail = new Email($mailContent);
+    $mail->send();
+    //$mail->Save();
+  }
+  else {
+    if (!empty($error)) {
+      foreach($error as $key => $value) {
+        if ($value == true) {
+          echo $key.'|';
+        }
+      }
+    }
+    else {
+      echo 'checkOk';
+    }
+    exit();
+  }
+}
+
+if ($valid_form && empty($error) && !isset($_POST["onlyCheck"]) ) {
+  $session->authorized_adv_infos = array_merge($CustomerMailData, $MainProductMailData, array('criteo' => $criteo));
+  echo 'LeadOk';
+  exit();
+}
+else {
+  // show = true si l'on arrive du panier (pas de 'nom' définit dans $_POST) ou que c'est une demande directe (pas de POST)
+  // ou que l'on est redirigé via mail d'abandon du lead
+  $show = $_SERVER["REQUEST_METHOD"] != 'POST' || !isset($_POST["nom"]);
+  
+  // Si on arrive via mail d'abandon de lead
+  if(!empty($_GET['alID'])){
+    $abortedLead = Doctrine_Query::create()
+            ->select()
+            ->from('ContactsAborted')
+            ->where('web_id = "'.$_GET['alID'].'"')
+            ->fetchOne(array(), Doctrine_Core::HYDRATE_ARRAY);
+    if(!empty($abortedLead)){
+      $_COOKIE["campaignID"] = 888888;
+      $_COOKIE["pays"] = $abortedLead['pays'];
+      $_COOKIE["telephone"] = $abortedLead['tel'];
+      $_COOKIE["email"] = $abortedLead['email'];
+      $_COOKIE["nom"] = $abortedLead['nom'];
+      $_COOKIE["prenom"] = $abortedLead['prenom'];
+      $_COOKIE["fax"] = $abortedLead['fax'];
+      $_COOKIE["fonction"] = $abortedLead['fonction'];
+      $_COOKIE["societe"] = $abortedLead['societe'];
+      $_COOKIE["adresse"] = $abortedLead['adresse'];
+      $_COOKIE["cadresse"] = $abortedLead['cadresse'];
+      $_COOKIE["cp"] = $abortedLead['cp'];
+      $_COOKIE["ville"] = $abortedLead['ville'];
+      //$_COOKIE["salaries"] = $abortedLead['salaries'];
+      $_COOKIE["secteur"] = $abortedLead['secteur'];
+      $_COOKIE["naf"] = $abortedLead['naf'];
+      $_COOKIE["siret"] = $abortedLead['siret'];
+    }
+  }
+
+  // Préparation liste des fonctions
+  $n = $pc = 0; $pl = array(); // Post List
+  if ($fh = fopen(MISC_INC."list_post.csv","r")) {
+    while (($data = fgetcsv($fh, 128, ";")) !== false) $pl[$n++] = $data;
+    $pc = $n - 1; // Post Count -> La 1ère ligne est l'intitulé des colonnes
+    fclose($fh);
+  }
+
+  // Préparation liste des tailles salariales
+  $n = $nec = 0; $nel = array(); // Number of Employee List
+  if ($fh = fopen(MISC_INC."list_number-of-employees.csv","r")) {
+    while (($data = fgetcsv($fh, 64, ";")) !== false) $nel[$n++] = $data[0];
+    $nec = $n - 1; // Number of Employee Count -> La 1ère ligne est l'intitulé des colonnes
+    fclose($fh);
+  }
+
+  // Préparation liste des secteurs d'activité
+  $activity_sectors = Doctrine_Core::getTable('ActivitySector');
+  $activity_sectorsList = $activity_sectors->findAll();
+  
+  // Préparation liste des pays en majuscule
+  $n = $cc = 0; $cl = array(); // Country List
+  if ($fh = fopen(MISC_INC."list_country.csv","r")) {
+    while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+    $cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+    fclose($fh);
+  }
+
+  for ($i = 1; $i <= $cc; $i++)
+    if ((isset($_COOKIE["pays"]) && $show && $_COOKIE["pays"] == $cl[$i]) || $infos["pays"] == $cl[$i]) $country_selected = $cl[$i];
+
+  if (!$country_selected) $country_selected = "FRANCE";
+
+  $pdt["url"] = URL."produits/".$pdt["cat_id"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+  $pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_big/".$pdt["id"]."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_big/".$pdt["id"]."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_big.gif";
+
+  if (empty($infos["precisions"])) {
+    $infos["precisions"] = FORM_PERSONNAL_INFOS_WARNING;
+  }
+  
+  define("__PAGE_LEAD__", true);
+  define("__BR_NO_AD__", true);
+  define("NOINDEX_FOLLOW", true);
+  //define("__TOP_NO_AD__", true);
+  if ($pdt["category"] != __ADV_CAT_SUPPLIER__) {
+    define("NO_SUPPLIER_PRODUCT", true);
+    if ($pdt["category"] != __ADV_CAT_ADVERTISER__)
+      define("NOR_ADVERTISER_PRODUCT", true);
+  }
+  $meta_desc = "";
+
+//determining commercial id for help message and phone
+$pdt_referent_commercial_id = $pdt['idCommercial'];
+
+  require(SITE."head.php");
+
+  $emptyInfos = true;
+  foreach($infos as $key => $info)
+    if(!empty($info) && $key != 'precisions') $emptyInfos = false;
+
+  if($emptyInfos && $session->logged){
+    $user = new CustomerUser($handle, $session->userID);
+    $infos["nom"] = $user->nom;
+    $infos["prenom"] = $user->prenom;
+    $infos["societe"] = $user->societe;
+    $infos["fonction"] = $user->fonction;
+    //$infos["salaries"] = $user->nb_salarie;
+    $infos["secteur"] = $user->secteur_activite;
+    $infos["naf"] = $user->code_naf;
+    $infos["siret"] = $user->num_siret;
+    $infos["adresse"] = $user->adresse;
+    $infos["cadresse"] = $user->complement;
+    $infos["cp"] = $user->cp;
+    $infos["ville"] = $user->ville;
+    $infos["pays"] = $user->pays;
+    $infos["telephone"] = Utils::sanitize_tel($user->tel1);;
+    $infos["produits"] = "";
+    $infos["fax"] = $user->fax1;
+    $infos["email"] = $user->email;
+    $infos["url"] = $user->url;
+  }
+
+?>
+
+<script type="text/javascript">
+var RevDate = new Date();
+//document.write( unescape( "%3Cscript src='" + (("https:" == document.location.protocol) ? "https://api2.reversoform.com/www.reversoform.com/includes/js/reversoObj.js" : "http://api.reversoform.com/includes/js/reversoObj.js") + "?t="+RevDate.getTime()+"' type='text/javascript'%3E%3C/script%3E" ) );
+</script>
+<script type="text/javascript">
+var reversoLoaded = window.ClassReverso !== undefined;
+// Reverso
+if (reversoLoaded) {
+  var ObjReverso = new ClassReverso();
+  ObjReverso.serial   = '8389615817859';
+  ObjReverso.phone    = 'telephone';
+  ObjReverso.company    = 'societe';
+  ObjReverso.firstname  = 'prenom';
+  ObjReverso.lastname   = 'nom';
+  ObjReverso.address    = 'adresse';
+  ObjReverso.zip      = 'cp';
+  ObjReverso.city     = 'ville';
+  ObjReverso.country    = 'pays';
+  ObjReverso.naf      = 'naf';
+  ObjReverso.siret    = 'siret';
+}
+var ERRORS_TEXT = new Array();
+ERRORS_TEXT["telephone"] = "Merci de renseigner votre téléphone.";
+ERRORS_TEXT["nom"] = "Merci de renseigner votre nom.";
+ERRORS_TEXT["prenom"] = "Merci de renseigner votre prénom.";
+ERRORS_TEXT["fax"] = "Merci de renseigner votre fax.";
+ERRORS_TEXT["email"] = "Merci de renseigner votre Email. Ex:xxx@domaine.com";
+ERRORS_TEXT["fonction"] = "Merci de renseigner votre fonction. <br /> Agriculteur : sélectionnez Directeur / Gérant <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral : sélectionnez Je suis libéral";
+ERRORS_TEXT["societe"] = "Merci de renseigner le nom de votre société. ";
+ERRORS_TEXT["adresse"] = "Merci de renseigner votre adresse.";
+ERRORS_TEXT["cadresse"] = "Merci de renseigner votre complément d'adresse.";
+ERRORS_TEXT["cp"] = "Merci de renseigner votre code postal.";
+ERRORS_TEXT["ville"] = "Merci de renseigner votre ville.";
+ERRORS_TEXT["pays"] = "Merci de renseigner votre pays.";
+//ERRORS_TEXT["salaries"] = "Merci de renseigner votre taille salariale. <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral ou agriculteur : sélectionnez 0 à 10 salariés";
+ERRORS_TEXT["secteur"] = "Merci de renseigner votre secteur d'activité. <br /> Particulier, sélectionnez Je suis un particulier <br /> Aucune proposition ne correspond : sélectionnez Autres";
+ERRORS_TEXT["naf"] = "Merci de renseigner votre code NAF.";
+ERRORS_TEXT["siret"] = "Merci de renseigner votre Siret.";
+ERRORS_TEXT["autre"] = "Ce champ ne doit pas être vide.";
+
+$(function () {
+  var lead_form = $("form[name='lead_form']");
+  var errorFields = <?php echo json_encode(array_keys($error)) ?>;
+  if (errorFields.length > 0) {
+    for (var i=0; i<errorFields.length; i++) errorFields[i] = "label[for='"+errorFields[i]+"']";
+    alertstring = "Afin de nous transmettre votre demande, veuillez renseigner le(s) champs suivants :\n";
+    $(errorFields.join(","), lead_form).addClass("error").each(function() {
+       alertstring += " - " + $.trim(this.innerHTML.substring(0, this.innerHTML.lastIndexOf("*"))) + "\n";
+    });
+    alert(alertstring);
+  }
+
+  // Reverso Initialisation
+  if (reversoLoaded) {
+    ObjReverso.fireCallback = function( response ) {
+      if ( response!="NULL") {
+        if (response.last_name) $("input[name='nom']", lead_form).val(response.last_name);
+        if (response.first_name) $("input[name='prenom']", lead_form).val(response.first_name);
+        if (response.address) $("input[name='adresse']", lead_form).val(response.address);
+        if (response.zip) $("input[name='cp']", lead_form).val(response.zip);
+        if (response.city) $("input[name='ville']", lead_form).val(response.city);
+        if (response.country) $("select[name='pays']", lead_form).val(response.country);
+        if (response.company) $("input[name='societe']", lead_form).val(response.company);
+        $("input[name='reversoReversed']", lead_form).val(1);
+      }else{
+        $("input[name='reversoReversed']", lead_form).val(0);
+      }
+    };
+  }
+  $("input[name='telephone']", lead_form).keyup(function(){
+    var tel = (this.value.match(/\d+/g)||[]).join("");
+    if (tel.length >=10 && reversoLoaded) ObjReverso.reverso(tel);
+  });
+  $("textarea[name='precisions']", lead_form).focus(function(){
+    if (this.innerHTML == "<?php echo FORM_PERSONNAL_INFOS_WARNING ?>") this.innerHTML = "";
+  });
+
+  var submited = false,
+      reqInProgress = false;
+
+  /*
+  $(".edit").tooltip({
+    tip: "#tooltip",
+    position: "top center",
+    onBeforeShow: function() {
+      if ($("#tooltip").html() == "") {
+        return false;
+      }
+    }
+  });
+*/
+  
+  $(".edit").focus(function() {
+    
+    $('form#lead_form div.form-error').hide().text('');
+    var bad = false;
+    if ($(this).hasClass("badInfos") == true) {
+      $(this).removeClass("badInfos");
+      $(this).next().find('.leadform_ok').html('');
+      bad = true;
+    }
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    $("#error_"+idArray[1]).hide();
+    if (idArray[1]) {
+      if (ERRORS_TEXT[idArray[1]]) {
+        var errContent = ERRORS_TEXT[idArray[1]];
+      }
+      else {
+        errContent = "Merci de renseigner " + idArray[1];
+      }
+
+      if (errContent.replace(/^\s*|\s*$/,"") != "" && bad == true) {
+        //$("#tooltip").html(errContent);
+        //tooltip.show();
+        //$(this).next().find('.leadform_error').html(errContent).show();
+      }
+    }
+  }).blur(function() {
+    //$("#tooltip").html("");
+    formData = lead_form.serialize();
+
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    var fname = idArray[1];
+
+    $.ajax({
+      type: "POST",
+      data: formData+"&onlyCheck=true",
+      url: lead_form.attr("action"),
+      success: function(data) {
+        data = data.replace(/^\s*|\s*$/,"");
+        if (data != 'checkOk') {
+          var errors = data.split('|');
+
+          var i = 0;
+          var fieldNameError = false;
+          // Last element of errors will be empty
+          for (i=0; i<errors.length-1; i++) {
+
+            if (submited == true) {
+              var errorContent = '';
+              if (ERRORS_TEXT[errors[i]]) {
+                errorContent = ERRORS_TEXT[errors[i]];
+              }
+              else {
+                errorContent = "Merci de renseigner " + errors[i];
+              }
+              $("#error_"+errors[i]).html("Merci de renseigner ce champ.");
+              $("#error_"+errors[i]).show();
+              $("#field_"+errors[i]).addClass("badInfos");
+              $("#ok_"+errors[i]).html("<img src='<?php echo $res_url; ?>images/form-warn-error.png' class='okImg' alt='X' />");
+              /*$("#ok_"+errors[i]).hide();*/
+              if (errors[i] == fname)
+                fieldNameError = true;
+            }
+            else {
+              if (errors[i] == fname) {
+                fieldNameError = true;
+              }
+            }// end if submitted == true
+          }// end for
+
+          if (fieldNameError == true) {
+            var errorContent = 'Merci de renseigner ce champ.';
+            if (ERRORS_TEXT[fname]) {
+              errorContent = ERRORS_TEXT[fname];
+            }
+            else {
+              errorContent = "Merci de renseigner " + fname;
+            }
+            
+            $("#error_"+fname).html(errorContent);
+            $("#error_"+fname).show();
+            $("#field_"+fname).addClass("badInfos");
+            $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-warn-error.png' class='okImg' alt='X' />");
+          }
+          else {
+
+              $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-check-ok.png' class='okImg' alt='ok' />");
+              $("#ok_"+fname).show();
+              $("#error_"+fname).hide();
+              $("#error_"+fname).html("");
+          }
+        }
+        else {
+          if (fname != '') {
+            $("#ok_"+fname).html("<img src='<?php echo $res_url; ?>images/form-check-ok.png' class='okImg' alt='ok' />");
+            $("#ok_"+fname).show();
+          }
+        }// end if data == checkOk
+
+      }// end success
+    });// end ajax
+  });// end blur
+  
+    
+    
+  $(".btn-send-lead", lead_form).mouseenter(function(){
+    $(".edit:focus").blur() ;
+
+    setTimeout(function(){
+      var errorsContent = '';
+      var hasError = false;
+        $('.leadform_error').each(function(){
+          if($(this).css('display') == 'block'){
+            var errorLabel = $(this).text().split('.');
+            errorsContent += errorLabel[0]+'<br />';
+            hasError = true;
+          }
+        });
+
+      var html = '<div class="search-ask-error-arrow-right"></div>';
+      if(hasError){
+        $('form#lead_form div.form-error').html(html+errorsContent).show();
+      }
+
+    }, 200);
+    
+
+  })
+  .click(function(){
+    var hasError = false;
+    $('.leadform_error').each(function(){
+      if($(this).css('display') == 'block')
+        hasError = true;
+    });
+
+    if(hasError)
+      return false;
+  
+    submited = true;
+    // Ajax request to valid form
+    if (!reqInProgress) {
+      reqInProgress = true
+      formData = lead_form.serialize();
+	  
+	  console.log(lead_form.attr("action"));
+      $.ajax({
+        type: "POST",
+        data: formData,
+        url: lead_form.attr("action"),
+        success: function(data) {
+          data = data.replace(/^\s*|\s*$/,"");
+          if (data == 'LeadOk') {
+            $("[id^='error_']").html("").hide();
+            var typeLead = document.location.pathname.split('-')[1].split('.')[0].substring(0,1);
+            if(typeLead == 'a' || typeLead == 'f' )
+              document.location.href = "<?php echo URL; ?>lead-"+typeLead+"-success.html";
+          }
+          else {
+            reqInProgress = false;
+            data = data.replace(/^\s*|\s*$/,"");
+            var errors = data.split('|');
+
+            var i = 0;
+            // Last element of errors will be empty
+            for (i=0; i<errors.length-1; i++) {
+              var errorContent = 'Merci de renseigner ce champ.';
+              if (ERRORS_TEXT[errors[i]]) {
+                errorContent = ERRORS_TEXT[errors[i]];
+              }
+              else {
+                errorContent = "Merci de renseigner " + errors[i];
+              }
+              $("#error_"+errors[i]).html(errorContent);
+              $("#error_"+errors[i]).show();
+              $("#field_"+errors[i]).addClass("badInfos");
+              $("#ok_"+errors[i]).html("<img src='<?php echo $res_url; ?>images/form-warn-error.png' class='okImg' alt='X' />");
+            }
+  //console.log('self.location.href=window.location;')
+              //self.location.href=window.location;
+          }
+        }
+      });
+    }
+    return false;
+  });
+
+// Postal code autocomplete
+var champCodePostal = $('#field_cp');
+
+champCodePostal.keyup( function(){
+  if(champCodePostal.val().match('[0-9]{5}') && $("input[name='reversoReversed']").val() == 0){
+
+    $.ajax({
+      type: "GET",
+      data: "code_postal="+champCodePostal.val(),
+      dataType: "json",
+      url: "ressources/ajax/AJAX_codesPostaux.php",
+      success: function(data) {
+
+        var refBox = $('#field_ville');
+
+        if(data['reponses'].length > 1){
+
+          var html = '<table id="cpAutocomplete" class="auto-completion-box" style="min-width: 221px; top: '+(refBox.offset().top + refBox.height() + 7)+'px; left: '+refBox.offset().left+'px; -moz-user-select: none;" >';
+          $.each(data['reponses'], function(){
+            html += '<tr class=""><td class="prop">'+this.commune+'</td><td class="results"></td></tr>';
+
+          });
+          html += '</table>';
+
+          $('#cpAutocomplete').remove(); // avoid multiple layers in case of multiple keyups
+          $('body').append(html);
+
+          $.each($('#cpAutocomplete tr'), function(){
+            $(this).mouseenter(function(){
+              $(this).addClass('over');
+            }).mouseleave(function(){
+              $(this).removeClass('over');
+            }).click(function(){
+              refBox.val($(this).find('td.prop').html());
+              $('#cpAutocomplete').remove();
+            });
+          });
+
+          refBox.blur(function(){
+            setTimeout(function(){$('#cpAutocomplete').remove();}, 200);
+          });
+
+        }else if(data['reponses'].length == 1){
+          refBox.val(data['reponses'][0].commune);
+        }
+      }
+    });
+  } // endif(id == champCodePostal)
+});
+// Postal code autocomplete
+
+// activity sector surqualification
+var societe = $('input[name=societe]');
+
+societe.blur( function(){
+  if($(this).val() != ''){ // && $("input[name='reversoReversed']").val() == 0
+
+    $.ajax({
+      type: "GET",
+      data: {"params":[{"action":"processSector", "raison_sociale": $(this).val()}]},
+      dataType: "json",
+      url: "ressources/ajax/AJAX_surqualificationSecteursActivites.php",
+      success: function(data) {
+        if(data['retour'])
+        if(data['retour'].length == 1){
+          var naf = $('input[name=naf]');
+          $('select[name=secteur] option[value='+data.data[0].sector+']').attr('selected', true);
+          if(data.data[0].Surqualifications[0].naf)
+            $('input[name=naf]').val(data.data[0].Surqualifications[0].naf);
+        }
+      }
+    });
+  }
+});
+// activity sector surqualification
+
+
+});
+
+function findPosX(obj) {
+  var curleft = obj.offsetLeft || 0;
+  while (obj = obj.offsetParent) {
+    curleft += obj.offsetLeft
+  }
+  return curleft;
+}
+
+function findPosY(obj) {
+  var curtop = obj.offsetTop || 0;
+  while (obj = obj.offsetParent) {
+    curtop += obj.offsetTop
+  }
+  return curtop;
+}
+/*
+function showTooltip(content, element) {
+  var offsetX = 25;
+  var offsetY = 25;
+
+  var posX = findPosX(element) + offsetX;
+  var posY = findPosY(element) - offsetY;
+
+  $("#tooltip").html(content);
+  $("#tooltip").css({top: posY, left: posX});
+  $("#tooltip").show();
+}
+
+function hideTooltip() {
+
+  $("#tooltip").hide();
+  $("#tooltip").html("");
+  
+}
+*/
+</script>
+
+  <link type='text/css' href='<?= URL ?>ressources/css/basic.css' rel='stylesheet' media='screen' />
+  <script type="text/javascript" src="<?= URL ?>ressources/scripts/jquery.simplemodal.js"></script>
+  <script type="text/javascript" src="<?= URL ?>ressources/scripts/init.js"></script>
+
+  <div id="body" class="white-bg">
+          <div class="lead-form blocks-left">
+            <div class="bigger-blue-title lead-form-title"><?php echo $page_title; ?></div>
+          <?php if ($pdt["category"] == __ADV_CAT_ADVERTISER__ || $pdt["category"] == __ADV_CAT_ADVERTISER_NOT_CHARGED__) { /*?>
+            <div class="callback-phone-pictos">
+              <img src="<?php echo $res_url ?>images/pictos/lead-phone.jpg" alt=""/>
+              <script type="text/javascript">function pop(url){ window.open(url,"CallBack","menubar=no, status=no, scrollbars=no, resizable=no, width=448, height=400"); }</script>
+              <a href="javascript:pop('http://callback.sysnekpro.com/')"><img src="<?php echo $res_url ?>images/pictos/callback-free-click.jpg"></a>
+            </div>
+          <?php*/ } ?>
+            <div class="lead-form-pdt-preview fl">
+              <div class="picture fl"><img src="<?php echo $pdt["pic_url"]; ?>" class="vmaib"/><div class="vsma"></div></div>
+              <div class="infos fr">
+                <div class="vmaib">
+                  <strong><?php echo $pdt["name"]; ?></strong><br/>
+                  <?php echo $pdt["fastdesc"]; ?><br/>
+                  <br/>
+                  Code fiche produit: <span class="color-blue"><?php echo $pdt["id"]; ?></span>
+                </div><div class="vsma"></div>
+              </div>
+              <div class="zero"></div>
+            </div>
+
+          <?php if ($lead_category != 'a') { ?>
+            <div class="lead-form-advantages grey-block">
+              <div class="blue-title">Vos avantages</div>
+            <?php if ($pdt["category"] == __ADV_CAT_SUPPLIER__) { ?>
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Conseils d'un expert en charge de vos besoins<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Devis gratuit et personnalisé en 24H<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Espace client pour facilement gérer vos demandes<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />15 ans d'expérience Techni-Contact<br />
+            <?php } else { ?>
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Votre demande est envoyée à nos partenaires<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Vous recevez immédiatement leurs coordonnées<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Vous obtenez plusieurs devis comparatifs<br />
+              <img src="<?php echo $res_url; ?>images/green-check.png" alt="check" />Vous gagnez du temps et de l'argent<br />
+              <?php } ?>
+              <br />
+            </div>
+            <div class="zero"></div>
+          <?php } ?>
+            
+            <?php $currentUri = explode('?', $_SERVER['REQUEST_URI']); ?>
+            <form id="lead_form" name="lead_form" action="<?php echo URL.str_replace('/', '', $currentUri[0]); ?>" method="post">
+            <div class="contact-infos grey-block">
+              <input type="hidden" name="type" value="<?php echo $lead_type; ?>">
+              <input type="hidden" name="pdtID" value="<?php echo $pdt["id"]; ?>">
+              <input type="hidden" name="catID" value="<?php echo $pdt["cat_id"]; ?>">
+              <input type="hidden" name="reversoReversed" value="0">
+
+              <div class="box white-sr-box lf-pi">
+                <div class="btl"></div>
+                <div class="btr"></div>
+                <div class="bbl"></div>
+                <div class="bbr"></div>
+                <div class="box-out">
+                  <div class="box-in">
+                    <div class="blue-title search-form-block-title">Demandez votre devis en 2 min</div>
+                    <div class="section-you-ab2">
+                      <div class="bil">
+                        
+                        <label for="telephone" id="telephone_label">Téléphone <span class="blue-title">*</span></label>
+                        <input id="field_telephone" name="telephone" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["telephone"]) && $show) ? $_COOKIE["telephone"] : $infos["telephone"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_telephone"></div>
+                          <div class="leadform_error" id="error_telephone"></div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                        
+                        <label for="email">Email <span class="blue-title">*</span></label>
+                        <input id="field_email" name="email" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["email"]) && $show) ? $_COOKIE["email"] : $infos["email"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_email"></div>
+                          <div class="leadform_error" id="error_email">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                        
+                        <label for="nom">Nom <span class="blue-title">*</span></label>
+                        <input id="field_nom" name="nom" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["nom"]) && $show) ? $_COOKIE["nom"] : $infos["nom"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_nom"></div>
+                          <div class="leadform_error" id="error_nom"></div>
+                        </div>
+                        
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                        
+                        <label for="prenom">Prénom <span class="blue-title">*</span></label>
+                        <input id="field_prenom" name="prenom" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["prenom"]) && $show) ? $_COOKIE["prenom"] : $infos["prenom"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_prenom">
+                            </div>
+                          <div class="leadform_error" id="error_prenom">
+                          </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      </div>
+                      <div class="bir">
+                      
+                        <label for="fonction">Fonction<?php echo (isset($notReqFields["fonction"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?> <!--<span class="infoClick" onmouseover="showTooltip('Agriculteur : sélectionnez Directeur / Gérant<br />Particulier : sélectionnez Je suis un particulier<br />Libéral : sélectionnez Je suis libéral', this);"
+                                                                                                                                                                  onmouseout="hideTooltip();"><img src="<?php echo $res_url; ?>images/help.jpg" alt="?" /></span>--></label>
+                        <select id="field_fonction" name="fonction" class="edit form-lead">
+                          <option value=""  disabled="disabled"> - </option>
+                        <?php for ($i = 1; $i <= $pc; $i++) { ?>
+                          <option <?php echo !empty($pl[$i][0]) ? 'value="'.$pl[$i][0].'"' : ' disabled="disabled"'; ?><?php if (((isset($_COOKIE["fonction"]) && $show && $_COOKIE["fonction"] == $pl[$i][0]) || $infos["fonction"] == $pl[$i][0]) && $pl[$i][0] != '') { ?> selected="selected"<?php } ?>><?php echo $pl[$i][1]; ?></option>
+                        <?php }?>
+                        </select>
+                        <div class="form-lead-error-select-wrapper">
+                          <div class="leadform_ok" id="ok_fonction"></div>
+                        <div class="leadform_error" id="error_fonction">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      </div>
+                      <div class="zero"></div>
+                    </div>
+          
+                    <div class="section-company-ab2">
+
+                      <div class="bil">
+                                                
+
+                        <label for="societe">Nom société / organisation<?php echo (isset($notReqFields["societe"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <input id="field_societe" name="societe" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["societe"]) && $show) ? $_COOKIE["societe"] : $infos["societe"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_societe"></div>
+                          <div class="leadform_error" id="error_societe"></div>
+                        
+                        
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                                                
+
+                        <label for="adresse">Adresse<?php echo (isset($notReqFields["adresse"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <input id="field_adresse" name="adresse" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["adresse"]) && $show) ? $_COOKIE["adresse"] : $infos["adresse"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_adresse"></div>
+                        <div class="leadform_error" id="error_adresse">  
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                                                
+                        <label for="cp">Code Postal<?php echo (isset($notReqFields["cp"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <input id="field_cp" name="cp" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["cp"]) && $show) ? $_COOKIE["cp"] : $infos["cp"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_cp"></div>
+                          <div class="leadform_error" id="error_cp">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->                       
+
+                        <label for="ville">Ville<?php echo (isset($notReqFields["ville"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <input id="field_ville" name="ville" type="text" maxlength="255" class="edit form-lead" value="<?=(isset($_COOKIE["ville"]) && $show) ? $_COOKIE["ville"] : $infos["ville"]?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_ville"></div>
+                        <div class="leadform_error" id="error_ville">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->                       
+
+                        <label for="pays">Pays<?php echo (isset($notReqFields["pays"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <select id="field_pays" name="pays" class="edit form-lead">
+                        <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                          <option value="<?php echo $cl[$i]; ?>"<?php if ($cl[$i] == $country_selected) { ?> selected="selected"<?php } ?>><?php echo $cl[$i]; ?></option>
+                        <?php } ?>
+                        </select>
+                        <div class="form-lead-error-select-wrapper">
+                          <div class="leadform_ok" id="ok_pays"></div>
+                        <div class="leadform_error" id="error_pays">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      </div>
+                      <div class="bir">                       
+                        <?php /*
+                        <label for="salaries">Taille salariale<?php echo (isset($notReqFields["nb_salarie"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?></label>
+                        <select id="field_salaries" name="salaries" class="edit form-lead">
+                          <option value=""> - </option>
+                        <?php for ($i = 1; $i <= $nec; $i++) { ?>
+                          <option value="<?php echo $nel[$i]; ?>"<?php if ((isset($_COOKIE["salaries"]) && $show && $_COOKIE["salaries"] == $nel[$i]) || $infos["salaries"] == $nel[$i]) { ?> selected="selected"<?php } ?>><?php echo $nel[$i]; ?></option>
+                        <?php } ?>
+                        </select>
+                        <div class="form-lead-error-select-wrapper">
+                          <div class="leadform_ok" id="ok_salaries"></div>
+                        <div class="leadform_error" id="error_salaries">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                        */ ?>
+                        <label for="secteur">Secteur d'activité<?php echo (isset($notReqFields["secteur_activite"])) ? " (optionnel)" : ' <span class="blue-title">*</span>'; ?> <!--<span class="infoClick" onmouseover="showTooltip('Particulier : sélectionnez Je suis un particulier<br />Aucune proposition ne correspond : sélectionnez Autres', this);"
+                                                                                                                                                               onmouseout="hideTooltip();"
+                                                                                                                                                                  ><img src="<?php echo $res_url; ?>images/help.jpg" alt="?" /></span>--></label>
+                        <select id="field_secteur" name="secteur" class="edit form-lead">
+                          <option value=""> - </option>
+                        <?php if(!empty($activity_sectorsList))
+                                foreach ($activity_sectorsList as $activity_sector) { ?>
+                          <option value="<?php echo $activity_sector['sector']; ?>"<?php if ((isset($_COOKIE["secteur"]) && $show && $_COOKIE["secteur"] == $activity_sector['sector']) || $infos["secteur"] == $activity_sector['sector']) { ?> selected="selected"<?php } ?>><?php echo $activity_sector['sector']; ?></option>
+                        <?php } ?>
+                        </select>
+                        <div class="form-lead-error-select-wrapper">
+                          <div class="leadform_ok" id="ok_secteur"></div>
+                        <div class="leadform_error" id="error_secteur">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->                       
+
+                      </div>
+                      <div class="zero"></div>
+                    </div>
+                <?php if (!empty($customFields)) { ?>
+                    <div class="section-custom-fields-ab2">
+                      
+                      <div class="bim">
+                  <?php for ($i = 0; $i < $cf_count; $i++) {
+                    $cf = &$customFields[$i];
+                    if (empty($cfv[$cf["name"]])) $cfv[$cf["name"]] = $cf["valueDefault"];
+                    switch($cf["type"]) {
+                      case "text":
+                      ?>
+            
+                        <label for="<?php echo $cf["name"]; ?>"><?php echo $cf["label"]; ?><?php echo $cf["required"] ? ' <span class="blue-title">*</span>' : " (optionnel)"; ?></label>
+                        <input id="field_<?php echo $cf["name"]; ?>" name="<?php echo $cf["name"]; ?>" type="text" maxlength="<?php echo $cf["length"]; ?>" class="edit form-lead" value="<?php echo $cfv[$cf["name"]]; ?>"/>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_<?php echo $cf["name"]; ?>"></div>
+                        <div class="leadform_error" id="error_<?php echo $cf["name"]; ?>">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      <?php
+                        break;
+                      case "select":
+                      ?>
+            
+                        <label for="<?php echo $cf["name"]; ?>"><?php echo $cf["label"]; ?><?php echo $cf["required"] ? ' <span class="blue-title">*</span>' : " (optionnel)"; ?></label>
+                        <select id="field_<?php echo $cf["name"]; ?>" name="<?php echo $cf["name"]; ?>" class="edit form-lead">
+                          <option value="">-</option>
+                        <?php $valueList = explode(",", $cf["valueList"]);
+                          foreach($valueList as $val) { ?>
+                          <option value="<?php echo $val ?>"<?php if ($val == $cfv[$cf["name"]]) { ?> selected="selected"<?php } ?>><?php echo $val ?></option>
+                        <?php } ?>
+                        </select>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_<?php echo $cf["name"]; ?>"></div>
+                        <div class="leadform_error" id="error_<?php echo $cf["name"]; ?>">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      <?php
+                        break;
+                      case "textarea":
+                      ?>
+            
+                        <label for="<?php echo $cf["name"]; ?>"><?php echo $cf["label"]; ?><?php echo $cf["required"] ? ' <span class="blue-title">*</span>' : " (optionnel)"; ?></label>
+                        <textarea id="field_<?php echo $cf["name"]; ?>" name="<?php echo $cf["name"]; ?>" class="edit form-lead" rows="4"><?php echo $cfv[$cf["name"]]; ?></textarea>
+                        <div class="form-lead-error-wrapper">
+                          <div class="leadform_ok" id="ok_<?php echo $cf["name"]; ?>"></div>
+                        <div class="leadform_error" id="error_<?php echo $cf["name"]; ?>">
+                        </div>
+                        </div>
+                        <div class="zero"></div>
+                        <!-- End .error -->
+                      <?php
+                        break;
+                      default: break;
+                    }
+                  } ?>
+                      </div>
+                    </div>
+                <?php } ?>
+                    
+                    
+                  </div>
+                </div>
+              </div>
+              <div class="zero"></div>
+            </div>
+              <div class="grey-block lead-form-bottom-block">
+                <div class="lead-form-precisions">Votre projet <span class="grey-small-text">(décrivez votre projet en quelques mots)</span></div>
+                <textarea style="margin-top: 5px; width: 250px; height: 100px; float: left" class="edit form-lead" name="precisions" rows="4" onmouseover="$('#precisionsInfos').show();" onmouseout="$('#precisionsInfos').hide();" ></textarea>
+                <div style="clear: both;"></div>
+              </div>
+              <div class="lead-form-submit-zone">
+                <div class="btn-send-lead"></div>
+                <div class="zero"></div>
+                <div class="form-error"></div>
+              </div>
+            </form>
+          </div>
+      
+          <div style="display: none; padding: 10px;" id="exit_content">
+            <div class="content-left"><img src="<?= URL ?>ressources/images/img-left.jpg" /></div>
+            <div class="content-right">
+              <div class="logo"><img src="<?= URL ?>ressources/images/logo2.jpg" style="width: 300px;" /></div>
+              <div id="contente-txt">
+                <div class="text-1">Pas envie de remplir le formulaire ?</div>
+                <div class="text-2">Nous le faisons pour vous !</div>
+                <div class="text-contact">Contactez un expert au</div>
+                <?php
+                  $sql_comm  = "SELECT bu.name,bu.tel_rentention_pop_up,bu.id
+                          FROM products pp, advertisers aa ,bo_users bu
+                          WHERE pp.idAdvertiser = aa.id
+                          AND   aa.idCommercial = bu.id
+                          AND pp.id='".$pdt["id"]."' ";
+                  $req_comm  =  mysql_query($sql_comm);
+                  $data_comm =  mysql_fetch_object($req_comm);
+                  
+                ?>
+                <input type="hidden" value="<?= $data_comm->id ?>" id="id_commercial" />
+                <input type="hidden" value="<?= $pdt["id"] ?>" id="id_proucts" />
+                <div class="text-num"><?= $data_comm->tel_rentention_pop_up ?> </div>
+                <div class="text-prix">Prix d'un appel local  </div>
+                <div class="format-div">
+                <div class="btn-call-img">
+                  <!--Ou demandez à être rappelé <br />GRATUITEMENT-->
+                
+				<!-- START IADVIZE JS CALL CALLBACK -->
+					<script type="text/javascript">
+					iAdvizeCallbacks = {
+					onCallStatusChanged: function(obj){ // call callback
+					if (obj.offline == 1){ // all call agents are offline
+					$('#idzfcallonline').hide(); // hide online button
+					} else { // at least one agent is avalaible
+					$('#idzfcallonline').show(); // show online button
+					}
+					}
+					};
+					</script>
+					<!-- END IADVIZE JS CALL CALLBACK -->
+
+					<!-- START IADVIZE HTML CALL BUTTON -->
+					<div class="idz_btn_fix_call">
+					<div id="idzfcallonline" style="display: none;" class="idz_c2cwidget">
+					<a href="javascript:ga('send', {hitType: 'event',eventCategory: 'Fiche produit',eventAction: 'Click to call',eventLabel: 'Bouton zone de contact colonne droite'});"><img src="<?= URL ?>ressources/images/btn-call.jpg" alt="" /></a>
+					</div>
+					</div>
+				<!-- START IADVIZE HTML CALL BUTTON -->
+				  
+				  
+                </div>
+                </div>
+                <div class="btn-close"><a class="simplemodal-close" style="color: #247fc5;text-decoration:none;" title="Close">[ Fermer ]</a></div>
+              </div>
+            </div>
+          </div>  
+     
+    <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+  </div>
+<?php
+
+require(SITE."foot.php");
+} // fin affichage form
+?>
+<!-- START IADVIZE LIVECHAT -->
+<?php
+if(!empty ($pdt['idCommercial']) && !empty($boUser)){?>
+  <script type="text/javascript">
+  var idzCustomData = {"email_commercial":"<?php echo $boUser[0]['email']; ?>"}; </script>
+
+  <script type="text/javascript">
+  var iproto = (("https:" == document.location.protocol) ? "https://" : "http://");
+  document.write(unescape("%3Cscript src='" + iproto + "lc.iadvize.com/iadvize.js?sid=6631&lang=fr'type='text/javascript'%3E%3C/script%3E"));
+  </script>
+<? } ?>
+<!-- END IADVIZE LIVECHAT -->
+
+
+<!-- treepodia video tracking -->
+<script type="text/javascript">
+document.write(unescape("%3Cscript src='" + document.location.protocol + "//dxa05szpct2ws.cloudfront.net/TreepodiaAsyncLoader.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+<script type="text/javascript">
+function initTreepodia () {
+   try { Treepodia.getProduct('UA-TECHNICONTACT','<?php echo $pdt["id"] ?>').logAddToCart(); } catch (e) {}
+}
+</script>
+<!-- treepodia video tracking -->
+

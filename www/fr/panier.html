@@ -1,0 +1,509 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+require(ICLASS."CUserSession.php");
+require(ICLASS."CCart.php");
+
+$handle = DBHandle::get_instance();
+$session = new UserSession($handle);
+$cart = new Cart($handle,$session->getID());
+
+$badPromotion = false;
+
+// Traiter les actions
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+  if (isset($_POST['todo'])) {
+    list($action,$value) = explode('_',$_POST['todo']);
+
+    switch ($action) {
+      case 'clearall' :
+        $cart->clearProducts();
+        $cart->calculateCart();
+        break;
+
+      case 'delpdt' :
+        if (!empty($value)) {
+          list($pdtID,$refID) = explode('-',$value);
+          if (preg_match('/^\d+$/',$refID)) {
+            $cart->delProduct($refID);
+            $cart->calculateCart();
+            
+            // searching for references of the same product
+            $pdtStillPresent = false;
+            foreach($cart->items as $item) {
+              if ($item["idProduct"] == $pdtID) {
+                $pdtStillPresent = true;
+                break;
+              }
+            }
+            
+            // Avail, only if there's no reference of this product anymore in the cart
+            if (!$pdtStillPresent && !TEST) {
+              $api = new JsonRpcClient(AVAIL_JSONRPC_API_URL);
+              try {
+                $api->logRemovedFromCart(array(
+                  "SessionID" => $_COOKIE["__avail_session__"],
+                  "ProductID" => $pdtID
+                ));
+              } catch (Exception $e) {
+                //echo $e->getMessage();
+              }
+            }
+          }
+        }
+        break;
+
+      case 'updqte' :
+        if (isset($_POST['updatestring'])) {
+          $data_ref_lines = explode('<_>',$_POST['updatestring']);
+          foreach ($data_ref_lines as $data_ref_line) {
+            list($refID,$quantity) = explode('-',$data_ref_line);
+            if (preg_match('/^\d+$/',$refID) && preg_match('/^[1-9]?[0-9]*$/',$quantity)) {
+              $cart->updateProductQuantity($refID,$quantity);
+            }
+          }
+          $cart->calculateCart();
+        }
+        break;
+      
+      case "addInsurance" :
+        $cart->calculateCart();
+        $cart->addInsurance();
+        $cart->calculateCart();
+        break;
+      
+      case "delInsurance" :
+        $cart->calculateCart();
+        $cart->removeInsurance();
+        $cart->calculateCart();
+        break;
+
+      default : break;
+    }
+  }
+  if (isset($_POST["promotion_code"])) {
+    if ($_POST["promotion_code"] != "") {
+      require_once ICLASS."CPromotion.php";
+      if (Promotion::promotionCodeIsValid(time(),$_POST["promotion_code"]))
+        $cart->promotionCode = $_POST["promotion_code"];
+      else {
+        $cart->promotionCode = "";
+        $badPromotion = true;
+      }
+    }
+    $cart->calculateCart();
+  }
+}
+else {
+  $cart->calculateCart();
+}
+//$showMins = $cart->locked == 1 && $cart->valid == 0;
+$showMins = true;
+
+$criteo = array('pdt_ids' => array(), 'pdt_prices' => array(), 'pdt_quantities' => array());
+foreach ($cart->items as $item) {
+  $criteo['pdt_ids'][] = $item['idProduct'];
+  $criteo['pdt_prices'][] = $item['priceHT'];
+  $criteo['pdt_quantities'][] = $item['quantity'];
+}
+
+$eperflex = array();
+foreach ($cart->items as $item) {
+  $eperflex[] = array((int)$item['idProduct'], $item['priceHT']);
+}
+
+define("__PANIER__",true);
+define("__BR_NO_PUB__",true);
+define("NOINDEX_FOLLOW",true);
+require(SITE."head.php");
+?>
+            <div id="body" class="white-bg">
+              <div class="blocks-left">
+                <?php if ($showMins) { ?>
+                <script type="text/javascript">
+                  HN.TC.GVars.notValidPdtList = <?php echo json_encode($cart->notValidPdtList) ?>;
+                  HN.TC.GVars.notValidAdvList = <?php echo json_encode($cart->notValidAdvList) ?>;
+                </script>
+                <?php } ?>
+                <?php if ($badPromotion) { ?><script type="text/javascript">$(function(){ alert("Nous sommes désolés, votre code promotionnel est invalide."); })</script><?php } ?>
+                <form name="panier" action="<?php echo URL; ?>panier.html" method="post">
+                  <input type="hidden" name="cartID" value="<?php echo $cart->id; ?>" />
+                  <input type="hidden" name="todo" value="" />
+                  <div class="cart">
+               <?php if ($cart->itemCount == 0) { ?>
+                <div class="catalogs-form lead-form-pdt-preview fl">
+                  <h2 class="big-blue-title">Votre panier</h2>
+                  <br/>
+                  <br/>
+                  Votre panier est actuellement vide.
+                  <br/>
+                  <br/>
+                  Vous n'arrivez pas à trouver le produit recherché?<br />
+                  Faites appel à vos experts :<br />
+                  <br />
+                    <a class="header-search-team-link" href="<?php echo URL ?>recherche.html"></a>
+                    <br />
+                    <br />
+                  <br />
+                  <br />
+                    Ou contactez le <br />
+                    <div class="blue-title">01.72.08.01.14</div>
+                </div>
+                <div class="fr">
+                  <div class="cart-left">
+                      <div class="q-a-block block">
+                        <div class="q-a-title">Vos questions, nos réponses</div>
+                        <ul>
+                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande']);<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
+                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés']);<?php endif; ?>HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
+                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Livraison en Corse']);<?php endif; ?>HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
+                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander']);<?php endif; ?>HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
+                        </ul>
+                      </div>
+                      <div class="trust-block block">
+                        <div class="trust-block-title">Ils nous font confiance</div>
+                          <table>
+                            <tr>
+                            <td><img src="<?php echo $res_url.'images/theytrustus/clairefontaine.jpg'; ?>" alt="clairefontaine"/></td>
+                            <td><img src="<?php echo $res_url.'images/theytrustus/postit.jpg'; ?>" alt="postit"/></td>
+                            <td><img src="<?php echo $res_url.'images/theytrustus/hp.jpg'; ?>" alt="hp"/></td>
+                          </tr>
+                          <tr>
+                            <td><img src="<?php echo $res_url.'images/theytrustus/rubbermaid.jpg'; ?>" alt="rubbermaid"/></td>
+                            <td><img src="<?php echo $res_url.'images/theytrustus/whirlpool.jpg'; ?>" alt="whirlpool"/></td>
+                            <td></td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
+                </div>
+               <?php } elseif ($cart->itemCount == 1) { ?>
+                  <!--<h2>Vous avez 1 article dans votre panier:</h2>-->
+               <?php } else { ?>
+                  <!--<h2>Vous avez <?php echo $cart->itemCount; ?> articles dans votre panier:</h2>-->
+               <?php } ?>
+                <!--</div>-->
+                
+              <?php if ($cart->itemCount > 0) { ?>
+                <div class="zero"></div>
+                
+                <div class="cart-wide">
+                  <div class="cart-table">
+                    <table cellspacing="0" cellpadding="0" class="table-type-2">
+                      <thead>
+                      <tr>
+                        <th colspan="2">Produit - désignation</th>
+                        <th>Référence</th>
+                        <th>Livraison</th>
+                        <th>Prix HT</th>
+                        <th>Quantité</th>
+                        <th>Prix total HT</th>
+                        <th class="delete"></th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                    <?php foreach ($cart->items as $item) { ?>
+                        <tr class="item-line">
+                          <td><img src="<?php echo $item["pic_url"]; ?>" alt=""/></td>
+                          <td class="designation"><a href="<?php echo $item["url"]; ?>"><?php echo $item["cart_desc"]; ?></a></td>
+                          <td><input type="hidden" name="pdt" value="<?php echo $item["idProduct"]."-".$item["idTC"]; ?>"/><?php echo htmlentities($item["idTC"]); ?></td>
+                          <td class="al"><?php echo $item["delivery_time"]; ?></td>
+                          <td class="price">
+                            <?php echo sprintf("%.02f", $item["price"]); ?> €
+                            <?php if ($item["ecotax"] > 0) : ?>
+                              <small>dont éco part : <?php echo $item["ecotax"] ?> €</small>
+                            <?php endif ?>
+                          </td>
+                          <td class="quantity"><div><div class="sub"></div><input type="text" name="qty" value="<?php echo $item["quantity"]; ?>"/><div class="add"></div></div>
+                            <a href=""<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Page panier', 'Gestion panier', 'Recalcul ligne produit']);"<?php endif; ?>>recalculer</a>
+                          </td>
+                          <td class="price">
+                            <?php echo sprintf("%.02f", $item["sum_base"]); ?> €
+                            <?php if ($item["sumEcotax"] > 0) : ?>
+                              <small>dont éco part : <?php echo $item["sumEcotax"] ?> €</small>
+                            <?php endif ?>
+                          </td>
+                          <td class="delete"><div class="delete"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Page panier', 'Gestion panier', 'Suppression produit']);"<?php endif; ?>></div></td>
+                        </tr>
+                        <tr class="comment-line">
+                          <td class="comment" colspan="8"><input type="text" class="comment" value="<?php echo to_entities($item["comment"]); ?>"/></td>
+                        </tr>
+                      <?php	if (!empty($item["promotion"])) { ?>
+                        <tr class="item-promotion">
+                          <td></td>
+                          <td colspan="5">Promotion de <b><?php echo sprintf("%.02f", $item["promotionpc"]) . "%</b> pour <b>" . $item["quantity"] . "</b> x " . $item['name']; ?></td>
+                          <td><?php echo sprintf("%.02f", -$item["sum_promotion"]); ?> €</td>
+                          <td></td>
+                        </tr>
+                      <?php	} ?>
+                      <?php if (!empty($item["discount"])) { ?>
+                        <tr class="item-discount">
+                          <td></td>
+                          <td colspan="5">Remise de <b><?php echo sprintf("%.02f", $item["discountpc"]) . "%</b> pour <b>" . $item["quantity"] . "</b> x " . $item['name']; ?></td>
+                          <td><?php echo sprintf("%.02f", -$item["sum_discount"]); ?> €</td>
+                          <td></td>
+                        </tr>
+                      <?php	} ?>
+                      <?php /*if ($showMins && isset($cart->notValidPdtList[$item["idProduct"]]) && $cart->notValidPdtList[$item["idProduct"]]["idTCn"] == $item["idTC"]) { ?>
+                        <tr class="item-min-pdt cartConstraintsPdt">
+                          <td colspan="8">La quantité mimimum requise pour commander ce(s) produit(s) est de <?php echo $cart->notValidPdtList[$item["idProduct"]]["qty_min"]; ?> (<?php echo $cart->notValidPdtList[$item["idProduct"]]["qty"]; ?> actuellement)</td>
+                        </tr>
+                      <?php	} */?>
+                      <?php /*if ($showMins && isset($cart->notValidAdvList[$item["advID"]]) && $cart->notValidAdvList[$item["advID"]]["idTCn"] == $item["idTC"]) { ?>
+                        <tr class="item-min-adv cartConstraintsAdv">
+                          <td colspan="8">Le total de commande pour l'ensemble des produits entourés en rouge doit être au minimum de<br><?php echo sprintf("%.0f", $cart->notValidAdvList[$item["advID"]]["sum_min"]); ?>€ HT (<?php echo sprintf("%.02f", $cart->notValidAdvList[$item["advID"]]["sum"]); ?>€ HT actuellement)</td>
+                        </tr>
+                      <?php	}*/ ?>
+                    <?php } ?>
+                      
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div class="cart-left">
+                    <div class="q-a-block block">
+                      <div class="q-a-title">Vos questions, nos réponses</div>
+                      <ul>
+                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande']);<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés'])<?php endif; ?>;HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Livraison en Corse'])<?php endif; ?>;HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander'])<?php endif; ?>;HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
+                      </ul>
+                    </div>
+                    <div class="trust-block block">
+                      <div class="trust-block-title">Ils nous font confiance</div>
+                        <table>
+                          <tr>
+                          <td><img src="<?php echo $res_url.'images/theytrustus/clairefontaine.jpg'; ?>" alt="clairefontaine"/></td>
+                          <td><img src="<?php echo $res_url.'images/theytrustus/postit.jpg'; ?>" alt="postit"/></td>
+                          <td><img src="<?php echo $res_url.'images/theytrustus/hp.jpg'; ?>" alt="hp"/></td>
+                        </tr>
+                        <tr>
+                          <td><img src="<?php echo $res_url.'images/theytrustus/rubbermaid.jpg'; ?>" alt="rubbermaid"/></td>
+                          <td><img src="<?php echo $res_url.'images/theytrustus/whirlpool.jpg'; ?>" alt="whirlpool"/></td>
+                          <td></td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  <div class="cart-right">
+                    <div class="block">
+                      <div class="discount-code promo-hidden">
+                        <span id="toggle-promotion-code">J'ai un code promo</span>
+                        <div><input type="text" class="text" name="promotion_code" value="" maxlength="255"/> <button>Valider le code</button></div>
+                      </div>
+                     <?php /*if ($cart->can_be_insured) { ?>
+                      <div class="insurance">
+                        <div class="insurance-1 fl">
+                            <img src="ressources/images/pictos/clic-protect.png" alt=""/>
+                            <div class="vs vmaib"></div>
+                            <div class="insurance-text vmaib">Pour <?php echo $cart->insurance; ?>&euro;, garantissez votre achat à 100%<br/>avec ClicProtect &gt; <a href="http://clicprotect.pro/cert1053" class="_blank">Voir toutes les garanties</a></div>
+                        </div>
+                        <div class="insurance-2 fr">
+                          <a id="cart-add-insurance" href="">Assurer mon achat</a>
+                        </div>
+                        <div class="zero"></div>
+                      </div>
+                     <?php } elseif ($cart->insured) { ?>
+                      <div class="insurance">
+                        <div class="insurance-1 fl">
+                            <img src="ressources/images/pictos/clic-protect.png" alt=""/>
+                            <div class="vs vmaib"></div>
+                            <div class="insurance-text vmaib">Votre achat est 100% garanti<br/><a href="http://clicprotect.pro/cert1053" class="_blank">Voir toutes les garanties</a></div>
+                        </div>
+                        <div class="fl"><?php echo sprintf("%.02f", $cart->insurance); ?> €</div>
+                        <div id="cart-del-insurance fl" class="delete"></div>
+                        <div class="zero"></div>
+                      </div>
+                     <?php }*/ ?>
+                    </div>
+
+                    <table class="cart-totals" cellspacing="0" cellpadding="0">
+                      <tbody>
+                        <tr class="stotal-ht">
+                          <td></td>
+                          <td class="label">Sous-total HT:</td>
+                          <td class="amount">
+                            <strike class="grey hidden">xxx € </strike><?php echo sprintf("%.02f", $cart->stotalHT); ?> €<br/>
+                            <em class="hidden">code promotionnel: 5% offerts</em></td>
+                        </tr>
+                        <tr class="fdp">
+                          <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                          <td class="label">Frais de port HT:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->fdpHT); ?> €</td>
+                        </tr>
+                        <tr class="total-ht">
+                          <td></td>
+                          <td class="label">Total HT:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalHT); ?> €</td>
+                        </tr>
+                        <tr class="tva">
+                          <td></td>
+                          <td class="label">TVA (20%):</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalTVA); ?> €</td>
+                        </tr>
+                       <?php if ($cart->insured) { ?>
+                        <tr class="insurance">
+                          <td></td>
+                          <td class="label">ClicProtect</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->insurance); ?> €</td>
+                        </tr>
+                       <?php } ?>
+                        <tr class="total-ttc">
+                          <td></td>
+                          <td class="label">Total TTC:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalTTC); ?> €</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <div class="btn-back-to-shop fl"></div>
+                    <div class="btn-order fr"></div>
+                    <div class="zero"></div>
+                    <a class="fr"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Page panier', 'Gestion panier', 'Impression BDC fax']);"<?php endif; ?> style="margin: 10px 24px 0 0; position: relative; line-height: 20px" href="<?php echo PDF_URL."order-fax.php?cart_id=".$cart->id; ?>" target="_blank"><div class="puce puce-2"></div>Ou commander par FAX</a>
+                    <div class="zero"></div>
+                  </div>
+                </div>
+                
+                <div class="cart-mobile">
+                  <div class="step-title">Panier</div>
+                  <div class="cart-table">
+                    <table cellspacing="0" cellpadding="0" class="table-type-2">
+                      <thead>
+                      <tr>
+                        <th>Produit</th>
+                        <th>Qté</th>
+                        <th class="delete"></th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                    <?php foreach ($cart->items as $item) { ?>
+                        <tr class="item-line">
+                          <td class="infos">
+                            <div class="clearfix">
+                              <img src="<?php echo $item["pic_url"]; ?>" alt=""/>
+                              <a href="<?php echo $item["url"]; ?>"><?php echo $item["cart_desc"]; ?></a>
+                            </div>
+                            <ul class="others clearfix">
+                              <li><div class="label">Référence :</div><div class="text"><input type="hidden" name="pdt" value="<?php echo $item["idProduct"]."-".$item["idTC"]; ?>"/><?php echo htmlentities($item["idTC"]); ?></div></li>
+                              <li><div class="label">Livraison :</div><div class="text"><?php echo $item["delivery_time"]; ?></div></li>
+                              <li><div class="label">Prix U. :</div><div class="text"><?php echo sprintf("%.02f", $item["price"]); ?> €</div></li>
+                              <li><div class="label">Total :</div><div class="text"><?php echo sprintf("%.02f", $item["sum_base"]); ?> €</div></li>
+                            </ul>
+                          </td>
+                          <td class="quantity"><input type="text" name="qty" value="<?php echo $item["quantity"]; ?>"/></td>
+                          <td class="delete"><div class="delete"<?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Page panier', 'Gestion panier', 'Suppression produit']);"<?php endif; ?>></div></td>
+                        </tr>
+                      <?php	if (!empty($item["promotion"])) { ?>
+                        <tr class="item-promotion">
+                          <td colspan="3">
+                            Promotion de <b><?php echo sprintf("%.02f", $item["promotionpc"]) . "%</b> pour <b>" . $item["quantity"] . "</b> x " . $item['name']; ?><br />
+                            <?php echo sprintf("%.02f", -$item["sum_promotion"]); ?> €
+                          </td>
+                        </tr>
+                      <?php	} ?>
+                      <?php if (!empty($item["discount"])) { ?>
+                        <tr class="item-discount">
+                          <td colspan="3">
+                            Remise de <b><?php echo sprintf("%.02f", $item["discountpc"]) . "%</b> pour <b>" . $item["quantity"] . "</b> x " . $item['name']; ?><br />
+                            <?php echo sprintf("%.02f", -$item["sum_discount"]); ?> €
+                          </td>
+                        </tr>
+                      <?php	} ?>
+                    <?php } ?>
+                      
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div class="cart-right">
+                    <div class="block">
+                      <div class="discount-code promo-hidden">
+                        <span id="toggle-promotion-code">J'ai un code promo</span>
+                        <div><input type="text" class="text" name="promotion_code" value="" maxlength="255"/> <button>Valider le code</button></div>
+                      </div>
+                    </div>
+
+                    <table class="cart-totals" cellspacing="0" cellpadding="0">
+                      <tbody>
+                        <tr class="stotal-ht">
+                          <td></td>
+                          <td class="label">Sous-total HT:</td>
+                          <td class="amount">
+                            <strike class="grey hidden">xxx € </strike><?php echo sprintf("%.02f", $cart->stotalHT); ?> €<br/>
+                            <em class="hidden">code promotionnel: 5% offerts</em></td>
+                        </tr>
+                        <tr class="fdp">
+                          <td><img src="<?php echo $res_url.'images/picto-delivery.png'; ?>" alt="logo" /></td>
+                          <td class="label">Frais de port HT:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->fdpHT); ?> €</td>
+                        </tr>
+                        <tr class="total-ht">
+                          <td></td>
+                          <td class="label">Total HT:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalHT); ?> €</td>
+                        </tr>
+                        <tr class="tva">
+                          <td></td>
+                          <td class="label">TVA (20%):</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalTVA); ?> €</td>
+                        </tr>
+                       <?php if ($cart->insured) { ?>
+                        <tr class="insurance">
+                          <td></td>
+                          <td class="label">ClicProtect</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->insurance); ?> €</td>
+                        </tr>
+                       <?php } ?>
+                        <tr class="total-ttc">
+                          <td></td>
+                          <td class="label">Total TTC:</td>
+                          <td class="amount"><?php echo sprintf("%.02f", $cart->totalTTC); ?> €</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <div class="btn-back-to-shop">Poursuivre mes achats</div>
+                    <div class="btn-order">Valider mon panier</div>
+                    <a class="btn-order-fax" <?php if(!TEST): ?> onClick="_gaq.push(['_trackEvent', 'Page panier', 'Gestion panier', 'Impression BDC fax']);"<?php endif; ?> href="<?php echo PDF_URL."order-fax.php?cart_id=".$cart->id; ?>" target="_blank"><div class="puce puce-2"></div>Ou commander par FAX</a>
+                  </div>
+                </div>
+                
+          <?php } ?>
+                <div class="zero"></div>
+                <!--<br/>
+                <div class="pictos">
+                  Modes de paiement disponibles
+                  <div class="line">
+                    <div class="pm-visa vtaib"></div>
+                    <div class="pm-cb vtaib"></div>
+                    <div class="pm-mc vtaib"></div>
+                    <div class="pm-paypal vtaib"></div>
+                    <div class="pm-cheque vtaib"><div class="pm-label">Chèque</div></div>
+                    <div class="pm-transfer vtaib"><div class="pm-label">Virement</div></div>
+                    <div class="pm-money-order vtaib"><div class="pm-label">Mandat administratif</div></div><div class="vsma"></div>
+                  </div>
+                </div>-->
+              </div>
+            </form>
+            <!--<br/>
+            <div class="cart-help help-block">
+              <div class="title">
+                Quelle différence entre une <strong>commande</strong> <img src="<?php echo $res_url; ?>icons/cart-dark_16x16.png" alt=""/> et un <strong>devis</strong> <img src="<?php echo $res_url; ?>icons/estimate-blue_14x18.png" alt=""/> ?
+              </div>
+              <br/>
+              Vous venez de sélectionner les produits qui vous intéressent et nous vous en remercions.<br/>
+              <br/>
+              Dès lors, vous pouvez:<br/>
+              <br/>
+              - Commander directement en ligne les produits sélectionnés <img src="<?php echo $res_url; ?>icons/cart-dark_16x16.png" alt=""/><br/>
+              - Créer un devis à partir du contenu du panier <img src="<?php echo $res_url; ?>icons/estimate-blue_14x18.png" alt=""/><br/>
+              <br/>
+              Le devis créé sera imprimable directement et archivé dans votre espace client pour être consulté et modifié é tout moment si vous le souhaitez.
+            </div>-->
+                                </div>
+<div id="q-a-dialog" title=""></div>
+
+<?php require(SITE."blocks-right.php"); ?>
+</div>
+<?php require(SITE."foot.php"); ?>

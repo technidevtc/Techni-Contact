@@ -1,0 +1,159 @@
+
+<form action="#" method="POST">	
+	
+	<div class="row">
+		<div class="form-stats-left">
+			
+		</div><!-- end .form-left -->
+		
+		
+		<div class="form-stats-right">
+			&nbsp;
+		</div>
+	</div><!-- end div .row -->
+	
+	<div class="row">
+		<br />
+		<div class="form-stats-one">
+			<div class="form-statselement-left">
+				De &nbsp;&nbsp;
+				<select id="stats_interval_v1" name="stats_interval_v1">
+				<?php
+				
+					/*$s1_start = $s1_month = strtotime('2012-01-01');
+					$s1_end = strtotime(date('Y-m').'-01');
+					
+					$date_compare_start	= strtotime(date('y-01-01'));
+					while($s1_month < $s1_end){
+						echo('<option value="'.date('m-y', $s1_month).'"');
+							if($s1_month==$date_compare_start){
+								echo(' selected="true" ');
+							}
+						echo('>');
+						
+							$s1_month_to_show_en	= date('F', $s1_month);
+							$s1_month_to_show_fr	= str_ireplace($months_en, $months_fr, $s1_month_to_show_en);
+						
+							echo (ucfirst($s1_month_to_show_fr.''.date('Y', $s1_month)));
+						echo('</option>');
+						 
+						 $s1_month = strtotime("+1 month", $s1_month);
+					}*/
+					
+					$s1_start = $s1_month = strtotime(date('Y-m').'-01');
+					
+					//To have January on the list we gonna
+					//take the last month of the previous year
+					//$s1_end = strtotime('2012-01-01');
+					$s1_end = strtotime('2011-12-01');
+					
+					$date_compare_start	= strtotime(date('y-01-01'));
+					while($s1_month > $s1_end){
+						echo('<option value="'.date('Ym', $s1_month).'"');
+							if($s1_month==$date_compare_start){
+								echo(' selected="true" ');
+							}
+						echo('>');
+						
+							$s1_month_to_show_en	= date('F', $s1_month);
+							$s1_month_to_show_fr	= str_ireplace($months_en, $months_fr, $s1_month_to_show_en);
+						
+							echo (ucfirst($s1_month_to_show_fr.' '.date('Y', $s1_month)));
+						echo('</option>');
+						 
+						 $s1_month = strtotime("-1 month", $s1_month);
+					}
+				?>
+				</select>
+				
+				&nbsp; &agrave; &nbsp;&nbsp;
+				<select id="stats_interval_v2" name="stats_interval_v2">
+				<?php
+					
+					//$s2_start = $s2_month = strtotime("+1 month", strtotime(date('Y-m').'-01'));
+					$s2_start = $s2_month = strtotime(date('Y-m').'-01');
+					
+					$s2_end = strtotime('2011-12-01');
+					
+					$date_compare_end	= strtotime(date('Y-m').'-01');
+					
+					while($s2_month > $s2_end){
+						echo('<option value="'.date('Ym', $s2_month).'"');
+							if($s2_month==$date_compare_end){
+								echo(' selected="true" ');
+							}
+						echo('>');
+						
+							$s2_month_to_show_en	= date('F', $s2_month);
+							$s2_month_to_show_fr	= str_ireplace($months_en, $months_fr, $s2_month_to_show_en);
+						
+							echo (ucfirst($s2_month_to_show_fr.' '.date('Y', $s2_month)));
+						echo('</option>');
+						 
+						 $s2_month = strtotime("-1 month", $s2_month);
+					}
+					
+				?>
+				</select>
+				
+				<input type="button" onclick="stats_product_detail_lunch_generation('interval');" value="OK" class="btn btn-primary" style="padding: 2px 10px; margin-left: 22px; margin-top: -2px;" />
+				
+			</div>
+			
+			<div class="form-statselement-right">
+			</div>
+
+		</div><!-- end .form-stats-one -->
+		
+	</div><!-- end div .row -->
+	
+	<div class="row">
+		<br />
+			
+		<div class="form-stats-one">
+			<div class="form-statselement-left">
+				<div class="form-stats-element-left" style="float: left; width: 184px;">
+					Ou s&eacute;lectionnez un mois
+				</div>
+				<div class="form-stats-element-right">
+					<select id="stats_simple_v1" name="stats_simple_v1">
+					<?php
+						
+						$s3_start = $s3_month = strtotime(date('Y-m').'-01');
+						$s3_end = strtotime('2011-12-01');
+						
+						$date_compare_end	= strtotime(date('Y-m').'-01');
+						
+						while($s3_month > $s3_end){
+							echo('<option value="'.date('Ym', $s3_month).'"');
+								if($s3_month==$date_compare_end){
+									echo(' selected="true" ');
+								}
+							echo('>');
+							
+								$s3_month_to_show_en	= date('F', $s3_month);
+								$s3_month_to_show_fr	= str_ireplace($months_en, $months_fr, $s3_month_to_show_en);
+							
+								echo (ucfirst($s3_month_to_show_fr.' '.date('Y', $s3_month)));
+							echo('</option>');
+							 
+							 $s3_month = strtotime("-1 month", $s3_month);
+						}
+						
+						echo('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;');
+					?>
+					</select>
+					
+					<input type="button" onclick="stats_product_detail_lunch_generation('simple');" value="OK" class="btn btn-primary" style="padding: 2px 10px; margin-left: 22px; margin-top: -2px;" />
+					
+					<input type="hidden" id="stats_products_hidden_id" value="<?php echo $content_get_product_info['id']; ?>" />
+				</div>
+			</div>
+		</div><!-- end .form-stats-one -->
+		
+		<div class="form-statselement-right">
+		</div>
+	</div><!-- end div .row -->
+
+
+</form>

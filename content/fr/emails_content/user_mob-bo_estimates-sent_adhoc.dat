@@ -1,0 +1,35 @@
+<p>
+  Bonjour CLIENT_FIRSTNAME CLIENT_LASTNAME<br/>
+  <br/>
+  Suite à votre demande, j’ai le plaisir vous adresser votre devis personnalisé.<br/>
+  <br/>
+  <a href="ESTIMATE_LINK">Consultez votre devis</a><br/>
+  <br/>
+  Afin de le valider, merci de nous le renvoyer par courrier, par fax au 01 83 62 36 12 ou par email <a href="mailto:commandes@mobaneo.com">commandes@mobaneo.com</a><br/>
+  <br/>
+  Important : en cas de règlement "A la commande", veuillez joindre votre règlement afin que votre commande puisse être traitée<br/>
+  <br/>
+  N’hésitez pas à me contacter pour renseignement complémentaire concernant cette offre :<br/>
+  <br/>
+  OPERATOR_NAME<br/>
+  OPERATOR_PHONE<br/>
+  <br/>
+  Dans l’attente d’une fructueuse collaboration.<br/>
+  <br/>
+  Cordialement.<br/>
+</p>
+
+<p style="font-size: 11px">
+	<b>Mobaneo est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 83 62 96 95 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="http://www.mobaneo.com/">http://www.mobaneo.com/</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

@@ -1,0 +1,55 @@
+<p>Bonjour CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</p>
+
+<p>Vous venez de faire une <b>CUSTOMER_REQUESTTYPE</b> pour le produit <a href="MAINPRODUCT_URL">MAINPRODUCT_NAME</a>. Nous vous en remercions.</p>
+
+<p>Ce produit étant fourni par l'un de nos <b>partenaires</b>, <b>votre demande lui a été directement transmise</b>.</p>
+
+<p>Notre partenaire reprendra contact avec vous dans les plus brefs délais (délai moyen constaté : 24H/48H).</p>
+
+Si vous souhaitez lui apporter un complément d'information concernant votre demande, <b>vous trouverez ci-dessous ses coordonnées, ainsi qu'un rappel du produit que vous avez sollicité</b>.</p>
+
+<p><b>Coordonnées de notre partenaire pour le produit MAINPRODUCT_NAME :</b></p>
+
+<p><b>MAINPRODUCT_ADVERTISER_NAME</b><br/>
+MAINPRODUCT_ADVERTISER_ADDRESS<br/>
+MAINPRODUCT_ADVERTISER_COMPLEMENT<br/>
+MAINPRODUCT_ADVERTISER_PC – MAINPRODUCT_ADVERTISER_CITY<br/>
+MAINPRODUCT_ADVERTISER_COUNTRY<br/>
+Téléphone : MAINPRODUCT_ADVERTISER_PHONE<br/>
+Fax : MAINPRODUCT_ADVERTISER_FAX<br/>
+Contact : MAINPRODUCT_ADVERTISER_CONTACT MAINPRODUCT_ADVERTISER_EMAIL<br/>
+MAINPRODUCT_ADVERTISER_URL</p>
+
+<p><b>Rappel du produit que vous avez sollicité :</b></p>
+
+<p><img src="MAINPRODUCT_IMAGE" alt=""/><br/>
+<b>MAINPRODUCT_NAME</b><br/>
+MAINPRODUCT_FASTDESC<br/>
+ID fiche produit: MAINPRODUCT_ID<br/>
+Description : MAINPRODUCT_DESCRIPTION<br/>
+Description Technique : MAINPRODUCT_DETAILEDDESCRIPTION<br/>
+Prix : MAINPRODUCT_PRICEDATA</p>
+
+<br/>
+<p>Merci de votre confiance et à très bientôt sur <a href="SITE_MAIN_URL">Techni-Contact.com</a>, la galerie marchande des professionnels.</p>
+
+<p>
+<b>Techni-Contact vous informe</b><br/>
+<i><a href="http://blog.techni-contact.com/?utm_source=email&utm_medium=email&utm_campaign=mail-client/">Découvrez notre blog</a> : législation professionnelle, guides d’achat et actualités du site</i><br/>
+<i><a href="http://feeds2.feedburner.com/LeBlogDeTechni-contactcom">S'abonner</a> directement à notre blog</i><br/>
+</p>
+
+<p>
+<b>Techni-Contact est édité par</b><br/>
+Md2i<br/>
+253 rue Gallieni<br/>
+F-92774 BOULOGNE BILLANCOURT cedex<br/>
+Tel : 0.811.06.07.07 (appel local)<br/>
+Fax: 01 72 08 01 18<br/>
+<a href="SITE_MAIN_URL">http://www.techni-contact.com</a><br/>
+<br/>
+SAS au capital de 160.000 €<br/>
+SIRET : 392 772 497 000 39<br/>
+TVA n° FR12 392 772 497<br/>
+R.C. NANTERRE B 392 772 497<br/>
+</p>

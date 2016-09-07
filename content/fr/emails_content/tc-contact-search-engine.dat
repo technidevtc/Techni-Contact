@@ -1,0 +1,14 @@
+<p>Un internaute n'a pas su trouver le produit qu'il recherche et sollicite de l'aide :</p>
+
+<p>Date : CONTACT_DATE</p>
+
+<p>
+Nom : CUSTOMER_LASTNAME<br/>
+Prénom : CUSTOMER_FIRSTNAME<br/>
+Société : CUSTOMER_COMPANY_NAME<br/>
+Tel : <a href="dial:CUSTOMER_PHONE">CUSTOMER_PHONE</a><br/>
+Adresse mail : <a href="mailto:CUSTOMER_EMAIL?subject=Demande de CONTACT_SUBJECT">CUSTOMER_EMAIL</a>
+</p>
+
+<p>Recherche : CONTACT_MESSAGE</p>
+

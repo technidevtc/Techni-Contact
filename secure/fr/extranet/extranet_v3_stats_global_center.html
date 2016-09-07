@@ -1,0 +1,59 @@
+<div class="za">
+	<div id="page-heading" class="ng-scope">
+		<h1><i class="fa fa-line-chart"></i> Statistiques</h1>
+    </div>
+	
+	<div class="row">
+		<div class="col-md-12" style="width:100%;">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h4>
+						Globales
+					</h4>
+
+				</div>
+				
+				<div class="panel-body">
+					
+					<div class="panel-form">
+						<?php require_once('extranet_v3_stats_global_form.html'); ?>
+					</div>
+					
+					<div id="loader_panel-table" style="display: block;">
+						<img src="<?php echo EXTRANET_URL.'ressourcesv3/images/lightbox-ico-loading.gif'; ?>" />
+					</div>
+					<!--
+					http://www.jqueryrain.com/?b26c1A3N
+					-->
+					<div id="panel-table">
+						<div id="panel_stats_content">
+							<div id="stats_load_head"></div>
+							<canvas id="stats_canvas" height="450" width="600"></canvas>
+							<div id="stats_load_results"></div>
+							<div id="stats_btn_export_container">
+								<input type="button" id="stats_btn_export_listner" value="Exporter" onclick="javascript:stats_global_export();" class="btn btn-primary" />
+							</div>
+							
+							<form id="stats_form_export" action="extranet-v3-stats-export-global.html" method="POST" target="_blank">
+								<input type="hidden" id="stats_h_month" name="stats_h_month" value="" />
+								<input type="hidden" id="stats_h_data" name="stats_h_data" value="" />
+								<input type="hidden" id="stats_h_values" name="stats_h_values" value="" />
+							</form>
+						</div><!-- end div #panel_stats_content -->
+					</div><!-- end div #panel-table -->
+
+					<script type="text/javascript">
+						var myBarChart;
+						stats_lunch_generation_type_interval();
+					</script>
+					
+				</div><!-- end div .panel-heading -->
+			</div><!-- end div .panel panel-primary -->
+			
+			
+		</div><!-- end div .col-md-12 -->
+	</div><!-- end div .row -->
+	
+	
+
+</div><!-- end div .za -->

@@ -1,0 +1,434 @@
+/* Start module MAJ Fournisseurs */
+
+#module_maj_fournisseurs, #module_maj_fournisseurs .bg {
+	overflow: auto;
+}
+
+#module_maj_fournisseurs .mmf_head_form_left {
+	float: left;
+	width: 280px;
+}
+
+#module_maj_fournisseurs .mmf_head_form_middle {
+	float: left;
+	width: 330px;
+	margin-top: -10px;
+}
+
+#module_maj_fournisseurs .mmf_head_form_middle .champstexte{
+	width: 300px;
+}
+
+#module_maj_fournisseurs .mmf_head_form_right {
+	float: left;
+	margin-top: -8px;
+}
+
+
+#mmf_autocomp_loader {
+	display: none;
+	background: url("../ressources/images/loader.gif") no-repeat;
+	position: absolute;
+	width: 16px;
+	margin-top: -26px;
+	margin-left: 296px;
+}
+
+#mmf_one_fournisseur_loader {
+	display: none;
+	background: url("../ressources/images/lightbox-ico-loading.gif") no-repeat;
+	position: absolute;
+	width: 35px;
+	height: 35px;
+	margin-top: 16px;
+	margin-left: 570px;
+}
+
+#mmf_autocomp_container {
+	display: none;
+	position: absolute;
+	margin-left: 5px;
+	margin-top: -6px;
+	width: 308px;
+	border: 1px solid #CCC;
+	z-index: 999;
+}
+
+#mmf_autocomp_container ul{
+	box-shadow: 0 4px 15px #ccc;
+	-moz-box-shadow: 0 4px 15px #ccc;
+	background-color: #FFFFFF;
+}
+
+#mmf_autocomp_container li{
+	cursor: pointer;
+	border-bottom: 1px solid #EEEEEE;
+	padding: 2px 5px;
+	font-size: 11px;
+}
+
+#mmf_autocomp_container li:hover{
+	/*background-color: rgb(255, 255, 205);*/
+	background-color: #FFED74
+	/*color: #A7A4A4;*/
+}
+
+#mmf_autocomp_container ul .lastone{
+	border-bottom: none;
+}
+
+
+#module_maj_fournisseurs_one {
+	min-height: 40px;
+	overflow: hidden;
+}
+
+#mmf_one_fournisseur_infos_basic_container {
+	padding-top: 10px;
+}
+
+#mmf_one_fournisseur_infos_basic_container .bg {
+	overflow: hidden;
+}
+
+#mmf_one_fournisseur_infos_basic_content .titreBloc {
+	padding: 2px 2px 2px 8px;
+	color: #FFFFFF;
+	font: bold 12px arial, helvetica, sans-serif;
+	letter-spacing: 1px;
+	border-bottom: 1px solid #EEEEEE;
+	background-color: #606060;
+	text-align: center;
+}
+
+#mmf_one_fournisseur_infos_basic_content  .one_bloc, #mmf_one_fournisseur_infos_basic_content  .one_bloc_c {
+	margin: 2px 10px 15px 0px;
+	width: 360px;
+	border: 1px solid #000000;
+	float: left;
+}
+
+#mmf_one_fournisseur_infos_basic_content .mmf_one_row {
+	margin-left: 5px;
+	overflow: hidden;
+	padding: 2px;
+}
+
+#mmf_one_fournisseur_infos_basic_content .one_bloc .mmf_left {
+	width: 132px;
+	float: left;
+	font-weight: bold;
+	padding-right: 4px;
+}
+
+#mmf_one_fournisseur_infos_basic_content .one_bloc .mmf_right {
+	width: 200px;
+	float: left;
+}
+
+#mmf_one_fournisseur_infos_basic_content .one_bloc_c .mmf_left {
+	width: 240px;
+	float: left;
+	font-weight: bold;
+	padding-right: 4px;
+}
+
+#mmf_one_fournisseur_infos_basic_content .one_bloc_c .mmf_right {
+	width: 100px;
+	float: left;
+}
+
+#mmf_one_fournisseur_infos_basic_content  .coordCustomer {
+	padding: 8px 2px 8px 2px;
+	font: normal 12px arial, helvetica, sans-serif;
+	text-align: left;
+	background-color: #FBFBFB;
+}
+
+#module_maj_fournisseurs .mmf_head_form_right_help {
+	margin: -8px 0 0 50px;
+	float: left;
+	cursor: pointer;
+}
+
+#supplier-update-help-container {
+	display: none;
+	position: absolute;
+	width: 600px;
+	background-color: #FFF;
+	padding: 10px;
+	border: 1px solid #CCC;
+	border-radius: 10px;
+	z-index: 1;
+	margin-left: 123px;
+	margin-top: -26px;
+}
+
+#supplier-update-help-container .mmf_help_header {
+	overflow: hidden;
+	padding: 5px;
+}
+
+#supplier-update-help-container .mmf_help_header_left {
+	float: left;
+	width: 97%;
+	font-weight: bold;
+}
+
+#supplier-update-help-container .mmf_help_header_right {
+	float:left;
+}
+
+#supplier-update-help-container .mmf_help_header_right img{
+	cursor: pointer;
+}
+
+#supplier-update-help-container  .mmf_help_content {
+	padding: 10px;
+}
+
+#mmf_create_import {
+	clear: both;
+	text-align: center;
+}
+
+.mmf_required {
+	color: red;
+}
+
+#mmf_create_import {
+	display: none;
+}
+
+#mmf_fournisseur_new_import {
+	/*margin-top: -40px;*/
+	margin-top: 215px;
+	position: absolute;
+}
+
+#mmf_popup_upload-msn-attachment-db .one_row {
+	overflow: hidden;
+	padding: 5px 0 5px 2px;
+}
+
+#mmf_popup_upload-msn-attachment-db  .one_rowi, #mmf_popup_upload-msn-attachment-db  .one_rowi label {
+	font-style: italic;
+}
+
+#mmf_popup_upload-msn-attachment-db .one_row_left {
+	float: left;
+	width: 240px;
+}
+
+#mmf_import_errors {
+	color: red;
+}
+
+.rederror {
+	color: red;
+}
+
+#mmf_steps_container .pending{
+	opacity: 0.4;
+	font-size: 120%;
+	font-weight: bold;
+	padding: 0px 5px 5px 25px;
+}
+
+#mmf_steps_container .processing{
+	opacity: 0.6;
+	font-size: 120%;
+	font-weight: bold;
+	padding: 0px 5px 5px 25px;
+	background: url("../ressources/images/loader.gif") no-repeat;
+}
+
+#mmf_steps_container .processing_ok{
+	opacity: 1;
+	font-size: 120%;
+	font-weight: bold;
+	padding: 0px 5px 5px 25px;
+	background: url("../ressources/icons/accept.png") no-repeat;
+}
+
+
+
+#mmf_popup_upload-msn-attachment-db input[type="radio"] {
+	margin: 0;
+}
+
+#mmf_popup_upload-msn-attachment-db label {
+	cursor: pointer;
+	padding-right: 5px;
+}
+
+#mmf_popup_upload-msn-attachment-db .mmf_popup_h2_1 {
+	font-weight: bold;
+	padding-bottom: 4px;
+	margin-left: -3px;
+}
+
+#mmf_popup_upload-msn-attachment-db .mmf_popup_h2_2 {
+	font-weight: bold;
+	padding-bottom: 4px;
+	margin-left: -3px;
+	padding-top: 9px;
+}
+
+/* End module MAJ Fournisseurs */
+
+/* Start import results page */
+
+#mmf_import_results .titreBloc {
+	padding: 2px 2px 2px 8px;
+	color: #FFFFFF;
+	font: bold 12px arial, helvetica, sans-serif;
+	letter-spacing: 1px;
+	border-bottom: 1px solid #EEEEEE;
+	background-color: #606060;
+	text-align: center;
+}
+
+#mmf_import_results  .one_bloc, #mmf_import_results  .one_bloc_c {
+	margin: 2px 10px 15px 0px;
+	width: 460px;
+	border: 1px solid #000000;
+	float: left;
+}
+
+#mmf_import_results  .one_bloc_c {
+	margin-left: 20px;
+}
+
+#mmf_import_results .mmf_one_row {
+	margin-left: 5px;
+	overflow: hidden;
+	padding: 2px;
+}
+
+#mmf_import_results .one_bloc .mmf_left {
+	width: 300px;
+	float: left;
+	font-weight: bold;
+	padding-right: 4px;
+}
+
+#mmf_import_results .one_bloc .mmf_right {
+	width: 200px;
+	float: left;
+}
+
+#mmf_import_results .one_bloc_c .mmf_left {
+	width: 270px;
+	float: left;
+	font-weight: bold;
+	padding-right: 4px;
+}
+
+#mmf_import_results .one_bloc_c .mmf_right {
+	width: 100px;
+	float: left;
+}
+
+#mmf_import_results  .coordCustomer {
+	padding: 8px 2px 8px 2px;
+	font: normal 12px arial, helvetica, sans-serif;
+	text-align: left;
+	background-color: #FBFBFB;
+}
+
+#mmf_btn_cancel_operation {
+	margin-left: -86px; 
+}
+
+
+#mmf_last_imports_content .mmf_lic_row_h  {
+	overflow: hidden;
+	background-color: #666666;
+	color: #FFFFFF;
+	font-weight: bold;
+	font-size: 12px;
+	text-align: center;
+	padding: 2px;
+}
+
+#mmf_last_imports_content .mmf_lic_row  {
+	overflow: hidden;
+	font-weight: bold;
+	font-size: 12px;
+	text-align: center;
+	padding: 7px 0px 5px 0px;
+	border-bottom: 1px solid #CCC;
+	width: 99.7%;
+	margin-left: 1px;
+}
+
+#mmf_last_imports_content .mmf_lic_voir {
+	float: left;
+	width: 45px;
+}
+
+#mmf_last_imports_content .mmf_lic_datec {
+	float: left;
+	width: 135px;
+}
+
+#mmf_last_imports_content .mmf_lic_nomf {
+	float: left;
+	width: 135px;
+}
+
+#mmf_last_imports_content .mmf_lic_etat {
+	float: left;
+	width: 90px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdm {
+	float: left;
+	width: 125px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdf {
+	float: left;
+	width: 120px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdmaj {
+	float: left;
+	width: 110px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdfob {
+	float: left;
+	width: 110px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdfar {
+	float: left;
+	width: 110px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdpab{
+	float: left;
+	width: 120px;
+	padding: 0 5px 0 5px;
+}
+
+#mmf_last_imports_content .mmf_lic_nrefdope{
+	float: left;
+	width: 150px;
+	padding: 0 5px 0 5px;
+	text-align: left;
+}
+
+#mmf_import_results .bg {
+	overflow: hidden;
+}
+
+/* End import results page */
+

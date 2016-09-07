@@ -1,0 +1,34 @@
+<p>
+	Bonjour <b>CUSTOMER_FIRSTNAME CUSTOMER_LASTNAME</b><br/>
+	<br/>
+	Vous venez de créer <a href="SITE_ACCOUNT_URL_LOGIN?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">un compte</a> sur notre site <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">Techni-Contact.com</a> et nous vous en remercions.<br/>
+	<br/>
+	Votre numéro client est : <b>CUSTOMER_ID</b>. Ce numéro est à nous communiquer pour toute demande concernant vos commandes ou vos devis.<br/>
+	Votre compte client vous permet désormais :
+</p>
+<ol>
+	<li>De commander ou créer un devis PDF sans avoir à ressaisir vos coordonnées.</li>
+	<li>De consulter ou gérer vos commandes et devis PDF.</li>
+	<li>De nous contacter directement par mail concernant un devis ou une commande.</li>
+	<li>De gérer vos coordonnées personnelles</li>
+</ol>
+<p>
+	Pour toute question concernant l’utilisation de notre site internet, nous vous invitons à consulter notre <a href="SITE_HELP_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">rubrique aide</a>.<br/>
+	<br/>
+	Toute l'équipe <a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-creation-compte-client">Techni-Contact.com</a> vous remercie pour votre confiance.
+</p>
+
+<p style="font-size: 11px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="SITE_MAIN_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">http://www.techni-contact.com</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

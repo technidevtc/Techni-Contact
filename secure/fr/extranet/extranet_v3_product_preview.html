@@ -1,0 +1,511 @@
+<?php
+	require_once('extranet_v3_functions.php');
+	define("PREVIEW", true);
+
+
+	$id_fiche		= mysql_escape_string($_GET['id']);
+	$type_fiche		= mysql_escape_string($_GET['t']);
+	
+	//c => is for the Draft add
+	//e => is for the Draft edit
+	//pc	=> is for Pending add
+	//pe	=> is for Pending edit
+	if(strcmp($type_fiche,'c')==0){
+		$table_source			= 'products_extranet_history';
+		$type_query				= 'Brouillon ajout';
+	}else if(strcmp($type_fiche,'e')==0){ 
+		$table_source			= 'products_extranet_history';
+		$type_query				= 'Brouillon modification';
+		$type_query_condition	= ' AND p__idAdvertiser='.$_SESSION['extranet_user_id'].''; 
+		
+	}else if(strcmp($type_fiche,'pc')==0){ 
+	
+		$table_source			= 'products_add_adv';
+		$type_query				= 'c';
+		
+	}else if(strcmp($type_fiche,'pe')==0){ 
+	
+		$table_source			= 'products_add_adv';
+		$type_query				= 'm';
+		$type_query_condition	= ' AND idAdvertiser='.$_SESSION['extranet_user_id'].'';
+		
+	}
+	
+	//Get the infos about the fiche
+	//And check if it's fiche
+	if($table_source=='products_extranet_history'){
+	
+		$result_get_history = $db->query("SELECT 
+									* 
+								FROM 
+									products_extranet_history  
+								WHERE  
+									p_add_adv___id=".$id_fiche."  
+									".$type_query_condition." 
+								AND
+									user_operation='".$type_query."'
+									", __FILE__, __LINE__);
+		
+		
+		if(empty($_SESSION['extranet_user_id']) || !empty($id) || mysql_num_rows($result_get_history)==0){
+			header('Location: ' . EXTRANET_URL);
+			exit;
+		}
+
+		//Fetching the results
+		$content_get_history	= $db->fetchAssoc($result_get_history);
+		
+		
+		//Get the ID Parent from the session !
+		$isSupplier = $_SESSION['extranet_user_parent'] == 61049 ? true : false;
+
+		
+		$pdt['id'] 		= $id_fiche;
+
+		
+		//Loading the informations from the Result Database to the specif vars
+		$pdt['name']     		= $content_get_history['pfr__name'];
+		$pdt['name'] 			= preg_replace('/ +/', ' ', $pdt['name']);
+		
+		$pdt['fastdesc'] 		= $content_get_history['pfr__fastdesc']; 
+		$pdt['descc']    		= $content_get_history['pfr__descc'];
+		$pdt['descd']    		= $content_get_history['pfr__descd'];
+		$pdt['video_code']    	= $content_get_history['p__video_code'];
+		
+		$pdt['shipping_fee']    = $content_get_history['p__shipping_fee'];
+		
+		
+		
+		$pdt['unite']    = $content_get_history['p__unite'];
+		$pdt['price']    = $content_get_history['p__price'];
+		$pdt['price2']   = $content_get_history['p__price2'];
+		$pdt['code_ref'] = '';
+		$pdt['unite']    = substr(trim($content_get_history['p__unite']), 0, 6);
+		if ($pdt['unite'] == ''){ 
+			$pdt['unite'] = 1; 
+		}
+
+
+		$product_familie_query	= $content_get_history['pfam__idFamily'];
+		//$pdt['delai_livraison']   = substr(trim($content_get_history['pfr__delai_livraison']), 0, 255);
+		//$pdt['contrainteProduit'] = substr(trim($content_get_history['p__contrainteProduit']), 0, 9);
+	
+	}else if($table_source=='products_add_adv'){
+	
+		$result_get_history = $db->query("SELECT 
+									* 
+								FROM 
+									products_add_adv  
+								WHERE  
+									id=".$id_fiche." 
+									".$type_query_condition." 
+								AND
+									type='".$type_query."'
+									", __FILE__, __LINE__);
+
+		if(empty($_SESSION['extranet_user_id']) || !empty($id) || mysql_num_rows($result_get_history)==0){
+			header('Location: ' . EXTRANET_URL);
+			exit;
+		}
+
+		//Fetching the results
+		$content_get_history	= $db->fetchAssoc($result_get_history);
+		
+		
+		//Get the ID Parent from the session !
+		$isSupplier = $_SESSION['extranet_user_parent'] == 61049 ? true : false;
+
+		
+		$pdt['id'] 		= $id_fiche;
+
+		
+		//Loading the informations from the Result Database to the specif vars
+		$pdt['name']     		= $content_get_history['name'];
+		$pdt['name'] 			= preg_replace('/ +/', ' ', $pdt['name']);
+		
+		$pdt['fastdesc'] 		= $content_get_history['fastdesc']; 
+		$pdt['descc']    		= $content_get_history['descc'];
+		$pdt['descd']    		= $content_get_history['descd'];
+		$pdt['video_code']    	= $content_get_history['video_code'];
+		
+		$pdt['shipping_fee']    = $content_get_history['shipping_fee'];
+		
+		
+		
+		$pdt['unite']    = $content_get_history['unite'];
+		$pdt['price']    = $content_get_history['price'];
+		$pdt['price2']   = $content_get_history['price2'];
+		$pdt['code_ref'] = '';
+		$pdt['unite']    = substr(trim($content_get_history['unite']), 0, 6);
+		if ($pdt['unite'] == ''){ 
+			$pdt['unite'] = 1; 
+		}
+
+		$product_familie_query	= $content_get_history['families'];
+		//$pdt['delai_livraison']   = substr(trim($content_get_history['pfr__delai_livraison']), 0, 255);
+		//$pdt['contrainteProduit'] = substr(trim($content_get_history['p__contrainteProduit']), 0, 9);
+	
+	}else{
+		header('Location: ' . EXTRANET_URL);
+		exit;
+	}//end else if source table
+	
+	
+
+// setting some vars
+  /*$pdt["price"] = $pdt["hasPrice"] ? $pdt["price"] : "sur devis";
+  $pdt["adv_min_amount"] *= $max_margin;
+  $pdt["ref_count"] = count($pdt["refs"]);
+  if ($pdt["fdp"] == 0) {
+    $pdt["shipping_fee"] = $pdt["hasPrice"] ? "Offerts" : "N/D";
+  } else {
+    if ($ttcPrice) {
+      $tvaValues = Tva::calculatePriceFromId(IDTVA, $pdt['fdp']);
+      $pdt["shipping_fee"] = sprintf("%.2f", $tvaValues['priceTTC'])."€ TTC";
+    } else {
+      $pdt["shipping_fee"] = $pdt["fdp"]."€ HT";
+    }
+  }
+  $pdt["url"] = URL."produits/".$pdt["cat3_id"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+  $pdt["print_url"] = URL."produits/imprimer/".$pdt["cat3_id"]."-".$pdt["id"];
+  $pdt["cart_add_url"] = "panier:".$pdt["cat3_id"]."-".$pdt["id"]."-".$pdt["idtc"];*/
+
+  // loading Images
+  //define("MAX_PDT_PIC_COUNT", 3);
+  
+  //Define the Folder URL 
+	if(strcmp(strtoupper(substr(dirname(__FILE__),0,3)),'C:\\')=='0'){
+		$pictures_url_folder	= 'http://local-pictures-products-adv.techni-contact.com/';
+	}else{
+		$pictures_url_folder	= PRODUCTS_IMAGE_ADV_URL;
+	}
+  
+  $i = 1;
+  while (is_file(PRODUCTS_IMAGE_ADV_INC."zoom/".$pdt["id"]."-".$i.".jpg")) {
+    $pdt["pic_url"][$i-1]["zoom"] = $pictures_url_folder."zoom/".$pdt["id"]."-".$i.".jpg";
+    $pdt["pic_url"][$i-1]["card"] = $pictures_url_folder."card/".$pdt["id"]."-".$i.".jpg";
+    $pdt["pic_url"][$i-1]["thumb_small"] = $pictures_url_folder."thumb_small/".$pdt["id"]."-".$i.".jpg";
+    $i++;
+  }
+  if (count($pdt["pic_url"]) == 0) {
+    $pdt["pic_url"][0]["zoom"] = $pictures_url_folder."no-pic-zoom.gif";
+    $pdt["pic_url"][0]["card"] = $pictures_url_folder."no-pic-card.gif";
+    $pdt["pic_url"][0]["thumb_small"] = $pictures_url_folder."no-pic-thumb_small.gif";
+  }
+  $pdt["pic_url_count"] = count($pdt["pic_url"]);
+  if (DEBUG) $tab_microtime["Product : images"] = microtime(true);
+
+  // loading docs
+  define("MAX_PDT_DOC_COUNT", 3);
+  $pdt["docs"] = mb_unserialize($pdt["docs"]);
+  if (!is_array($pdt["docs"]))
+    $pdt["docs"] = array();
+  $pdt["docs_count"] = 0;
+  foreach($pdt["docs"] as $doc)
+    if ($doc["uploaded"] == 2)
+      $pdt["docs_count"]++;
+  if (DEBUG) $tab_microtime["Product : docs"] = microtime(true);
+
+
+//Families
+
+	//Looking for the Rd Name and reference
+		$res_get_categorys_rd_level = $db->query("select
+					f.id, f.idParent, fr.name, fr.ref_name
+				from
+					families f, 
+					families_fr fr
+				where
+					f.id = ".$product_familie_query."	
+				AND
+					fr.id=f.id
+				LIMIT 0, 1", __FILE__, __LINE__);
+		$res_categorys_rd_level = $db->fetchAssoc($res_get_categorys_rd_level);
+	
+	//Looking for the Nd Level !
+		$res_get_categorys_nd_level = $db->query("select
+					f.id, f.idParent, fr.name, fr.ref_name
+				from
+					families f, 
+					families_fr fr
+				where
+					f.id = ".$res_categorys_rd_level['idParent']."
+				AND
+					fr.id=f.id	
+				LIMIT 0, 1", __FILE__, __LINE__);
+		$res_categorys_nd_level = $db->fetchAssoc($res_get_categorys_nd_level);		
+	
+	//Looking for the St Level
+		$res_get_categorys_st_level = $db->query("select
+					f.id, f.idParent, fr.name, fr.ref_name
+				from
+					families f, 
+					families_fr fr
+				where
+					f.id = ".$res_categorys_nd_level['idParent']."
+				AND
+					fr.id=f.id
+				LIMIT 0, 1", __FILE__, __LINE__);
+		$res_categorys_st_level = $db->fetchAssoc($res_get_categorys_st_level);
+		
+		//Check if existing families (Third, second and first)
+		//To show them on the page ..
+		if($res_categorys_rd_level['name'] && $res_categorys_rd_level['ref_name']){
+			$pageName = "fiche_produit";
+	
+			$pdt["cat3_name"]	= $res_categorys_rd_level['name'];
+			$pdt["cat2_name"]	= $res_categorys_nd_level['name'];
+			$pdt["cat1_name"]	= $res_categorys_st_level['name'];
+
+
+			$pdt["cat1_ref_name"]	= $res_categorys_rd_level['ref_name'];
+			$pdt["cat2_ref_name"]	= $res_categorys_nd_level['ref_name'];
+			$pdt["cat3_ref_name"]	= $res_categorys_st_level['ref_name'];
+		
+		}
+	
+
+
+$title     = to_entities($pdt['name']);
+$meta_desc = $meta_keys = '';
+
+require(SITE."head.php");
+
+	//getting notation and commentaries
+    /*require ('star-rater.php');
+    $notations = ProductNotation::get('id_product = '.$pdt['id'], 'inactive = 0');
+    if(!empty ($notations)){
+      $a=0;
+      foreach ($notations as $i => $notation){
+        $notation_maker = new CustomerUser($handle, $notation['id_client']);
+
+        if(!empty ($notation_maker) && count($notation_maker) == 1){
+          $notations[$i]['prenom'] = $notation['anonymous'] == true ? 'Client' : $notation_maker->prenom;
+          $notations[$i]['ville'] = $notation_maker->ville;
+        }  else {
+          $notations[$i]['prenom'] = 'Prénom non défini';
+          $notations[$i]['ville'] = '';
+        }
+        $sumNote += $notation['note'];
+        $a++;
+      }
+      $pdt['average_note'] = round($sumNote/$a);
+      $pdt['nb_comments'] = $a;
+    }*/
+	
+?>
+
+				<script type="text/javascript">
+					HN.TC.GVars.pdtID = <?php echo $pdt["id"] ?>;
+					HN.TC.GVars.showTtcPrice = <?php echo $ttcPrice ? 'true' : 'false'; ?>;
+					//HN.TC.GVars.catID = <?php echo $pdt["cat3_id"] ?>;
+					HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE["email"]) ? $_COOKIE["email"] : "") ?>";
+					<?php if (!is_null($avail_saveSearch_js)) { ?>
+					HN.TC.GVars.avail_saveSearch = "<?php echo str_replace('"','\"',$avail_saveSearch_js); ?>";
+					<?php }?>
+					var pic_url_list = <?php echo json_encode($pdt["pic_url"]) ?>;
+				</script>
+				<div id="body" class="white-bg">
+					<div class="product-page" itemscope="itemscope" itemtype="http://data-vocabulary.org/Product">
+					
+						<div class="product-page-title">
+							<h1 class="bigger-blue-title" itemprop="name"><?php echo $pdt['name']; ?></h1>
+							<h2 class="medium-blue-title"><?php echo $pdt['fastdesc']; ?></h2>
+						</div>
+						
+						<div class="product-page-main-zone" id="product-sheet">
+						
+							<div class="product-page-pic-zone fl">
+								<div class="product-page-pdt-code">
+									Code fiche produit : <span class="color-blue"><?php echo $id_fiche; ?></span>
+								</div>
+								<div class="product-page-picture">
+										<img itemprop="image" src="<?php echo $pdt["pic_url"][0]["card"]; ?>" alt="<?php echo $pdt["name"]."-".$pdt["fastdesc"]; ?>" class="vmaib" data-index="0" style="display: none;"><div class="vsma"></div>
+								</div>
+											
+								<?php if ($pdt["pic_url_count"] > 1 || !empty($pdt["video_code"])) { ?>
+									<div class="product-page-carrousel">
+										<div class="grey-block">
+										  <ul class="items">
+											<?php $nb_video = 0;
+											if (!empty($pdt["video_code"])) {
+											  $nb_video = 1;?>
+											<li><a class="video" rel="fancyboxvideo" href="#"><img alt="video" src="<?php echo $res_url; ?>images/picto-video.png"></a></li>
+									  <?php } ?>
+										   <?php for($i=1; $i <= $pdt["pic_url_count"]; $i++) { ?>
+												<li><img alt="" src="<?php echo $pdt["pic_url"][$i-1]["card"]; ?>" /></li>
+										   <?php } ?>
+										  </ul>
+										</div>
+										<?php if(($i-1 + $nb_video) > 3){ ?>
+										<div class="scroll-l-product-page"><img alt="" src="<?php echo $res_url; ?>images/carrousel-arrow-left.png"></div>
+										<div class="scroll-r-product-page"><img alt="" src="<?php echo $res_url; ?>images/carrousel-arrow-right.png"></div>
+										<?php } ?>
+									</div>
+								<?php } ?>
+											
+											
+							</div><!-- end div .product-page-pic-zone fl -->
+							
+							<div class="product-page-text-zone fr">
+								<div class="product-page-main-zone-desc">
+									<span class="atseo multiple-estimates"></span>
+									<!-- <span class="atseo expert-advice"></span> -->
+									<h3 class="product-paragraph">
+										<?php echo substr($pdt['fastdesc'], 0,220).'...'; ?>
+										<a class="color-blue" href="#product-desc">Lire la suite</a>
+									</h3>
+							
+								</div><!-- end div .product-page-main-zone-desc -->
+								
+								<div class="product-page-main-zone-left fl">
+									<?php if ($pdt["saleable"] && !$pdt_set_as_estimate) { ?>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png"><span class="atseo shipping-fee"></span> <?php echo $pdt["shipping_fee"]; ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Commande minimum: <?php echo ($pdt["adv_min_amount"] > 0 ? sprintf("%.0f", $pdt["adv_min_amount"])."€" : "non"); ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Livraison: <?php echo $pdt["delivery_time"]; ?></div>
+									  <div class="cat3-checked-line"><img alt="check" src="<?php echo $res_url; ?>images/green-check.png">Garantie: <?php echo $pdt["warranty"]; ?></div>
+									  <div class="zero"></div>
+									<?php } ?>
+									
+									<?php if($pdt["docs_count"] > 0 ||  !empty ($pdt['average_note'])): ?>
+									<div class="blue-small-title product-page-notation-docs-links blue-smaller-title ">Avis / Doc</div>
+									<?php endif; ?>
+									<?php if(!empty ($pdt['average_note'])) {
+									  echo '<div class="cat3-checked-line"><img src="'.URL.'ressources/images/picto-avis.png" alt="picto-avis" /> Avis client ';
+									  showStarRater($pdt['average_note']);
+									  echo ' <a class="color-blue" href="#block-product-notation">Plus d\'infos</a></div>';
+									} ?>
+									<?php if ($pdt["docs_count"] > 0) { ?>
+									  <div class="cat3-checked-line">
+										<img src="<?php echo $res_url; ?>images/picto-docs.png" alt="picto-docs" />
+										Documentation produit  <a class="color-blue" href="#block-product-document">Plus d'infos</a>
+									  </div>
+									<? } ?>
+								</div> <!-- end div .product-page-main-zone-left fl -->
+								
+								<div class="product-page-main-zone-right fr" itemscope="itemscope" itemtype="http://data-vocabulary.org/Offer">
+								
+									<?php if(strcmp($pdt['price'],'sur devis')!=0){ ?>
+									
+										<div class="product-page-esti">
+										<!-- <div class="product-page-price"> -->
+											Prix indicatif : <div><span itemprop="price"><?php echo $pdt['price']; ?></span><span itemprop="currency">€</span> HT</div>
+										</div>
+										<div class="product-page-action">
+											<!-- <a href="#" class="btn-cart-add-big-pink"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>"></a><br />-->
+											<a href="#" class="btn-esti-ask-orange"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>"></a><br />
+											<div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+												<a href="#" class="btn-users-product-list">
+													<div class="puce puce-5"></div>Sauvegarder ce produit
+												</a>
+												<div class="zero"></div>
+											</div>
+										</div>
+										
+									<?php }else{ // no price ?>
+										<div class="product-page-esti">
+										  Prix :<div> sur devis</div>
+										</div>
+										<div class="product-page-action">
+											<a href="#" class="btn-esti-ask-orange"  data-adv-type="<?php echo $pdt["adv_cat"]; ?>"></a><br />
+											<div class="savedProductsListZone_<?php echo $pdt['id'] ?>">
+												<a href="#" class="btn-users-product-list">
+													<div class="puce puce-5"></div>Sauvegarder ce produit
+												</a>
+												<div class="zero"></div>
+											</div>
+										</div>
+									  <?php } ?>
+										 
+									
+
+									</div><!-- end div .product-page-main-zone-right fr -->
+								
+									<div class="zero"></div>
+									<div class="product-page-reseaux-sociaux">
+										<img src="ressourcesv3/images/preview_product_social_network.png" alt="Partage" title="Partage" />
+									</div>
+									
+									
+							</div><!-- end div .product-page-text-zone -->
+							
+							<div class="zero"></div>
+							
+							
+						</div><!-- end div .product-page-main-zone -->
+				
+						<div class="product-page-shadow"></div>
+						
+						<!-- Start the bottom part -->
+
+						<div class="product-page-bottom-zone">
+						
+							<div class="product-page-bottom-left-col fl">
+								<div id="recommended-products-pdt-block" class="grey-block product-page-bottom-recommended" style="display:block;">
+									<div class="product-page-top-arrow"></div>
+									<div class="blue-small-title blue-smaller-title">Vous aimerez aussi</div>
+									<div id="recommended-products-pdt">
+										<br /><br /><br /><br /><br />
+										<br /><br /><br /><br /><br />
+									</div>
+								</div> <!-- end div #recommended-products-pdt-block -->
+							
+								<div class="grey-block product-page-bottom-seen">
+									<div class="product-page-top-arrow"></div>
+									<div class="blue-small-title blue-smaller-title">Déjà consultés</div>
+									<div id="already-seen-products">
+										<br /><br /><br /><br /><br />
+										<br /><br /><br /><br /><br />
+									</div>
+								</div><!-- end div .grey-block product-page-bottom-seen -->
+							
+							</div> <!-- end div .product-page-bottom-left-col fl -->
+						
+						
+							<div class="product-page-bottom-right-col fr">
+								<div class="grey-block product-page-bottom-desc">
+									<div class="product-page-top-arrow"></div>
+									<span class="atseo description" id="product-desc"></span>
+									<br />
+									<br />
+									<span itemprop="description">
+										<?php echo $pdt['descc']; ?>
+										
+										<?php
+											if($pdt['video_code']){
+												echo('<br />');
+												echo('<br />');
+												echo($pdt['video_code']);
+											}
+										?>
+									</span>
+									<div class="zero"></div>
+									<br />
+									<br />
+								</div><!-- end div .grey-block product-page-bottom-desc -->
+								
+								<div id="product_preview_no_documentation" style="font-weight: bold; font-size: 130%; padding-top: 10px; padding-left: 4px; font-style: italic;">
+									Les documentations éventuellement jointes à la fiche produit n'apparaissent pas en mode preview
+								</div>
+							
+							</div><!-- end div .product-page-bottom-right-col fr -->
+						
+						</div> <!-- end div .product-page-bottom-zone -->
+
+
+
+
+
+						
+					</div><!-- end div .product-page -->
+				
+					<?php require(SITE . "blocks-right.php"); ?>
+				
+				</div><!-- end div #body .white-bg -->
+				
+				
+				<div id="product_preview_bloc_message" class="bigger-blue-title" style="position: fixed; bottom: -7px; z-index: 100; background: white; border-top: 1px solid #c3c3c3; width: 100%; padding-left: 5px; left: 0; text-align: center; font: normal 26px Open Sans, Segoe UI, Droid Sans, Tahoma, Arial, sans-serif; box-shadow: 0px 0px 8px 1px;">
+					Pr&eacute;visualisation de Fiche produit 
+				</div>
+				
+				<?php require(SITE . "foot.php"); ?>

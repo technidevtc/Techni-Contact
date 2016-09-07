@@ -1,0 +1,166 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+$user = new CustomerUser($db, $session->userID);
+
+if (!$session->logged){
+	header('Location: '.COMPTE_URL.'login.html');
+	exit();
+}
+// getting all customers' estimate
+$oc = Cart::getEstimates($session->userID);
+//pp($oc);
+foreach ($oc as &$o){
+  //$o['conv'] = Messenger::getConversation(__MSGR_CTXT_CUSTOMER_TC_DEVIS_PDF__, $user->id, $o['estimate']);
+  $o['origine'] = 'Créé par vous';
+  $o['status'] = 'Prêt';
+}
+unset($o);
+// getting managers' estimates      , 'estimate', 'promotionCode', 'insured', 'delivery_address_id', 'billing_address_id'
+$estimateList = Doctrine_Query::create()
+        ->select('id as estimate, web_id as id, created as create_time, total_ht as totalHT, total_ttc at totalTTC, status, 
+          bou.name as origine, nom, prenom, adresse, ville')
+        ->from('Estimate e')
+        ->leftJoin('e.created_user bou')
+        ->where('e.client_id = ?', $session->userID)
+        ->andWhere('status > 1')
+        ->fetchArray();
+$merged = array_merge($oc, $estimateList);
+//pp($estimateList);
+$estimateStatusText = array(
+  '1' => 'Prêt',
+  '2' => 'Prêt',
+  '3' => 'Prêt',
+  '4' => 'Validé',
+  '5' => 'Non validé'
+);
+//pp($merged);
+
+foreach ($merged as $key => $row) {
+    $create_time[$key]  = $row['create_time'];
+    }
+array_multisort($create_time, SORT_DESC, $merged);
+
+//pp($merged);
+
+$current_account_menuitem = "Mes commandes";
+define('SECURE', true);
+require(SITE.'head.php');
+require(SITE.'account-head.php');
+?>
+<div class="right-account-panel">
+    <div class="right-account-panel-inlay fl">
+      <div class="account-header">
+        <h1 class="bigger-blue-title"><img src="<?php echo  $res_url?>images/personal-space-logo.png" alt="logo" />Mes devis</h1>
+      </div>
+      <div class="font14">voici le listing des devis que nos experts vous ont transmis ou que vous avez généré vous même sur notre site.<br />
+        Cliquez sur «Imprimer» pour télécharger le devis au format PDF ou accédez à son détail en cliquant sur «Voir».
+      </div>
+      <div class="account-order margin-top-11">
+        <div class="account-order-table">
+          <table class="account-order-list estimate-list">
+            <thead>
+              <tr>
+                <th class="num"><span class="display-infos">Numéro</span><span class="mobile-infos">Informations</span></th>
+                <th class="datetime">Date et heure</th>
+                <th class="amount">Montant</th>
+                <th class="status">État</th>
+                <th class="documents">Document</th>
+                <th class="author">Auteur</th>
+                <th class="contact">Contact</th>
+              </tr>
+            </thead>
+            <tbody>
+<?php foreach ($merged as $o) : ?>
+              <tr>
+                <td class="num">
+                  <div class="display-infos">
+                    <?php echo $o['estimate'] ?><br />
+                    <a class="color-blue" href="pdfestimate.html?<?php echo $o['origine'] == 'Créé par vous' ? 'pdfestimateID='.$o['id'] : 'estimateID='.$o['id']; ?>">Voir</a>
+                  </div>
+                  <a class="mobile-infos" href="pdfestimate.html?<?php echo $o['origine'] == 'Créé par vous' ? 'pdfestimateID='.$o['id'] : 'estimateID='.$o['id']; ?>">
+                    <ul class="clearfix">
+                      <li><div class="label">Réf :</div><div class="text"><?php echo $o['estimate'] ?></div></li>
+                      <li><div class="label">Le :</div><div class="text"><?php echo date('d/m/Y à H:i', $o['create_time']) ?></div></li>
+                      <li><div class="label">Total :</div><div class="text"><?php echo sprintf('%.02f', $o['totalHT']) ?>&nbsp;€&nbsp;HT</div></li>
+                      <li><div class="label">État :</div><div class="text-long"><?php echo is_numeric($o['status']) ? $estimateStatusText[$o['status']] : $o['status'];?></div></li>
+                      <li><div class="label">Auteur :</div><div class="text-long"><?php echo !empty($o['origine']) ? $o['origine'] : '' ?></div></li>
+                      <li class="see">Voir le détail</li>
+                    </ul>
+                  </a>
+                </td>
+                <td class="datetime"><?php echo date('d/m/Y à H:i', $o['create_time']) ?></td>
+                <td class="amount">
+                  <?php //echo sprintf('%.02f', $o['totalTTC']) ?>
+                  <?php echo sprintf('%.02f', $o['totalHT']) ?>&nbsp;€&nbsp;HT
+                </td>
+                <td class="status">
+                  <?php echo is_numeric($o['status']) ? $estimateStatusText[$o['status']] : $o['status'];?>
+                </td>
+                <td class="documents">
+                  
+                  <div class="vmaib">
+                    <?php if($o['origine'] != 'Créé par vous'): ?>
+                    <div class="order-steps">
+                      <div class="btn-estimate-actions">
+                        <div class="link-estimate-print">
+                          <a class="option-print"  href="<?php echo PDF_DL_URL."devis-commercial/".$o['id']; ?>"></a>
+                        </div>
+                      </div>
+                    </div>
+                    <?php else: ?>
+                      <a  class="option-print link-estimate-print" href="javascript:void(0);" data-cart-id="<?php echo $o['id'] ?>"></a>
+                    <?php endif; ?>
+                  </div>
+                  <div class="vsma"></div>
+                </td>
+                <td class="author">
+                  <?php if (!empty($o['origine'])) : 
+                    echo $o['origine'];
+                    endif; ?>
+                </td>
+                <td class="contact">
+                  <a class="<?php echo $o['origine'] == 'Créé par vous' ? 'account-contact-btn': 'operator-contact-btn'; ?>" href="#account-contact-dialog_<?php echo $o['origine'] == 'Créé par vous' ? 2: 3; ?>,<?php echo $o['estimate']; ?>"></a>
+                </td>
+              </tr>
+              <?php if (!empty($o['conv'])) : ?>
+              <tr class="conversation">
+                <td colspan="7">
+                  <div class="conv-title">Conversation liée à ce devis</div>
+                  <ul>
+                  <?php foreach ($o['conv'] as $post) : ?>
+                    <li>
+                      <div class="post-title">Message de <?php echo $post['sender_name'] ?> envoyé le <?php echo date('d/m/Y à H:m', $post['timestamp']) ?></div>
+                    <?php if (!empty($post['attachments'])) : ?>
+                      <img class="post-clip" src="<?php echo $res_url ?>icons/attachment-icon.png" alt="Pièces jointes" />
+                      <div class="post-files" >
+                      <?php foreach ($post['attachments'] as $attachment) : ?>
+                        <a href="<?php echo $attachment['file']['url'] ?>" target="_blank"><?php echo $attachment['file']['shown_name'] ?></a><br/>
+                      <?php endforeach ?>
+                      </div>
+                    <?php endif ?>
+                      <div class="post-text"><?php echo $post['text'] ?></div>
+                    </li>
+                  <?php endforeach // post ?>
+                  </ul>
+                </td>
+              </tr>
+              <?php endif // conv ?>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+  $(".account-order")
+  .find("a.icon-conv").click(function(){ $(this).closest('tr').next('tr.conversation').toggle(); }).end()
+    .find("img.post-clip").click(function(){ $(this).next().css({ left: $(this).position().left+20 }).toggle(300); });
+    HN.TC.GVars.userEmail = "<?php echo (isset($_COOKIE["email"]) ? $_COOKIE["email"] : ""); ?>";
+</script>
+<?php require(SITE.'account-foot.php') ?>
+<?php require(SITE.'foot.php') ?>

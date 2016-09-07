@@ -1,0 +1,1007 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$db = DBHandle::get_instance();
+
+$session = new UserSession($db);
+
+// directly force the cart to be an estimate (only done here)
+$session->estimate = true;
+
+// user is already logged, go to step 2 directly
+if ($session->logged) {
+  header("Location: ".COMMANDE_URL."estimate-step2.html");
+  exit();
+}
+
+$cart = new Cart($db, $session->getID());
+// empty cart, nothing to do here
+if ($cart->itemCount == 0 || $cart->valid == 0) {
+  header("Location: ".URL."panier.html");
+  exit();
+}
+
+$user = new CustomerUser($db);
+
+$error = array();
+$errorstring = "";
+$infos = array();
+if ($_SERVER['REQUEST_METHOD'] == "POST") {
+
+  if (isset($_POST['already_customer'])) {
+    $login = isset($_POST['login']) ? substr(trim($_POST['login']), 0, 255) : "";
+    $pass  = isset($_POST['pass']) ? substr(trim($_POST['pass']), 0, 255) : "";
+
+    $customerID = CustomerUser::canLogin($login, $pass, $db);
+    // Log in
+    if ($customerID) {
+      $session->login($customerID);
+    } else {
+      $errorstring .= "Nous n'avons pas pu vous identifier, merci de saisir des codes client valides.\\n";
+    }
+  
+  } else { // new customer
+    $infos['coord_livraison'] = isset($_POST['coord_livraison']) && $_POST['coord_livraison'] == 'on' ? 1 : 0;
+    $infos['login']      = isset($_POST['login']) ?      substr(trim($_POST['login']), 0, 255) : "";
+    $infos['pass']       = isset($_POST['pass']) ?       substr(trim($_POST['pass']), 0, 255) : "";
+    $infos['pass2']      = isset($_POST['pass2']) ?      substr(trim($_POST['pass2']), 0, 255) : "";
+    $infos['titre']      = isset($_POST['titre']) ?      substr(trim($_POST['titre']), 0, 255) : "";
+    $infos['nom']        = isset($_POST['nom']) ?        strtoupper(substr(trim($_POST['nom']), 0, 255)) : "";
+    $infos['prenom']     = isset($_POST['prenom']) ?     ucfirst(substr(trim($_POST['prenom']), 0, 255)) : "";
+    $infos['societe']    = isset($_POST['societe']) ?    ucfirst(substr(trim($_POST['societe']), 0, 255)) : "";
+    $infos['adresse']    = isset($_POST['adresse']) ?    substr(trim($_POST['adresse']), 0, 255) : "";
+    $infos['complement'] = isset($_POST['complement']) ? substr(trim($_POST['complement']), 0, 255) : "";
+    $infos['ville']      = isset($_POST['ville']) ?      strtoupper(substr(trim($_POST['ville']), 0, 255)) : "";
+    $infos['cp']         = isset($_POST['cp']) ?         substr(trim($_POST['cp']), 0, 5) : "";
+    $infos['pays']       = isset($_POST['pays']) ?       strtoupper(substr(trim($_POST['pays']), 0, 255)) : "";
+    $infos['infos_sup']  = isset($_POST['infos_sup']) ?  substr(trim($_POST['infos_sup']), 0, 2047) : "";
+    $infos['tel1']       = isset($_POST['tel1']) ?       preg_replace("/[^0-9]/", "", $_POST['tel1']) : "";
+    $infos['fax1']       = isset($_POST['fax1']) ?       preg_replace("/[^0-9]/", "", $_POST['fax1']) : "";
+
+    if (!preg_match('`^[[:alnum:]]([-_.]?[[:alnum:]])*@[[:alnum:]]([-_.]?[[:alnum:]])*\.([a-z]{2,4})$`', $infos['login'])) {
+      $errorstring .= "Cette adresse e-mail n'est pas valide.\\n";
+      $error['login'] = true;
+    } elseif (($origin = CustomerUser::getCustomerOriginFromLogin($infos['login'], $db)) != 'A' && $origin) {
+      $errorstring .= "Cette adresse e-mail a déjà été attribuée à un autre utilisateur Techni-Contact.\\nMerci de choisir une autre adresse e-mail.\\n";
+      $error['loginIdem'] = true;
+    }
+
+    if (strlen($infos['pass']) < 6 || strlen($infos['pass']) > 60 ) { // pass length between 6 and 60 caracters no matter what caracter (Tristan tel 14/12/2012)
+      $errorstring .= "Veuillez renseigner le(s) champs suivant\\n - Mot de passe (minimum 6 caractères)\\n";
+      $error['pass'] = true;
+    }
+    
+    if ($infos['pass'] != $infos['pass2'] || $infos['pass2'] == '') {
+      $errorstring .= "Confirmation du mot de passe incorrecte\\n - Mots de passe différents)\\n";
+      $error['pass2'] = true;
+    }
+
+    if ($infos['titre'] < 1 && $infos['titre'] > 3)
+      $error['titre'] = true;
+    
+    if (empty($infos['prenom']))
+      $error['prenom'] = true;
+    
+    if (empty($infos['nom']))
+      $error['nom'] = true;
+    
+    if (empty($infos['societe'])) {
+      //$error['societe'] = true;
+    } else { // restraining activity sector and naf
+      $terms = preg_replace('/ de /', ' ', $infos['societe']);
+      $terms = explode(' ', $terms);
+      $ActivitySector = Doctrine_Core::getTable('ActivitySectorSurqualification');
+      $ActivitySector->batchUpdateIndex();
+      $array_results = array();
+      foreach($terms as $term){
+        $term = Utils::toDashAz09($term);
+        if($result = $ActivitySector->search($term)){
+          $q = Doctrine_Query::create()
+            ->from('ActivitySector as')
+            ->leftJoin('as.Surqualifications ass')
+            ->where('ass.id = ?', $result[0]['id']);
+
+          $array_results[$result[0]['id']] = $result[0]['id'];
+          $sector = $q->fetchArray();
+          $results[] = $result;
+        }
+      }
+
+      if(count($array_results) == 1){
+        $infos['secteur_activite'] = $sector[0]['sector'];
+        $infos['secteur_qualifie'] = $sector[0]['Surqualifications'][0]['qualification'];
+        $infos['code_naf'] = $sector[0]['Surqualifications'][0]['naf'];
+      }
+    }
+    
+    if (empty($infos['adresse']))
+      $error['adresse'] = true;
+    
+    if (empty($infos['ville']))
+      $error['ville'] = true;
+    
+    if (empty($infos['pays']))
+      $error['pays'] = true;
+    
+    if (!preg_match("/^[0-9]+$/", $infos['cp']))
+      $error['cp'] = true;
+    
+    if (!preg_match(REGEX_TEL, $infos['tel1']))
+      $error['tel1'] = true;
+    
+    if (!empty($infos['fax1']) && !preg_match(REGEX_TEL, $infos['fax1']))
+      $error['fax1'] = true;
+
+    if ($infos['coord_livraison'] == 1) {
+      $infos['titre_l']      = isset($_POST['titre_l']) ?      substr(trim($_POST['titre_l']), 0, 255) : "";
+      $infos['nom_l']        = isset($_POST['nom_l']) ?        strtoupper(substr(trim($_POST['nom_l']), 0, 255)) : "";
+      $infos['prenom_l']     = isset($_POST['prenom_l']) ?     ucfirst(substr(trim($_POST['prenom_l']), 0, 255)) : "";
+      $infos['societe_l']    = isset($_POST['societe_l']) ?    ucfirst(substr(trim($_POST['societe_l']), 0, 255)) : "";
+      $infos['adresse_l']    = isset($_POST['adresse_l']) ?    substr(trim($_POST['adresse_l']), 0, 255) : "";
+      $infos['complement_l'] = isset($_POST['complement_l']) ? substr(trim($_POST['complement_l']), 0, 255) : "";
+      $infos['ville_l']      = isset($_POST['ville_l']) ?      strtoupper(substr(trim($_POST['ville_l']), 0, 255)) : "";
+      $infos['cp_l']         = isset($_POST['cp_l']) ?         substr(trim($_POST['cp_l']), 0, 5) : "";
+      $infos['pays_l']       = isset($_POST['pays_l']) ?       strtoupper(substr(trim($_POST['pays_l']), 0, 255)) : "";
+      $infos['infos_sup_l']  = isset($_POST['infos_sup_l']) ?  substr(trim($_POST['infos_sup_l']), 0, 2047) : "";
+      $infos['tel2']         = isset($_POST['tel2']) ?         preg_replace("/[^0-9]/", "", $_POST['tel2']) : "";
+      $infos['fax2']         = isset($_POST['fax2']) ?         preg_replace("/[^0-9]/", "", $_POST['fax2']) : "";
+
+      if (!preg_match(REGEX_TEL, $infos['tel2']))
+        $error['tel2'] = true;
+      
+      if ($infos['titre_l'] < 1 && $infos['titre_l'] > 3)
+        $error['titre_l'] = true;
+      
+      if (empty($infos['nom_l']))
+        $error['nom_l'] = true;
+      
+      if (empty($infos['prenom_l']))
+        $error['prenom_l'] = true;
+      
+      //if (empty($infos['societe_l']))
+        //$error['societe_l'] = true;
+      
+      if (empty($infos['adresse_l']))
+        $error['adresse_l'] = true;
+      
+      if (!preg_match("/^[0-9]+$/", $infos['cp_l']))
+        $error['cp_l'] = true;
+      
+      if (empty($infos['ville_l']))
+        $error['ville_l'] = true;
+      
+      if (empty($infos['pays_l']))
+        $error['pays_l'] = true;
+      
+      if (!empty($infos['fax2']) && !preg_match(REGEX_TEL, $infos['fax2']))
+        $error['fax2'] = true;
+    } else {
+      $infos['titre_l']      = $infos['titre'];
+      $infos['nom_l']        = $infos['nom'];
+      $infos['prenom_l']     = $infos['prenom'];
+      $infos['societe_l']    = $infos['societe'];
+      $infos['adresse_l']    = $infos['adresse'];
+      $infos['complement_l'] = $infos['complement'];
+      $infos['ville_l']      = $infos['ville'];
+      $infos['cp_l']         = $infos['cp'];
+      $infos['pays_l']       = $infos['pays'];
+      $infos['infos_sup_l']  = $infos['infos_sup'];
+      $infos['tel2']         = $infos['tel1'];
+      $infos['fax2']         = $infos['fax1'];
+    }
+
+    if (empty($error) && empty($errorstring) && !Utils::is_ajax_requested()) {
+      $infos['email'] = $infos['login'];
+      setCookie('email', $infos["email"], time() + 24 * 3600 * 365, '/', DOMAIN);
+      if ($origin == 'A') {
+        $user->id = CustomerUser::getCustomerIdFromLogin($infos['login'], $db);
+        $user->load();
+        $user->origin = 'O';
+        $user->actif = 1;
+      } else {
+        $user->create();
+        $user->origin = 'O';
+        if (!empty($infos['societe']))
+          $user->code = '9'.substr(strtoupper(Utils::toASCII(utf8_encode($infos['societe']))),0,4).substr($user->id,0, 6);
+        else
+          $user->code = '9'.substr(strtoupper(Utils::toASCII(utf8_encode($infos['nom']))),0,4).substr($user->id,0, 6);
+      }
+      $user->setCoordFromArray($infos);
+      $user->pass = md5($infos['pass']);
+      $user->save();
+      $session->login($user->id);
+
+      $mail_data = array(
+        'CUSTOMER_ID' => $user->id,
+        'CUSTOMER_FIRSTNAME' => $user->prenom,
+        'CUSTOMER_LASTNAME' => $user->nom,
+        'SITE_MAIN_URL' => URL,
+        'SITE_HELP_URL' => URL."aide.html",
+        'SITE_ACCOUNT_URL_LOGIN' => COMPTE_URL."login.html"
+      );
+      $mail = new Email(array(
+          'email' => $infos['login'],
+          'subject' => "Création de votre compte gratuit",
+                            'headers' => "From: Techni-Contact – Service clients <commandes@techni-contact.com>\nReply-To: Techni-Contact – Service clients <commandes@techni-contact.com>\n",
+          'template' => "customer-creation-compte",
+          'data' => $mail_data
+        )
+      );
+			$mail->send();
+      
+      header("Location: ".COMMANDE_URL."estimate-step2.html");
+      exit();
+    }
+  }
+}
+
+if (empty($infos)) {
+  $infos['nom'] =        isset($_COOKIE['nom']) ?       $_COOKIE['nom'] : "";
+  $infos['prenom'] =     isset($_COOKIE['prenom']) ?    $_COOKIE['prenom'] : "";
+  $infos['societe'] =    isset($_COOKIE['societe']) ?   $_COOKIE['societe'] : "";
+  $infos['adresse'] =    isset($_COOKIE['adresse']) ?   $_COOKIE['adresse'] : "";
+  $infos['complement'] = isset($_COOKIE['cadresse']) ?  $_COOKIE['cadresse'] : "";
+  $infos['cp'] =         isset($_COOKIE['cp']) ?        $_COOKIE['cp'] : "";
+  $infos['ville'] =      isset($_COOKIE['ville']) ?     $_COOKIE['ville'] : "";
+  $infos['pays'] =       isset($_COOKIE['pays']) ?      $_COOKIE['pays'] : "FRANCE";
+  $infos['tel1'] =       isset($_COOKIE['telephone']) ? $_COOKIE['telephone'] : "";
+  $infos['fax1'] =       isset($_COOKIE['fax']) ?       $_COOKIE['fax'] : "";
+  $infos['login'] =      isset($_COOKIE['email']) ?     $_COOKIE['email'] : "";
+}
+
+// AJAX request for form checking
+if (Utils::is_ajax_requested()) {
+  if (!empty($error)) {
+    foreach($error as $key => $value) {
+      if ($value == true) {
+        $o['errors'] .=  $key.'|';
+      }
+    }
+  } else {
+    $o[] = 'checkOk';
+  }
+  print json_encode($o);
+  exit();
+}
+
+$n = $cc = 0; $cl = array(); // Country List
+if ($fh = fopen(MISC_INC . "list_country.csv","r")) {
+  while (($data = fgetcsv($fh, 128, ";")) !== false) $cl[$n++] = mb_strtoupper($data[0]);
+  $cc = $n - 1; // Country Count -> La 1ère ligne est l'intitulé des colonnes
+  fclose($fh);
+}
+
+$country_selected = !empty($infos['pays']) ? $infos['pays'] : "FRANCE";
+$country_selected_l = !empty($infos['pays_l']) ? $infos['pays_l'] : "FRANCE";
+
+define('SECURE', true);
+define('ORDER_STEP_1', true);
+define('__BR_NO_PUB__', true);
+require SITE.'head.php';
+?>
+<script type="text/javascript">
+var RevDate = new Date();
+document.write( unescape( "%3Cscript src='" + (("https:" == document.location.protocol) ? "https://api2.reversoform.com/www.reversoform.com/includes/js/reversoObj.js" : "http://api.reversoform.com/includes/js/reversoObj.js") + "?t="+RevDate.getTime()+"' type='text/javascript'%3E%3C/script%3E" ) );
+</script>
+<script type="text/javascript">
+var reversoLoaded = window.ClassReverso !== undefined;
+// Reverso
+if (reversoLoaded) {
+  var ObjReverso = new ClassReverso();
+  ObjReverso.serial = '8389615817859';
+  ObjReverso.phone = 'tel1';
+  ObjReverso.company = 'societe';
+  ObjReverso.firstname = 'prenom';
+  ObjReverso.lastname = 'nom';
+  ObjReverso.address = 'adresse';
+  ObjReverso.zip = 'cp';
+  ObjReverso.city = 'ville';
+  ObjReverso.country = 'pays';
+}
+
+var ERRORS_TEXT = new Array();
+ERRORS_TEXT['tel1'] = "Merci de renseigner votre téléphone.";
+ERRORS_TEXT['nom'] = "Merci de renseigner votre nom.";
+ERRORS_TEXT['prenom'] = "Merci de renseigner votre prénom.";
+ERRORS_TEXT['fax1'] = "Merci de renseigner votre fax.";
+ERRORS_TEXT['pass'] = "Mot de passe vide ou trop court";
+ERRORS_TEXT['pass2'] = "Mots de passe différents ou vides";
+ERRORS_TEXT['login'] = "Merci de saisir votre Email Ex: xxx@domaine.com";
+ERRORS_TEXT['loginIdem'] = "Cet Email a déjà été attribuée à un autre utilisateur.";
+ERRORS_TEXT['fonction'] = "Merci de renseigner votre fonction. <br /> Agriculteur : sélectionnez Directeur / Gérant <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral : sélectionnez Je suis libéral";
+ERRORS_TEXT['societe'] = "Merci de renseigner le nom de votre société. ";
+ERRORS_TEXT['adresse'] = "Merci de renseigner votre adresse.";
+ERRORS_TEXT['cadresse'] = "Merci de renseigner votre complément d'adresse.";
+ERRORS_TEXT['cp'] = "Merci de renseigner votre code postal.";
+ERRORS_TEXT['ville'] = "Merci de renseigner votre ville.";
+ERRORS_TEXT['pays'] = "Merci de renseigner votre pays.";
+ERRORS_TEXT['salaries'] = "Merci de renseigner votre taille salariale. <br /> Particulier : sélectionnez Je suis un particulier <br /> Libéral ou agriculteur : sélectionnez 0 à 10 salariés";
+ERRORS_TEXT['secteur'] = "Merci de renseigner votre secteur d'activité. <br /> Particulier, sélectionnez Je suis un particulier <br /> Aucune proposition ne correspond : sélectionnez Autres";
+ERRORS_TEXT['naf'] = "Merci de renseigner votre code NAF.";
+ERRORS_TEXT['siret'] = "Merci de renseigner votre Siret.";
+ERRORS_TEXT['autre'] = "Ce champ ne doit pas être vide.";
+// delivery fields
+ERRORS_TEXT['tel2'] = "Renseigner le téléphone de livraison.";
+ERRORS_TEXT['noml'] = "Renseigner le nom de livraison.";
+ERRORS_TEXT['prenoml'] = "Renseigner le prénom de livraison.";
+ERRORS_TEXT['fax2'] = "Merci de renseigner votre fax.";
+ERRORS_TEXT['societel'] = "Renseigner le nom la société de livraison. ";
+ERRORS_TEXT['adressel'] = "Renseigner l'adresse de livraison.";
+ERRORS_TEXT['cpl'] = "Renseigner le code postal de livraison.";
+ERRORS_TEXT['villel'] = "Renseigner la ville de livraison.";
+ERRORS_TEXT['paysl'] = "Renseigner le pays de livraison.";
+
+$(function () {
+  var coord_form = $("form[name='coord']");
+  var errorFields = <?php echo json_encode(array_keys($error)) ?>;
+
+  if (errorFields.length > 0) {
+    for (var i=0; i<errorFields.length; i++)
+      errorFields[i] = "label[for='"+errorFields[i]+"']";
+    alertstring = "Veuillez renseigner le(s) champs suivants :\n";
+    $(errorFields.join(","), coord_form).addClass("error").each(function(){
+      if (this.innerHTML.lastIndexOf("*") >= 0) {
+        alertstring += " - " + $.trim(this.innerHTML.substring(0, this.innerHTML.lastIndexOf("*"))) + "\n";
+      } else {
+        alertstring += " - " + $.trim(this.innerHTML.substring(0, this.innerHTML.lastIndexOf(":"))) + "\n";
+      }
+    });
+    alert(alertstring);
+    $("div.grey-block.estimate-steps.step1").css("display", "block");
+  }
+  <?php if (!empty($errorstring)) { ?>
+    alert("<?php echo $errorstring ?>");
+  <?php } ?>
+
+  // Reverso Initialisation
+  if (reversoLoaded) {
+    ObjReverso.fireCallback = function( response ) {
+      if ( response!="NULL") {
+        if (response.last_name) $("input[name='nom']", coord_form).val(response.last_name);
+        if (response.first_name) $("input[name='prenom']", coord_form).val(response.first_name);
+        if (response.address) $("input[name='adresse']", coord_form).val(response.address);
+        if (response.zip) $("input[name='cp']", coord_form).val(response.zip);
+        if (response.city) $("input[name='ville']", coord_form).val(response.city);
+        if (response.country) $("select[name='pays']", coord_form).val(response.country);
+        if (response.company) $("input[name='societe']", coord_form).val(response.company);
+        $("input[name='reversoReversed']", coord_form).val(1);
+      }else{
+        $("input[name='reversoReversed']", coord_form).val(0);
+      }
+    };
+  }
+  $("input[name='tel1']", coord_form).keyup(function(){
+    var tel = this.value.match(/\d+/g).join("");
+    if (tel.length >=10 && reversoLoaded) ObjReverso.reverso(tel);
+  });
+
+var submited = false;
+
+  $(".edit").focus(function() {
+    $('form[name=coord] div.form_error_bottom_layer').html('').hide();
+    var bad = false;
+    if ($(this).hasClass("badInfos") == true) {
+      $(this).removeClass("badInfos");
+      $(this).next().find('.leadform_ok').html('');
+      bad = true;
+    }
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    
+    $("#error_"+idArray[1]).hide();
+    $("#ok_"+idArray[1]).html('');
+    $(this).next().next('.field-note').show();
+    if (idArray[1]) {
+      if (ERRORS_TEXT[idArray[1]]) {
+        var errContent = ERRORS_TEXT[idArray[1]];
+      }
+      else {
+        errContent = "Merci de renseigner " + idArray[1];
+      }
+
+      if (errContent.replace(/^\s*|\s*$/,"") != "" && bad == true) {
+        //$("#tooltip").html(errContent);
+        //tooltip.show();
+        //$(this).next().find('.leadform_error').html(errContent).show();
+      }
+    }
+  }).blur(function() {
+    formData = coord_form.serialize();
+
+    $(this).next().next('.field-note').hide();
+    var id = $(this).attr("id");
+    var idArray = id.split("_"); // 0 => "field", 1 => id
+    var fname = idArray[1];
+
+    $.ajax({
+      type: "POST",
+      data: formData+"&onlyCheck=true",
+      dataType: "json",
+      url: coord_form.attr("action"),
+      success: function(data) {
+        //data = data.replace(/^\s*|\s*$/,"");
+        if (data != 'checkOk') {
+          var errors = data.errors.split('|');
+
+          var i = 0;
+          var fieldNameError = false;
+          
+          // Last element of errors will be empty
+          for (i=0; i<errors.length-1; i++) {
+            var errorLibelle = errors[i].replace('_l', 'l'); // manage delivery data errors (splitting _ from id)
+            if (submited == true) {
+              var errorContent = 'Merci de renseigner ce champ.';
+              if (ERRORS_TEXT[errorLibelle]) {
+                errorContent = ERRORS_TEXT[errorLibelle];
+              }
+              else {
+                errorContent = "Merci de renseigner " + errorLibelle;
+              }
+              $("#error_"+errorLibelle).html(errorContent);
+              $("#error_"+errorLibelle).show();
+              $("#field_"+errorLibelle).addClass("badInfos");
+              $("#ok_"+errorLibelle).html("<img src='<?php echo $res_url ?>images/form-warn-error.png' class='okImg' alt='X' />");
+              
+              if (errorLibelle == fname)
+                fieldNameError = true;
+            }
+            else {
+              if (errorLibelle == fname) {
+                fieldNameError = true;
+              }else if((errorLibelle == 'loginIdem' && fname == 'login')){
+                fieldNameError = true;
+                fname = 'loginIdem';
+              }
+            }
+          };// end for
+
+          if (fieldNameError == true) {
+            if(errorLibelle == 'loginIdem' && fname == 'login'){fname = 'loginIdem'};
+            var errorContent = 'Merci de renseigner ce champ.';
+            if (ERRORS_TEXT[fname]) {
+              errorContent = ERRORS_TEXT[fname];
+            }
+            else {
+              errorContent = "Merci de renseigner " + fname;
+            }
+            fname = fname == 'loginIdem' ? 'login' : fname;
+            $("#error_"+fname).html(errorContent);
+            $("#error_"+fname).show();
+            $("#field_"+fname).addClass("badInfos");
+            $("#ok_"+fname).html('<img src="<?php echo $res_url ?>images/form-warn-error.png" class="okImg" alt="X" />');
+          }
+          else {
+              $("#ok_"+fname).html('<img src="<?php echo $res_url ?>images/form-check-ok.png" class="okImg" alt"ok" />');
+              $("#ok_"+fname).show();
+              $("#error_"+fname).hide();
+              $("#error_"+fname).html("");
+          }
+
+
+        }
+        else { //data == checkOk
+          if (fname != '') {
+            $("#ok_"+fname).html('<img src="<?php echo $res_url ?>images/form-check-ok.png" class="okImg" alt="ok" />');
+            $("#ok_"+fname).show();
+          }
+        }
+
+      }// end success
+    });//end ajax
+  });// end blur
+  
+  
+  $('input.btn-next-step[type=submit]').mouseenter(function(){
+
+    if($('div.grey-block.estimate-steps.step1').css('display') == 'block'){
+      $(".edit:focus").blur() ;
+      
+      formData = coord_form.serialize();
+      $.ajax({
+        type: "POST",
+        data: formData+"&onlyCheck=true",
+        dataType: "json",
+        url: coord_form.attr("action"),
+        success: function(data) {
+          //data = data.replace(/^\s*|\s*$/,"");
+          if (data != 'checkOk') {
+            var errorsContent = 'Merci de renseigner les champs:<br />'; 
+            fname = data.errors.split('|');
+            for(var z=0; z<fname.length; z++){
+              var errorLibelle = fname[z].replace('_l', 'l'); // manage delivery data errors (splitting _ from id)
+              if (ERRORS_TEXT[errorLibelle]) {
+                errorsContent  += ERRORS_TEXT[errorLibelle]+'<br />';
+              }
+              else {
+                if(errorLibelle != '')
+                  errorsContent  += "Merci de renseigner " + errorLibelle+'<br />';
+              }
+            }
+            $('form[name=coord] div.form_error_bottom_layer').show();
+              var html = '<div class="search-ask-error-arrow-right"></div>';
+              $('form[name=coord] div.form_error_bottom_layer').html(html+errorsContent).show();
+          }
+          else
+            return false;
+        }// end success
+      });
+    }
+
+  })
+  .click(function(){
+    formData = coord_form.serialize();
+    $.ajax({
+      type: "POST",
+      data: formData+"&onlyCheck=true",
+      dataType: "json",
+      url: coord_form.attr("action"),
+      success: function(data) {
+        //data = data.replace(/^\s*|\s*$/,"");
+        if (data != 'checkOk') {
+          return false;
+        }else{
+         coord_form.submit(); 
+        }
+      }// end success
+    });
+    return false;
+  });
+  
+  $('form[name=coord] div.form_error_bottom_layer').live('click', function(){
+    $('form[name=coord] div.form_error_bottom_layer').html('').hide();
+  });
+});//end function
+
+</script>
+<style>
+  #foreignDelivery, #foreignDelivery_l { color : #0070C0; text-align: right; margin-top: 10px; font-weight: bold}
+  #foreignDelivery:hover, #foreignDelivery_l:hover { text-decoration: underline ; cursor: pointer}
+  #foreignDeliveryLayer, #foreignDeliveryLayer_l {background-color: #fff; border: solid medium red; padding: 10px;}
+</style>
+<div class="white-bg">
+  <div class="blocks-left">
+    
+    <div class="step-title">Identification</div>
+    
+    <div class="grey-block new-client-block">
+      <div class="blue-title">Nouveau client</div>
+      <img src="<?php echo $res_url ?>/images/blue-dot.png" alt="." />
+      Créer votre compte en quelques secondes en remplissant le formulaire ci-dessous
+      <div class="btn-sign-up"></div>
+    </div>
+    
+    <div class="grey-block already-client-block">
+      <div class="blue-title">Déjà client Techni-contact</div>
+      <form id="login" method="post" action="<?php echo COMMANDE_URL."estimate-step1.html" ?>">
+        <div>
+          <label for="login">Adresse e-mail <span class="color-blue">*</span>:</label>
+          <input type="text" value="" name="login"/>
+          <div class="zero"></div>
+          <div class="fl">
+            <label for="pass">Mot de passe <span class="color-blue">*</span>:</label>
+            <input type="password" value="" name="pass"/>
+            <input type="hidden" name="already_customer" value="1"/>
+            <div class="zero"></div>
+          </div>
+          <div class="btn-i-login" onclick="HN.TC.Login()"></div>
+          <div class="zero"></div>
+          <a href="<?php echo COMPTE_URL ?>password-recovery.html" class="color-blue">Mot de passe oublié ? Cliquez ici</a>
+          <div class="zero"></div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="zero"></div>
+
+    <form id="coord_form" method="post" action="<?php echo COMMANDE_URL."estimate-step1.html" ?>" name="coord">
+      <div class="grey-block estimate-steps step1">
+        <div class="blue-title padding-10">Créer un devis</div>
+        <div class="col-left">
+          
+          <div class="box white-mr-box customer-infos">
+            <div class="btl"></div><div class="btr"></div>
+            <div class="bbl"></div><div class="bbr"></div>
+            <div class="box-out">
+              <div class="box-in order-box contact-infos">
+                <ul>
+                  <li>
+                    <label for="tel1">Téléphone <span class="blue-title">*</span>:</label>
+                    <input id="field_tel1" name="tel1" type="text" maxlength="255" class="edit" value="<?php echo $infos['tel1'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_tel1"></div>
+                      <div class="leadform_error" id="error_tel1"></div>
+                    </div>
+                    <!--<div class="field-note"><span>Nous trouvons vos coordonnées grâce à l'annuaire</span></div>-->
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="login">Adresse e-mail <span class="blue-title">*</span>:</label>
+                    <input id="field_login" name="login" type="text" maxlength="255" class="edit small" value="<?php echo $infos['login'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_login"></div>
+                      <div class="leadform_error" id="error_login"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="pass">Mot de passe <span class="blue-title">*</span>:</label>
+                    <input id="field_pass" name="pass" type="password" maxlength="255" class="edit small"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_pass"></div>
+                      <div class="leadform_error" id="error_pass"></div>
+                    </div>
+                    <div class="field-note"><span>6 caractères minimum</span></div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="pass">Confirmation du mot de passe <span class="blue-title">*</span>:</label>
+                    <input id="field_pass2" name="pass2" type="password" maxlength="255" class="edit small"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_pass2"></div>
+                      <div class="leadform_error" id="error_pass2"></div>
+                    </div>
+                    <div class="field-note"><span>6 caractères minimum</span></div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="titre">Titre <span class="blue-title">*</span>:</label>
+                    <select id="field_titre" name="titre" class="edit">
+                    <option value="1"<?php echo $infos['titre'] == '1' ? 'selected' : '' ?>><?php echo "M." ?></option>
+                    <option value="2"<?php echo $infos['titre'] == '2' ? 'selected' : '' ?>><?php echo "Mme" ?></option>
+                    <option value="3"<?php echo $infos['titre'] == '3' ? 'selected' : '' ?>><?php echo "Mlle" ?></option>
+                    </select>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_titre"></div>
+                      <div class="leadform_error" id="error_titre"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="nom">Nom <span class="blue-title">*</span>:</label>
+                    <input name="nom" id="field_nom" type="text" maxlength="255" class="edit" value="<?php echo $infos['nom'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_nom"></div>
+                      <div class="leadform_error" id="error_nom"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="prenom">Prénom <span class="blue-title">*</span>:</label>
+                    <input name="prenom"  id="field_prenom" type="text" maxlength="255" class="edit" value="<?php echo $infos['prenom'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_prenom"></div>
+                      <div class="leadform_error" id="error_prenom"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="societe">Société :</label>
+                    <input name="societe" id="field_societe" type="text" maxlength="255" class="edit" value="<?php echo $infos['societe'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_societe"></div>
+                      <div class="leadform_error" id="error_societe"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="adresse">Adresse <span class="blue-title">*</span>:</label>
+                    <textarea id="field_adresse" name="adresse" rows="3" class="edit"><?php echo $infos['adresse'] ?></textarea>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_adresse"></div>
+                      <div class="leadform_error" id="error_adresse"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="cp">Code postal <span class="blue-title">*</span>:</label>
+                    <input id="field_cp" name="cp" type="text" maxlength="255" class="edit" value="<?php echo $infos['cp'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_cp"></div>
+                      <div class="leadform_error" id="error_cp"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="ville">Ville <span class="blue-title">*</span>:</label>
+                    <input id="field_ville" name="ville" type="text" maxlength="255" class="edit" value="<?php echo $infos['ville'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_ville"></div>
+                      <div class="leadform_error" id="error_ville"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="pays">Pays:</label>
+                    <select id="field_pays" name="pays" class="edit">
+                     <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                    <option value="<?php echo $cl[$i] ?>"<?php echo ($country_selected == $cl[$i] ? ' selected' : '') ?>><?php echo $cl[$i] ?></option>
+                     <?php } ?>
+                    </select>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_pays"></div>
+                      <div class="leadform_error" id="error_pays">
+                      </div>
+                    </div>
+                    <div id="foreignDeliveryLayer" title="Info livraison à l'étranger / Corse / DOM / TOM">
+                      Les conditions générales de vente de Techni-contact ne couvrent que les livraisons en France Continentale (Hors Corse et DOM / TOM).<br />
+                      <br />
+                      Pour les livraisons à l'étranger, corse DOM et TOM, veuillez directement faire une demande de devis en cliquant sur le bouton "Demander un Devis" présent sur la fiche du produit qui vous intéresse.
+                      <br />
+                      Un devis sur mesure vous sera alors proposé par notre équipe commerciale.<br />
+                      <br />
+                      Merci pour votre compréhension.<br />
+                      <br />
+                      Le service commercial <span onClick="CloseForeignDeliveryLayer();" style="font-weight : bold; text-decoration: underline; float: right; cursor: pointer">[ FERMER ]</span>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label>&nbsp;</label>
+                    <div class="delivery-infos color-blue uwh">Info livraison à l'étranger / Corse / DOM / TOM</div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="fax1">Fax:</label>
+                    <input id="field_fax1" name="fax1" type="text" maxlength="255" class="edit" value="<?php echo $infos['fax1'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_fax1">
+                        <div class="leadform_error" id="error_fax1"></div>
+                      </div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="infos_sup">Instruction de livraison:</label>
+                    <textarea id="field_infossup" name="infos_sup" rows="3" class="edit"><?php echo $infos['infos_sup'] ?></textarea>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_infossup">
+                        <div class="leadform_error" id="error_infossup"></div>
+                      </div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div><!-- customer-infos -->
+          
+          <div class="other-billing-address contact-infos">
+            <label for="coord_livraison" class="js-checkbox-label">Je souhaite être livré à une autre adresse</label>
+            <input type="checkbox" id="coord_livraison" name="coord_livraison" <?php echo ($infos['coord_livraison'] ? 'checked="checked"' : "") ?> />
+            <div class="zero"></div>
+          </div>
+          
+          <div class="zero"></div>
+          
+          <div id="os1-billing-address" class="box white-mr-box customer-infos billing-infos">
+            <div class="btl"></div><div class="btr"></div>
+            <div class="bbl"></div><div class="bbr"></div>
+            <div class="box-out">
+              <div class="box-in order-box contact-infos">
+                <div class="foreign-delivery-legend blue-title">Coordonnées de livraison</div>
+                <div class="zero"></div>
+                <ul>
+                  <li>
+                    <label for="tel2">Téléphone <span class="blue-title">*</span>:</label>
+                    <input name="tel2" id="field_tel2" type="text" maxlength="255" class="edit" value="<?php echo $infos['tel2'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_tel2"></div>
+                      <div class="leadform_error" id="error_tel2"></div>
+                    </div>
+                    <div class="field-note"><span>Permet de vous contacter avant livraison</span></div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="titre_l">Titre <span class="blue-title">*</span>:</label>
+                    <select name="titre_l" class="edit">
+                      <option value="1"<?php echo $infos['titre_l'] == '1' ? 'selected' : '' ?>><?php echo "M." ?></option>
+                      <option value="2"<?php echo $infos['titre_l'] == '2' ? 'selected' : '' ?>><?php echo "Mme." ?></option>
+                      <option value="3"<?php echo $infos['titre_l'] == '3' ? 'selected' : '' ?>><?php echo "Mlle." ?></option>
+                    </select>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="nom_l">Nom <span class="blue-title">*</span>:</label>
+                    <input name="nom_l" id="field_noml" type="text" maxlength="255" class="edit" value="<?php echo $infos['nom_l'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_noml"></div>
+                      <div class="leadform_error" id="error_noml"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="prenom_l">Prénom <span class="blue-title">*</span>:</label>
+                    <input name="prenom_l" id="field_prenoml" type="text" maxlength="255" class="edit" value="<?php echo $infos['prenom_l'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_prenoml"></div>
+                      <div class="leadform_error" id="error_prenoml"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="societe_l">Société :</label>
+                    <input name="societe_l" id="field_societel" type="text" maxlength="255" class="edit" value="<?php echo $infos['societe_l'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_societel"></div>
+                      <div class="leadform_error" id="error_societel"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="adresse_l">Adresse <span class="blue-title">*</span>:</label>
+                    <textarea name="adresse_l" id="field_adressel" rows="3" class="edit"><?php echo $infos['adresse_l'] ?></textarea>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_adressel"></div>
+                      <div class="leadform_error" id="error_adressel"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="cp_l">Code postal <span class="blue-title">*</span>:</label>
+                    <input name="cp_l" id="field_cpl" type="text" maxlength="255" class="edit" value="<?php echo $infos['cp_l'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_cpl"></div>
+                      <div class="leadform_error" id="error_cpl"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="ville_l">Ville <span class="blue-title">*</span>:</label>
+                    <input name="ville_l" id="field_villel" type="text" maxlength="255" class="edit" value="<?php echo $infos['ville_l'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_villel"></div>
+                      <div class="leadform_error" id="error_villel"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="pays_l">Pays:</label>
+                    <select id="field_paysl" name="pays_l" class="edit">
+                     <?php for ($i = 1; $i <= $cc; $i++) { ?>
+                      <option value="<?php echo $cl[$i] ?>"<?php echo ($country_selected_l == $cl[$i] ? " selected" : "") ?>><?php echo $cl[$i] ?></option>
+                     <?php } ?>
+                    </select>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_paysl"></div>
+                      <div class="leadform_error" id="error_paysl"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label>&nbsp;</label>
+                    <div class="delivery-infos color-blue uwh">Info livraison à l'étranger / Corse / DOM / TOM</div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="fax2">Fax:</label>
+                    <input name="fax2" id="field_fax2" type="text" maxlength="255" class="edit" value="<?php echo $infos['fax2'] ?>"/>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_fax2"></div>
+                      <div class="leadform_error" id="error_fax2"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                  <li>
+                    <label for="infos_sup_l">Instruction de livraison:</label>
+                    <textarea name="infos_sup_l" id="field_infossupl" rows="3" class="edit"><?php echo $infos['infos_sup_l'] ?></textarea>
+                    <div class="form-lead-error-wrapper">
+                      <div class="leadform_ok" id="ok_infossupl"></div>
+                      <div class="leadform_error" id="error_infossupl"></div>
+                    </div>
+                    <div class="zero"></div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div><!-- customer-infos billing-infos -->
+          
+          <div class="zero"></div>
+
+          <input type="hidden" name="reversoReversed" value="0">
+
+        </div><!-- col-left -->
+        <div class="zero"></div>
+      </div><!-- order-steps step 1-->
+    
+      <div class="order-bottom-submit-btns">
+        <div class="btn-prev-step fl"><span>Retour au panier</span></div>
+        <input type="submit" class="btn-next-step fr" value="Poursuivre ma devis" name="btn-next-step"/>
+        <div class="zero"></div>
+        <div class="form_error_bottom_layer"></div>
+      </div>
+      
+    </form>
+  </div><!-- blocks-left -->
+  
+<script type="text/javascript">
+  $("#coord_form .delivery-infos").on("click", function(){
+    $("#foreignDeliveryLayer").dialog("open");
+  });
+  
+  function CloseForeignDeliveryLayer(){
+    $('#foreignDeliveryLayer').dialog('close');
+  }
+
+  // Postal code autocomplete
+  var champCodePostal = $('input[name=cp], input[name=cp_l]');
+
+  champCodePostal.live('keyup', function(){
+    
+    var term = $(this).attr('name').indexOf('_l') > 0 ? '_l' : '';
+   
+    if($(this).val().match('[0-9]{5}')){// && $("input[name='reversoReversed']").val() == 0
+      $.ajax({
+        type: "GET",
+        data: "code_postal="+$(this).val(),
+        dataType: "json",
+        url: "<?php echo ADMIN_URL ?>ressources/ajax/AJAX_codesPostaux.php",
+        success: function(data) {
+
+          var refBox = $('input[name=ville'+term+']');
+          if(data['reponses'].length > 1){
+
+            var html = '<table id="cpAutocomplete" class="auto-completion-box" style="min-width: 221px; top: '+(refBox.offset().top + refBox.height() + 7)+'px; left: '+refBox.offset().left+'px; -moz-user-select: none; position: absolute" >';
+            $.each(data['reponses'], function(){
+              html += '<tr class=""><td class="prop">'+this.commune+'</td><td class="results"></td></tr>';
+
+            });
+            html += '</table>';
+
+            $('#cpAutocomplete').remove(); // avoid multiple layers in case of multiple keyups
+            $('body').append(html);
+
+            $.each($('#cpAutocomplete tr'), function(){
+              $(this).mouseenter(function(){
+                $(this).addClass('over');
+              }).mouseleave(function(){
+                $(this).removeClass('over');
+              }).click(function(){
+                refBox.val($(this).find('td.prop').html());
+                $('#cpAutocomplete').remove();
+              });
+            });
+
+            refBox.blur(function(){
+              setTimeout(function(){$('#cpAutocomplete').remove();}, 200);
+            });
+
+          }else if(data['reponses'].length == 1){
+            refBox.val(data['reponses'][0].commune);
+          }
+        }
+      });
+    } // endif(id == champCodePostal)
+  });
+  // Postal code autocomplete
+
+  /*$('.btn-sign-up').click(function(){
+    $('div.grey-block.estimate-steps.step1').slideToggle();
+  });*/
+
+  $('input[type=checkbox][name=coord_livraison]').live(
+    'click', function(){
+      if($(this).attr('checked'))
+        $("#os1-billing-address").show();
+      else
+        $("#os1-billing-address").hide();
+    }
+  )
+
+  $('#foreignDeliveryLayer').dialog({
+      width: 840,
+      autoOpen: false,
+      modal: true,
+      draggable: false,
+      resizable: false
+  });
+
+  $('.btn-prev-step').click(function(){
+    document.location.href = HN.TC.Locals.URL+"panier.html";
+  })
+</script>
+
+<?php require SITE.'blocks-right.php' ?>
+
+</div><!-- white-bg -->
+
+<?php require SITE.'foot.php' ?>

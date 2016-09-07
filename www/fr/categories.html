@@ -1,0 +1,852 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+if (!isset($_GET["category"]) || !preg_match("/^[0-9a-z\-]+$/", $_GET["category"])) {
+  require("404.php");
+  exit();
+}
+
+$curCategory = $_GET["category"];
+
+include_once(LANG_LOCAL_INC."meta-titles-".DB_LANGUAGE."_local.php");
+
+define("CAT3_EXAMPLES_COUNT_MAX", 3);
+define("PDT_SELECTION_COUNT", 5);
+define("CAT2_SIBLINGS_CAT3_COUNT", 15);
+define("FAMILIES_PAGES", true);
+
+$db = DBHandle::get_instance();
+$session = new UserSession($db);
+
+// Loading XML
+$dom = Families::getDomXML();
+$xPath = Families::getXPathXML();
+
+$curCatDOMNode = $dom->getElementById(XML_KEY_PREFIX.$curCategory);
+if (!$curCatDOMNode) {
+  require("404.php");
+  exit();
+}
+
+$catTree = $xPath->query("ancestor-or-self::category",$curCatDOMNode);
+
+// Globals stats
+$cat0 = $xPath->query("parent::categories",$dom->getElementById(XML_KEY_PREFIX."0"))->item(0);
+$stats_key = explode("|",$xPath->query("child::stats_key",$cat0)->item(0)->nodeValue);
+$stats = explode("|",$xPath->query("child::stats",$cat0)->item(0)->nodeValue);
+for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+  $global[$stats_key[$sk]] = $stats[$sk];
+
+// get main cat1 in all cases
+$xmlCat1 = $catTree->item(0);
+
+// populate a classical array cat1 var for better usability
+$cat1 = array(
+  'id' => (int)$xmlCat1->getAttribute('id'),
+  'name' => $xmlCat1->getAttribute('name'),
+  'ref_name' => $xmlCat1->getAttribute('ref_name')
+);
+
+// get cat1 stats
+$stats = explode("|",$xPath->query("child::stats",$xmlCat1)->item(0)->nodeValue);
+for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+  $cat1[$stats_key[$sk]] = $stats[$sk];
+
+// Settings global categories vars
+switch($catTree->length) {
+
+  case 1 :
+    $xmlCat2l = $xPath->query("child::category", $xmlCat1);
+    $xmlCurCat = $xmlCat1;
+    $curCat = $cat1;
+
+    // get all cat3 descendant id's for pdt selection and mini stores
+    $xmlCat1Cat3l = $xPath->query("child::category/child::category", $xmlCat1);
+    foreach ($xmlCat1Cat3l as $xmlCat1Cat3)
+      $cat3IDs[] = (int)$xmlCat1Cat3->getAttribute("id");
+    break;
+
+  case 2 :
+    $xmlCat2 = $catTree->item(1);
+    $xmlCurCat = $xmlCat2;
+
+    // populate cat2 var for better usability
+    $cat2 = array(
+      'id' => (int)$xmlCat2->getAttribute('id'),
+      'name' => $xmlCat2->getAttribute('name'),
+      'ref_name' => $xmlCat2->getAttribute('ref_name'),
+      'children' => array()
+    );
+    $curCat = $cat2;
+
+    // get cat2's cat3 children
+    $xmlCat2Cat3l = $xPath->query("child::category", $xmlCat2);
+    foreach ($xmlCat2Cat3l as $xmlCat2Cat3) {
+      $cat3Id = (int)$xmlCat2Cat3->getAttribute("id");
+      $cat3IDs[] = $cat3Id; // id's for pdt selection
+      $cat2['children'][] = array(
+        'id' => $cat3Id,
+        'name' => $xmlCat2Cat3->getAttribute('name'),
+        'ref_name' => $xmlCat2Cat3->getAttribute('ref_name')
+      );
+    }
+
+    // get cat2 stats
+    $stats = explode("|",$xPath->query("child::stats",$xmlCat2)->item(0)->nodeValue);
+    for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+      $cat2[$stats_key[$sk]] = $stats[$sk];
+
+    // get cat2 siblings and CAT2_SIBLINGS_CAT3_COUNT of their children
+    $xmlCat2sl = $xPath->query("child::category", $xmlCat1);
+    $cat2sl = array(); // cat2 sibling list
+    foreach ($xmlCat2sl as $xmlCat2s) {
+      $cat2sId = (int)$xmlCat2s->getAttribute('id');
+      if ($cat2sId !== $cat2['id']) {
+        $cat2s = array(
+          'id' => $cat2sId,
+          'name' => $xmlCat2s->getAttribute('name'),
+          'ref_name' => $xmlCat2s->getAttribute('ref_name'),
+          'children' => array()
+        );
+        $xmlCat2sCat3l = $xPath->query("child::category", $xmlCat2s);
+        foreach ($xmlCat2sCat3l as $k => $xmlCat2sCat3) {
+          if ($k >= CAT2_SIBLINGS_CAT3_COUNT)
+            break;
+          $cat2s['children'][] = array(
+            'id' => (int)$xmlCat2sCat3->getAttribute('id'),
+            'name' => $xmlCat2sCat3->getAttribute('name'),
+            'ref_name' => $xmlCat2sCat3->getAttribute('ref_name'),
+          );
+        }
+        $cat2sl[] = $cat2s;
+      }
+    }
+    break;
+
+  case 3 :
+    $xmlCat2 = $catTree->item(1);
+    $xmlCat3 = $catTree->item(2);
+    $xmlCurCat = $xmlCat3;
+
+    // populate cat2 and cat3 vars for better usability
+    $cat2 = array(
+      'id' => (int)$xmlCat2->getAttribute('id'),
+      'name' => $xmlCat2->getAttribute('name'),
+      'ref_name' => $xmlCat2->getAttribute('ref_name'),
+      'children' => array()
+    );
+    $cat3 = array(
+      'id' => (int)$xmlCat3->getAttribute('id'),
+      'name' => $xmlCat3->getAttribute('name'),
+      'ref_name' => $xmlCat3->getAttribute('ref_name')
+    );
+    $curCat = $cat3;
+
+    // get cat2's cat3 children
+    $xmlCat2Cat3l = $xPath->query("child::category", $xmlCat2);
+    foreach ($xmlCat2Cat3l as $xmlCat2Cat3) {
+      $cat2['children'][] = array(
+        'id' => (int)$xmlCat2Cat3->getAttribute('id'),
+        'name' => $xmlCat2Cat3->getAttribute('name'),
+        'ref_name' => $xmlCat2Cat3->getAttribute('ref_name')
+      );
+    }
+
+    // get cat2 and cat3 stats for product-list.php
+    $stats = explode("|",$xPath->query("child::stats",$xmlCat2)->item(0)->nodeValue);
+    for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+      $scat2[$stats_key[$sk]] = $stats[$sk];
+    $stats = explode("|",$xPath->query("child::stats",$xmlCat3)->item(0)->nodeValue);
+    for ($sk=0, $slen=count($stats); $sk<$slen; $sk++)
+      $scat3[$stats_key[$sk]] = $stats[$sk];
+
+    // get cat2 siblings and CAT2_SIBLINGS_CAT3_COUNT of their children
+    $xmlCat2sl = $xPath->query("child::category", $xmlCat1);
+    $cat2sl = array(); // cat2 sibling list
+    foreach ($xmlCat2sl as $xmlCat2s) {
+      $cat2sId = (int)$xmlCat2s->getAttribute('id');
+      if ($cat2sId !== $cat2['id']) {
+        $cat2s = array(
+          'id' => $cat2sId,
+          'name' => $xmlCat2s->getAttribute('name'),
+          'ref_name' => $xmlCat2s->getAttribute('ref_name'),
+          'children' => array()
+        );
+        $xmlCat2sCat3l = $xPath->query("child::category", $xmlCat2s);
+        foreach ($xmlCat2sCat3l as $k => $xmlCat2sCat3) {
+          if ($k >= CAT2_SIBLINGS_CAT3_COUNT)
+            break;
+          $cat2s['children'][] = array(
+            'id' => (int)$xmlCat2sCat3->getAttribute('id'),
+            'name' => $xmlCat2sCat3->getAttribute('name'),
+            'ref_name' => $xmlCat2sCat3->getAttribute('ref_name'),
+          );
+        }
+        $cat2sl[] = $cat2s;
+      }
+    }
+    break;
+
+  default : break;
+}
+
+
+// --------------------------------------------------------------------------------
+// SELECTION/FAVOURITE/MOST VIEWED/LATEST PDT
+// Getting the products ID from xml and/or from the DB
+// --------------------------------------------------------------------------------
+// Shipping fee
+$res = $db->query("select config_name, config_value from config where config_name = 'fdp' or config_name = 'fdp_franco' or config_name = 'fdp_sentence'", __FILE__, __LINE__ );
+while ($rec = $db->fetch($res)) {
+  $$rec[0] = $rec[1];
+}
+
+// category custom title & meta desc
+$cc_title = ($cc_title_node = $xPath->query("child::title", $xmlCurCat)) >= 1 ? $cc_title_node->item(0)->nodeValue : "";
+$cc_meta_desc = ($cc_meta_desc_node = $xPath->query("child::meta_desc", $xmlCurCat)) >= 1 ? $cc_meta_desc_node->item(0)->nodeValue : "";
+
+$pdt_infos = array();
+
+switch ($catTree->length) {
+  case 1:
+    $pageName = "liste_categories";
+    break;
+  case 2:
+    $pageName = "liste_categories";
+    break;
+  case 3:
+    $pageName = "liste_produits";
+    break;
+  default:
+    break;
+}
+
+if ($catTree->length < 3) {
+
+  $mts["TOTAL TIME"]["start"] = microtime(true);
+
+  define("CAT1_PDT_SELECTION_COUNT", 6);
+
+  $pdt_selection = array();
+  $pdt_selection_node = $xPath->query("child::pdt_selection", $xmlCurCat);
+  if ($pdt_selection_node->length >= 1) {
+    $pdt_selection = explode("|",$pdt_selection_node->item(0)->nodeValue);
+    foreach($pdt_selection as $v) $pdt_infos[$v] = true;
+  }
+  $pdt_selection_count = count($pdt_selection);
+
+  $pdt_infos_count = count($pdt_infos);
+
+  if ($pdt_selection_count < CAT1_PDT_SELECTION_COUNT) {
+
+    // Selection products
+    // sortDbInPlace is to slow for thousands of results, so we expect those queries to be in the cache and a lot faster
+    if ($pdt_selection_count < CAT1_PDT_SELECTION_COUNT) {
+      $mts["PDT SELECTION LOAD"]["start"] = microtime(true);
+      $hits2leads_w = 0.2 * $global["hits"] / $global["leads"];	// weight of products leads
+      $hits2orders_w = 0.8 * $global["hits"] / $global["orders"];	// weight of products orders
+      $pdtSelectionList = array();
+      $res = $db->query("
+        SELECT DISTINCT p.id, (ps.leads/ps.hits*".$hits2leads_w." + ps.orders/ps.hits*".$hits2orders_w.") as score_selection
+        FROM products p, products_fr pfr, products_stats ps, products_families pf, advertisers a
+        WHERE
+          p.id = pfr.id
+          AND pfr.active = 1
+          AND p.id = ps.id
+          AND p.id = pf.idProduct
+          AND pf.idFamily IN (".implode(",",$cat3IDs).")
+          AND p.idAdvertiser = a.id
+          AND a.category < ".__ADV_CAT_PROSPECT__."
+          AND a.actif = 1
+        ORDER BY score_selection DESC
+        LIMIT 0, 50", __FILE__, __LINE__);
+      while ($pdt = $db->fetchAssoc($res)) $pdtSelectionList[] = $pdt;
+      $pdtSelectionCount = count($pdtSelectionList);
+
+      // Selection
+      while ($pdt_selection_count < CAT1_PDT_SELECTION_COUNT && $pdt_selection_count < $pdtSelectionCount) {
+        do {
+          $pdtID = $pdtSelectionList[mt_rand(0, $pdtSelectionCount-1)]["id"];
+          $pdt_in_selection = in_array($pdtID, $pdt_selection);
+          if ($pdt_infos_count < $pdtSelectionCount) $pdt_in_all = isset($pdt_infos[$pdtID]);
+          else $pdt_in_all = false;
+        } while ($pdt_in_selection || $pdt_in_all);
+        $pdt_selection[] = $pdtID;
+        $pdt_selection_count++;
+        $pdt_infos[$pdtID] = true;
+        $pdt_infos_count++;
+      }
+      $mts["PDT SELECTION LOAD"]["end"] = microtime(true);
+    }
+
+  }
+
+  if (!empty($pdt_infos)) {
+    $mts["PDT DETAIL LOAD"]["start"] = microtime(true);
+    $res = $db->query("
+      SELECT
+        p.id, p.idTC, p.price AS pdt_price, p.timestamp, p.shipping_fee,
+        pfr.name, pfr.ref_name, pfr.fastdesc, pfr.delai_livraison AS delivery_time,
+        pf.idFamily AS catID,
+        a.id AS adv_id, a.nom1 AS adv_name, a.category AS adv_cat, a.delai_livraison AS adv_delivery_time,
+        rc.id as ref_idtc, rc.refSupplier AS ref_refSupplier, rc.price+rc.ecotax AS ref_price
+      FROM products p
+      INNER JOIN products_fr pfr ON p.id = pfr.id AND pfr.active = 1
+      INNER JOIN products_families pf ON p.id = pf.idProduct
+      INNER JOIN advertisers a ON p.idAdvertiser = a.id AND a.actif = 1
+      LEFT JOIN references_content rc ON p.id = rc.idProduct AND rc.classement = 1 AND rc.vpc = 1 AND rc.deleted = 0
+      WHERE p.id in (".implode(",", array_keys($pdt_infos)).")
+      GROUP BY p.id", __FILE__, __LINE__);
+
+    while ($pdt = $db->fetchAssoc($res)) {
+      // idTC
+      if (isset($pdt["ref_idtc"]))
+        $pdt["idTC"] = $pdt["ref_idtc"];
+      $pdt["saleable"] = $pdt["hasPrice"] = false;
+      $pdt["price"] = $pdt["pdt_price"];
+      if ($pdt["price"] == "ref") {
+        $pdt["price"] = $pdt["ref_price"];
+      }
+      if (empty($pdt["price"])) {
+        $pdt["price"] = "sur devis";
+      }
+      elseif (preg_match('/^[0-9]+((\.|,)[0-9]+){0,1}$/', $pdt["price"])) { // real price
+        $pdt["hasPrice"] = true;
+        if ($pdt["adv_cat"] == __ADV_CAT_SUPPLIER__)
+          $pdt["saleable"] = true;
+      }
+      else {
+        $pdt["price"] = "sur devis";
+      }
+
+      $pdt["shipping_fee"] = empty($pdt["shipping_fee"]) ? ($pdt["shipping_fee"] = $pdt["hasPrice"] ? ($pdt["price"] > $fdp_franco ? "Offert" : $fdp." € HT") : "N/D") : $pdt["shipping_fee"]." € HT";
+      if ($pdt["delivery_time"] == "") $pdt["delivery_time"] = $pdt["adv_delivery_time"];
+      $pdt["url"] = URL."produits/".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_name"].".html";
+      $pdt["cart_add_url"] = "panier:".$pdt["catID"]."-".$pdt["id"]."-".$pdt["ref_idtc"];
+      $pdt["pic_url"] = is_file(PRODUCTS_IMAGE_INC."thumb_small/".$pdt["id"]."-1.jpg") ? PRODUCTS_IMAGE_URL."thumb_small/".$pdt["ref_name"].'-'.$pdt["id"]."-1.jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif";
+
+      $pdt_infos[$pdt["id"]] = $pdt;
+    }
+    $mts["PDT DETAIL LOAD"]["end"] = microtime(true);
+
+    for ($i = 0; $i < $pdt_selection_count; $i++)
+      $pdt_selection[$i] = &$pdt_infos[$pdt_selection[$i]];
+  }
+  $mts["TOTAL TIME"]["end"] = microtime(true);
+
+  //foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt["end"]-$mt["start"])*1000 . "ms</b><br/>\n";
+} else {
+  include(WWW_PATH."product-list.php");
+
+  // Bayesian average of every products
+  $bayesianAvg = (700 * TYPICAL_DATA_SET_SIZE + $pdtList["priceSum"]) / ($pdtList["priceCount"] + 10);
+
+  if ($pdtList["priceCount"] > 5) {
+    $priceBayesMean = round($bayesianAvg, -2);
+    $priceMin = floor($pdtList["priceMin"]);
+    if ($priceMin % 100 != 0)
+      $priceMin = $priceMin - $priceMin % 100;
+    $priceMax = ceil($pdtList["priceMax"]);
+    if ($priceMax % 100 != 0)
+      $priceMax = $priceMax - $priceMax % 100 + 100;
+
+    $priceRange1 = ($priceBayesMean + $priceMin) / 2;
+    $priceRange2 = ($priceBayesMean + $priceMax) / 2;
+  }
+
+}
+
+// customer tracking
+$viewedProductIds = isset($session->tracking["product"]) ? array_slice(array_unique($session->tracking["product"]),0,4) : array();
+$viewedProductCount = count($viewedProductIds);
+
+// completing with pdt_selection if not enough products viewed
+for ($k=0, $mk=min(4-$viewedProductCount,count($pdt_selection)); $k<$mk; $k++)
+  $viewedProductIds[] = $pdt_selection[$k]["id"];
+
+switch($catTree->length) {
+  case 1 : // Main Category
+    $mts["CAT1 CAT2 SHOW INIT"]["start"] = microtime(true);
+
+    // Mini Stores
+    $msl = MiniStore::getMiniStoresByCatIDs($cat3IDs, true, false, true);
+    if (!empty($msl)) {
+      $k = 0;
+      foreach ($msl as $ms) {
+        if ($k++ >= 3) break;
+        $msnl[] = $ms["name"]; // mini store name list
+      }
+      $msnl = implode(", ",$msnl);
+    }
+
+    $cat1_cat2List = $cat1_cat2nameList10 = $cat1_cat2nameList3 = array();
+    $cat1_cat2nameList_len = 0;
+    foreach ($xmlCat2l as $ccat2) {
+
+      // Getting sample families
+      $ccat2_cat3s = $xPath->query("child::category", $ccat2);
+      $ccat2_cat3s_ex = array(); $ccat2_cat3s_ex_count = 0;
+      foreach($ccat2_cat3s as $ccat2_cat3) {
+        $ccat2_cat3s_ex[] = array(
+          "id" => $ccat2_cat3->getAttribute("id"),
+          "name" => $ccat2_cat3->getAttribute("name"),
+          "ref_name" => $ccat2_cat3->getAttribute("ref_name"),
+          "url" => URL."familles/".$ccat2_cat3->getAttribute("ref_name").".html");
+        if (++$ccat2_cat3s_ex_count >= CAT3_EXAMPLES_COUNT_MAX) break;
+      }
+
+      // Getting a picture for the cat2
+      $ccat2_pic_id = 0;
+      $ccat2_pics_node = $xPath->query("child::pdt_pic", $ccat2);
+      if ($ccat2_pics_node->length >= 1) {
+        $ccat2_pics = explode("|",$ccat2_pics_node->item(0)->nodeValue);
+        $ccat2_pics_count = count($ccat2_pics);
+        if ($ccat2_pics_count != 0)
+          $ccat2_pic_id = $ccat2_pics[mt_rand(0,$ccat2_pics_count-1)];
+      }
+      if ($ccat2_pic_id == 0) { // no picture found in xml
+        $ccat2_cat3IDs = array();
+        foreach($ccat2_cat3s as $ccat2_cat3)
+          $ccat2_cat3IDs[] = (int)$ccat2_cat3->getAttribute("id");
+
+        $stats = explode("|",$xPath->query("child::stats",$ccat2)->item(0)->nodeValue);
+        for($sk = 0, $slen = count($stats); $sk < $slen; $sk++)
+          $sccat2[$stats_key[$sk]] = $stats[$sk];
+
+        $res = $db->query("
+          SELECT p.id
+          FROM products p, products_families pf, advertisers a
+          WHERE p.id = pf.idProduct AND pf.idFamily IN (".implode(",",$ccat2_cat3IDs).") AND p.idAdvertiser = a.id AND a.actif = 1
+          LIMIT ".(mt_rand(0,$sccat2["pdt_count"]-1)).",1", __FILE__, __LINE__);
+        list($ccat2_pic_id) = $db->fetch($res);
+      }
+
+      // Setting cat2 usefull infos
+      $cat1_cat2List[] = array(
+        "id" => $ccat2->getAttribute("id"),
+        "name" => $ccat2->getAttribute("name"),
+        "ref_name" => $ccat2->getAttribute("ref_name"),
+        "url" => URL."familles/".$ccat2->getAttribute("ref_name").".html",
+        "pic_url" => is_file(PRODUCTS_IMAGE_INC."thumb_small/".$ccat2_pic_id."-1".".jpg") ? PRODUCTS_IMAGE_URL."thumb_small/".$ccat2->getAttribute("ref_name").'-'.$ccat2_pic_id."-1".".jpg" : PRODUCTS_IMAGE_URL."no-pic-thumb_small.gif",
+        "cat3_ex" => $ccat2_cat3s_ex
+      );
+
+      // Getting 10 first cat2 names for meta/title
+      if ($cat1_cat2nameList_len < 10)
+        $cat1_cat2nameList10[] = $ccat2->getAttribute("name");
+      // but only the 3 first for block-pdt-title
+      if ($cat1_cat2nameList_len < 3)
+          $cat1_cat2nameList3[] = $ccat2->getAttribute("name");
+      $cat1_cat2nameList_len++;
+
+    }
+    $cat1_cat2nameList10 = implode(", ", $cat1_cat2nameList10);
+    $cat1_cat2nameList3 = implode(", ", $cat1_cat2nameList3);
+    $mts["CAT1 CAT2 SHOW INIT"]["end"] = microtime(true);
+    //foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt["end"]-$mt["start"])*1000 . "ms</b><br/>\n";
+
+    list($title, $meta_desc, $meta_keys) = str_replace(
+      array("%CAT1_NAME%", "%CAT1_CAT2_LIST%"),
+      array($cat1['name'], $cat1_cat2nameList3),
+      array(CAT1_TITLE, CAT1_META_DESC, CAT1_META_KEYS));
+    $title = !empty($cc_title) ? $cc_title : $cat1['name'].' - Techni-Contact';
+
+    if (!empty($cc_meta_desc))
+      $meta_desc = $cc_meta_desc;
+
+    $c2i = 0;
+
+    $h1label = $cat1['name'].', '.($cat1_cat2List[0]['name']?$cat1_cat2List[0]['name'].', ':'').($cat1_cat2List[1]['name']?($cat1_cat2List[1]['name'].', '):'').($cat1_cat2List[2]['name']?($cat1_cat2List[2]['name'].' '):'').' ...';
+
+    // criteo first 3 products
+    $criteo['pdt_ids'] = array_slice($viewedProductIds, 0, 3);
+
+    require(SITE."head.php");
+?>
+<div id="body" class="white-bg">
+<div class="categories" id="left-col">
+  <div class="categories-header">
+    <h1 class="cat1 blue-title"><?php echo $h1label; ?>&nbsp;</h1>
+    <span class="h1-cat1 blue-smaller-title">(<?php echo number_format($cat1['pdt_count'], 0, "", " "); ?> produits)</span>
+    <div class="clear"></div>
+   <?php if (!empty($msl)) : ?>
+    <div class="categories-block-text">Nos espaces thématiques : <em><?php echo $msnl; ?></em></div>
+   <?php endif ?>
+  </div>
+
+  <div class="grey-block" id="top-sells-cat1">
+    <div class="grey-block-title">Nos meilleures ventes en <?php echo $cat1['name'] ?></div>
+    <div class="AvailCarrousel">
+      <div class="mask">
+        <ul class="items">
+        </ul>
+      </div>
+      <div class="scroll-l"><img src="<?php echo $res_url; ?>images/carrousel-arrow-left.png" alt=""></div>
+      <div class="scroll-r"><img src="<?php echo $res_url; ?>images/carrousel-arrow-right.png" alt=""></div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    HN.TC.GetNuukikRecommendedProducts("top-sells-cat1", [78, "categories", "<?php echo str_replace('"', '\"', $cat1['id']) ?>", "bestsellers"], "carrousel", null, function(){
+      window._gaq && _gaq.push(['_trackEvent', 'Nuukik', 'Reco F1', "<?php echo addslashes($cat1['name']) ?>"]);
+    });
+  </script>
+
+  <div id="block-categories-children" class="invisible-block">
+    <div class="grey-block-title">Nos <?php echo count($cat1_cat2List); ?> rayons en <?php echo $cat1['name'] ?></div>
+    <div class="grey-block-wide-inlay">
+
+      <?php foreach($cat1_cat2List as $cat2) { ?>
+
+        <div class="grey-block half-width-block<?php if ($c2i%2 == 0) { echo ' hwbl';} elseif($c2i%2 == 1){echo ' hwbr';}?>">
+          <div class="fr">
+            <div class="sous-cat-infos">
+              <h2><a class="blue-small-title" href="<?php echo $cat2["url"]; ?>"><?php echo $cat2["name"] ?></a></h2>
+              <ul class="sous-cat-examples">
+              <?php foreach($cat2["cat3_ex"] as $cat3) { ?>
+                <li><h3><a href="<?php echo $cat3["url"]; ?>"><?php echo $cat3["name"]; ?></a></h3></li>
+              <?php } ?>
+              </ul>
+            </div>
+          </div>
+          <div class="fl sous-cat">
+            <div class="picture">
+              <img src="<?php echo $cat2["pic_url"]; ?>" alt="Retrouvez tous les produits  <?= $cat2["name"]; ?> sur Techni-Contact" class="vmaib"/><div class="vsma"></div>
+            </div>
+            <!--<div class="grey-btn">
+              <img src="<?php echo $res_url; ?>images/grey-btn-left.png" alt="" class="fl" />
+              <span class="see-link">Voir tout</span>
+              <img src="<?php echo $res_url; ?>images/grey-btn-right.png" alt="" class="fr" />
+              <div class="zero"></div>
+            </div>-->
+            <button class="grey-btn gb135 see-link">Voir tout le rayon</button>
+          </div>
+          <div class="zero"></div>
+        </div>
+      <?php if($c2i%2 == 1): ?>
+      <div class="zero"></div>
+      <?php endif; ?>
+
+      <?php $c2i++; } ?>
+
+    </div>
+  </div>
+<?php
+    break;
+
+  case 2 : // Level 2 category
+    $mts["CAT2 CAT3 SHOW INIT"]["start"] = microtime(true);
+    $cat2_cat3List = $cat2_cat3nameList10 = $cat2_cat3nameList3 = array();
+    $cat2_cat3nameList_len = 0;
+    $cat2_cat3_pp_ids = array(); // list of preview product's ids for each cat3
+    foreach ($xmlCat2Cat3l as $ccat3) {
+
+      // Getting a fixed picture for the cat3
+      $ccat3_pic_id = "";
+      $xpq = $xPath->query("child::pdt_pic", $ccat3);
+      if ($xpq->length)
+        list($ccat3_pic_id) = explode("|",$xpq->item(0)->nodeValue);
+
+      // preview products, should always be = to CAT3_PREVIEW_PDT_SELECTION_COUNT
+      $ccat3_preview_pdt_node = $xPath->query("child::preview_pdt_selection", $ccat3);
+      $ccat3_pp = array();
+      if ($ccat3_preview_pdt_node->length >= 1) {
+        $ccat3_pp = explode("|",$ccat3_preview_pdt_node->item(0)->nodeValue);
+        foreach ($ccat3_pp as $pdt_id)
+          $cat2_cat3_pp_ids[$pdt_id] = true;
+      }
+
+      // Setting cat2 usefull infos
+      $cat2_cat3List[] = array(
+        "id" => $ccat3->getAttribute("id"),
+        "name" => $ccat3->getAttribute("name"),
+        "ref_name" => $ccat3->getAttribute("ref_name"),
+        "url" => URL."familles/".$ccat3->getAttribute("ref_name").".html",
+        "pic_url" => Utils::get_pdt_pic_url($ccat3_pic_id, 'thumb_small', 1,$ccat3->getAttribute("ref_name")),
+        "nbr_products" => $sccat3["pdt_count"],
+        "preview_products" => $ccat3_pp
+      );
+
+      // Getting 10 first cat2 names for meta/title
+      if ($cat2_cat3nameList_len < 10)
+        $cat2_cat3nameList10[] = $ccat3->getAttribute("name");
+      if ($cat2_cat3nameList_len < 3)
+        $cat2_cat3nameList3[] = $ccat3->getAttribute("name");
+      $cat2_cat3nameList_len++;
+
+    }
+
+    // get all previewed cat3's products in one query, then index the products by their ids
+    $cat2_cat3_pp = Doctrine_Query::create()
+        ->select('id, ref_name, name')
+        ->from('ProductsFr')
+        ->whereIn('id', array_keys($cat2_cat3_pp_ids))
+        ->fetchArray();
+    $cat2_cat3_pp_i = array();
+    foreach ($cat2_cat3_pp as $pdt)
+      $cat2_cat3_pp_i[$pdt['id']] = $pdt;
+
+    // then just replace the pdt id's with the pdt infos for each cat3
+    foreach ($cat2_cat3List as &$cat3) {
+      $pp = $cat3['preview_products'];
+      $cat3['preview_products'] = array();
+      foreach ($pp as $pdt_id)
+        $cat3['preview_products'][] = $cat2_cat3_pp_i[$pdt_id];
+    }
+    unset($cat3);
+
+    $cat2_cat3nameList10 = implode(", ", $cat2_cat3nameList10);
+    $cat2_cat3nameList3 = implode(", ", $cat2_cat3nameList3);
+    $mts["CAT2 CAT3 SHOW INIT"]["end"] = microtime(true);
+    //foreach($mts as $mtn => $mt) print $mtn . " = <b>" . ($mt["end"]-$mt["start"])*1000 . "ms</b><br/>\n";
+
+    list($title, $meta_desc, $meta_keys) = str_replace(
+      array("%CAT1_NAME%", "%CAT2_NAME%", "%CAT2_CAT3_LIST%"),
+      array($cat1['name'], $cat2['name'], $cat2_cat3nameList10),
+      array(CAT2_TITLE, CAT2_META_DESC, CAT2_META_KEYS));
+    $title = !empty($cc_title) ? $cc_title : $cat2['name'].' - '.$cat1['name'].' - Techni-Contact';
+    if (!empty($cc_meta_desc))
+      $meta_desc = $cc_meta_desc;
+
+    // criteo first 3 products
+    $criteo['pdt_ids'] = array_slice($viewedProductIds, 0, 3);
+    $h1label = $cat2['name'].', '.($cat2_cat3List[0]['name']?$cat2_cat3List[0]['name'].', ':'').($cat2_cat3List[1]['name']?($cat2_cat3List[1]['name'].', '):'').($cat2_cat3List[2]['name']?($cat2_cat3List[2]['name'].' '):'').' ...';
+    require(SITE . "head.php");
+?>
+<div id="body" class="white-bg">
+<div class="categories cat2" id="left-col">
+
+  <div class="left-panel">
+    <div id="cat3-cat-filtering" class="filtering">
+      <div class="pdt-filtering-title"><a href="<?php echo URL."familles/".$cat2['ref_name'].".html" ?>"><?php echo $cat2['name'] ?></a></div>
+      <ul class="cat3-cat-filtering">
+       <?php foreach ($cat2['children'] as $cat2Cat3) : ?>
+        <li><a href="<?php echo URL."familles/".$cat2Cat3['ref_name'].".html" ?>"><?php echo $cat2Cat3['name'] ?></a></li>
+       <?php endforeach ?>
+      </ul>
+      <div class="cat-siblings">
+       <?php foreach ($cat2sl as $cat2s) : ?>
+        <div class="pdt-filtering-title"><a href="<?php echo URL."familles/".$cat2s['ref_name'].".html" ?>"><?php echo $cat2s['name'] ?></a></div>
+        <ul class="cat3-cat-filtering">
+         <?php foreach ($cat2s['children'] as $cat2sCat3) : ?>
+          <li><a href="<?php echo URL."familles/".$cat2sCat3['ref_name'].".html" ?>"><?php echo $cat2sCat3['name'] ?></a></li>
+         <?php endforeach ?>
+          <li><a href="<?php echo URL."familles/".$cat2s['ref_name'].".html" ?>" class="more">Voir tout <?php echo $cat2s['name'] ?></a></li>
+        </ul>
+       <?php endforeach ?>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="categories-header">
+     <h1 class="cat2 blue-title"><?php echo $h1label; ?>&nbsp;</h1>
+      <span class="h1-cat2 blue-smaller-title">(<?php echo number_format($cat2['pdt_count'], 0, "", " "); ?> produits)</span>
+      <div class="clear"></div>
+    </div>
+    <div class="clear"></div>
+    <div class="grey-block" id="top-sells-cat2">
+      <div class="grey-block-title">Nos meilleures ventes en <?php echo $cat2['name'] ?></div>
+      <div class="AvailCarrousel">
+        <div class="mask">
+          <ul class="items">
+          </ul>
+        </div>
+        <div class="scroll-l"><img src="<?php echo $res_url; ?>images/carrousel-arrow-left.png" alt=""></div>
+        <div class="scroll-r"><img src="<?php echo $res_url; ?>images/carrousel-arrow-right.png" alt=""></div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      HN.TC.GetNuukikRecommendedProducts("top-sells-cat2", [79, "categories", "<?php echo str_replace('"', '\"', $cat2['id']) ?>", "bestsellers"], "carrousel", null, function(){
+      window._gaq && _gaq.push(['_trackEvent', 'Nuukik', 'Reco F2', "<?php echo addslashes($cat2['name']) ?>"]);
+    });
+    </script>
+
+    <div id="block-categories-children" class="invisible-block">
+      <div class="grey-block-title">Nos <?php echo count($cat2_cat3List); ?> rayons en <?php echo $cat2['name']; ?></div>
+      <div class="grey-block-wide-inlay">
+       <?php foreach ($cat2_cat3List as $cat3) : ?>
+        <div class="grey-block half-width-block">
+          <div class="fl sous-cat">
+            <div class="picture">
+              <img src="<?php echo $cat3["pic_url"]; ?>" alt="Retrouvez tous les produits  <?= $cat3["name"]; ?> sur Techni-Contact" class="vmaib"/><div class="vsma"></div>
+            </div>
+            <button class="grey-btn gb112 see-link">Voir tout le rayon</button>
+          </div>
+          <div class="fr">
+            <div class="sous-cat-infos">
+              <h2><a class="blue-small-title blue-smaller-title" href="<?php echo $cat3["url"]; ?>"><?php echo $cat3["name"] ?></a></h2>
+              <ul class="sous-cat-examples">
+                <?php foreach ($cat3['preview_products'] as $pdt) : ?>
+                <li><h3><a href="<?php echo Utils::get_pdt_fo_url($pdt['id'], $pdt['ref_name'], $cat3['id']) ?>"><?php echo $pdt['name'] ?></a></h3></li>
+                <?php endforeach ?>
+              </ul>
+            </div>
+          </div>
+          <div class="zero"></div>
+        </div>
+       <?php endforeach ?>
+      </div>
+    </div>
+  </div>
+<?php
+    break;
+
+  case 3 : // Level 3 category
+    list($title, $meta_desc, $meta_keys) = str_replace(
+      array("%CAT2_NAME%", "%CAT3_NAME%", "%LISTING_START%", "%LISTING_END%", "%PAGE_CURRENT%", "%PAGE_TOTAL%"),
+      array($cat2['name'], $cat3['name'], $startItemIndex+1, $endItemIndex+1, $page, $maxpage),
+      array(CAT3_TITLE, CAT3_META_DESC, CAT3_META_KEYS));
+
+    $titlePage = $_GET['page'];
+    $title = !empty($cc_title) ?
+      $cc_title . (!empty($titlePage)?' (page '.$titlePage.')':'') :
+      $cat3['name'].(!empty($titlePage)?' (page '.$titlePage.')':'').' - '.$cat2['name'].' - Techni-Contact';
+
+    if (!empty($cc_meta_desc))
+      $meta_desc = $cc_meta_desc;
+
+    $motto = "Le plus large choix de ".$cat3['name'];
+
+    if ($pdtList["advCatCountShowed"][__ADV_CAT_SUPPLIER__] == 0) {
+      define("NO_SUPPLIER_PRODUCT", true);
+      if ($pdtList["advCatCountShowed"][__ADV_CAT_ADVERTISER__] < $pdtList["count"])
+        define("NOR_ADVERTISER_PRODUCT", true);
+    }
+    if (isset($_GET["sort"]) || isset($_GET["filter"]) || isset($_GET["range"]))
+      define("NOINDEX_FOLLOW", true);
+
+    $MetaLinksNextPrev = "";
+    if ($page > 1)
+      $MetaLinksNextPrev .= "<link rel=\"prev\" href=\"".URL."familles/".$cat3['ref_name'].".html".($page > 2 ? "?page=".($page-1) : "")."\" />";
+    if ($page < $maxpage)
+      $MetaLinksNextPrev .= "<link rel=\"next\" href=\"".URL."familles/".$cat3['ref_name'].".html?page=".($page+1)."\" />";
+
+    require CONTROLLER.'front/FacetController.php';
+    $facetCtrl = new FrontFacetController();
+    $facets = $facetCtrl->getList($cat3['id']);
+
+    //$s = microtime(true);
+    //print_r('time = '.round((microtime(true)-$s)*1000,3).'ms');
+
+    require SITE."head.php";
+    $savedProductsList = new ProductsSavedList();
+    $savedProducts = $savedProductsList->getList();
+?>
+<script type="text/javascript">
+  HN.TC.GVars.userLogged = <?php echo $session->logged ? 'true': 'false'; ?>;
+  HN.TC.GVars.savedProductsList = <?php echo json_encode($savedProducts) ?>;
+</script>
+
+<div id="body" class="white-bg">
+<div class="categories" id="left-col">
+
+<?php if ($results["count"] > 0) { ?>
+  <div class="left-panel">
+
+    <div id="pdt-filtering" class="filtering">
+      <div class="pdt-filtering-title current-criterias">Critères pour le produit</div>
+      <ul class="current-criterias">
+        <li><a href="#" class="filtering-reload-page" data-action="-_filter_all">Supprimer tous les critères</a></li>
+      </ul>
+
+     <?php foreach ($facets as $facet) : ?>
+      <div class="pdt-filtering-title first-filtering-title"><?php echo $facet['title'].' '.$facet['unit_text']; ?></div>
+      <ul class="facet">
+       <?php foreach ($facet['lines'] as $line) : ?>
+        <li>
+          <input class="filterAdd" type="checkbox" name="+_filter_facet_<?php echo $facet['ref_title'] ?>_<?php echo $line['ref_value'] ?>" />
+          <a href="<?php echo Utils::get_family_fo_url($cat3['ref_name'], $facet['ref_title'], $line['ref_value']) ?>">
+           <?php if ($line['type'] == FacetLine::TYPE_VALUE) : ?>
+            <?php echo $line['value'].' '.$line['unit_text'] ?>
+           <?php elseif ($line['type'] == FacetLine::TYPE_INTERVAL) : ?>
+            <?php echo 'De '.$line['start'].' à '.$line['end'].' '.$line['unit_text'] ?>
+           <?php endif ?>
+          </a>
+        </li>
+       <?php endforeach ?>
+      </ul>
+     <?php endforeach ?>
+
+     <?php if ($pdtList["priceCount"] > 5) : ?>
+      <div class="pdt-filtering-title">Prix</div>
+      <ul>
+        <li>
+          <input class="filter" type="checkbox" name="+_filter_price_<?php echo $priceMin.'_'.$priceRange1; ?>" />
+          <label>De <?php echo $priceMin; ?>€ à <?php echo $priceRange1; ?>€</label>
+        </li>
+        <li>
+          <input class="filter" type="checkbox" name="+_filter_price_<?php echo $priceRange1.'_'.$priceBayesMean; ?>" />
+          <label>De <?php echo $priceRange1; ?>€ à <?php echo $priceBayesMean; ?>€</label>
+        </li>
+        <li>
+          <input class="filter" type="checkbox" name="+_filter_price_<?php echo $priceBayesMean.'_'.$priceRange2; ?>" />
+          <label>De <?php echo $priceBayesMean; ?>€ à <?php echo $priceRange2; ?>€</label>
+        </li>
+        <li>
+          <input class="filter" type="checkbox" name="+_filter_price_<?php echo $priceRange2.'_'.$priceMax; ?>" />
+          <label>De <?php echo $priceRange2; ?>€ à <?php echo $priceMax; ?>€</label>
+        </li>
+      </ul>
+    <?php endif // priceCount > 5 ?>
+    </div>
+
+    <div id="cat3-cat-filtering" class="filtering">
+      <div class="pdt-filtering-title"><a href="<?php echo URL."familles/".$cat2['ref_name'].".html"; ?>"><?php echo $cat2['name']; ?></a></div>
+      <ul class="cat3-cat-filtering">
+     <?php foreach ($cat2['children'] as $cat2Cat3) : ?>
+        <li<?php if ($cat3['ref_name'] == $cat2Cat3['ref_name']) : ?> class="current"<?php endif ?>>
+          <a <?php if(!TEST): ?>onClick="_gaq.push(['_trackEvent', 'Famille 3', 'Navigation famille 3', '<?php echo $cat2Cat3['name'] ?>']);" <?php endif; ?>href="<?php echo URL."familles/".$cat2Cat3['ref_name'].".html"; ?>"><?php echo $cat2Cat3['name']; ?></a>
+        </li>
+     <?php endforeach // cat3list ?>
+      </ul>
+      <div class="cat-siblings">
+       <?php foreach ($cat2sl as $cat2s) : ?>
+        <div class="pdt-filtering-title"><a href="<?php echo URL."familles/".$cat2s['ref_name'].".html" ?>"><?php echo $cat2s['name'] ?></a></div>
+        <ul class="cat3-cat-filtering">
+         <?php foreach ($cat2s['children'] as $cat2sCat3) : ?>
+          <li><a href="<?php echo URL."familles/".$cat2sCat3['ref_name'].".html" ?>"><?php echo $cat2sCat3['name'] ?></a></li>
+         <?php endforeach ?>
+          <li><a href="<?php echo URL."familles/".$cat2s['ref_name'].".html" ?>" class="more">Voir tout <?php echo $cat2s['name'] ?></a></li>
+        </ul>
+       <?php endforeach ?>
+      </div>
+    </div>
+
+  </div>
+  <div class="right-panel">
+    <div id="ajax-pdt-list" class="pdt-list"><?php echo $pdtListHTML ?></div>
+  </div>
+<?php } ?>
+<?php
+    require "categories-google-adwords.php";
+    break;
+
+  default :
+    header("Location: ".URL);
+    exit();
+}
+?>
+</div>
+
+<?php require SITE.'blocks-right.php' ?>
+  <div class="clear"></div>
+  <div id="cart-add-product-dialog" title="Choisir mon modèle"></div>
+</div><!-- .white-bg -->
+<script type="text/javascript">
+  $("#pdt-filtering").on("click", "li input[type=checkbox], ul.current-criterias li img, ul.current-criterias .filtering-reload-page", function(){
+    window._gaq && _gaq.push(['_trackEvent', 'Famille 3', 'Utilisation facettes', '<?php echo $cat3['name'] ?>']);
+
+    // var cleanh1 = $('head title').text().split(' - ');
+    // var cleanProduct = cleanh1[0].split(' (', 1);
+    // var page = '';
+    // $('head title').text(cleanProduct+page+' - '+cleanh1[1]+' - '+cleanh1[2]);
+
+    HN.TC.updateCat3ProductsView(<?php echo $cat3['id'] ?>, $(this).data("action") || $(this).attr("name"), $(this));
+    // if($(this).get(0).tagName.toLowerCase() == 'a')
+    //   return false;
+  });
+  $("#ajax-pdt-list").on("change", ".filter-sort select", function(){
+    HN.TC.updateCat3ProductsView(<?php echo $cat3['id'] ?>, $(this).children("option:selected").attr("value"), $(this));
+  });
+</script>
+<?php require SITE.'foot.php' ?>

@@ -1,0 +1,76 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+$session = new UserSession();
+
+$infos = $session->authorized_adv_infos;
+
+if (!isset($infos)) {
+  $infos = array(
+  'Customer-RequestType' => 3,
+  'Customer-Email2' => "t.henryg@techni-contact.com",
+  'MainProduct-Advertiser-Category' => 1,
+  'MainProduct-Advertiser-ShowInfosOnline' => 0,
+  'MainProduct-GeneratedContactID' => "");
+}
+
+define("__PARTNER_SUCCESS__", true);
+define("__BR_NO_AD__", true);
+define("__TOP_NO_AD__", true);
+
+if ($infos["MAINPRODUCT_ADVERTISER_CATEGORY"] != __ADV_CAT_SUPPLIER__) {
+  define("NO_SUPPLIER_PRODUCT", true);
+  if ($infos["MAINPRODUCT_ADVERTISER_CATEGORY"] != __ADV_CAT_ADVERTISER__)
+    define("NOR_ADVERTISER_PRODUCT", true);
+}
+$meta_desc = "";
+require SITE.'head.php';
+?>
+<div class="white-bg">
+  <div class="lead-form partner-success">
+    <div class="blue-title">Merci pour votre confiance</div>
+    <div class="zero"></div>
+    <br/>
+	<p>
+	Votre demande a été transmise à notre service partenariat qui reviendra vers vous dans les 24H.
+	</p>
+   
+    <strong>Voici ses coordonnées :</strong><br/>
+    <br/>
+   <p>
+    01 72 08 01 28<br/>
+    <a class="color-blue" href="mailto:partenariat@techni-contact.com?subject=Contrat de partenariat"> partenariat@techni-contact.com</a><br/>
+    De 9H30 à 12H30 et de 14H à 19H
+    </p>
+   <br/>
+	
+  </div>
+</div>
+<noscript>
+  <div style="display:inline;">
+    <img height="1" width="1" style="border-style:none;" alt="" src="http://www.googleadservices.com/pagead/conversion/1003507373/?label=4skVCPOohwIQrZ3B3gM&amp;guid=ON&amp;script=0"/>
+  </div>
+</noscript>
+<!-- Google Code for Demande de devis Conversion Page -->
+<script type="text/javascript">
+  /* <![CDATA[ */
+  var google_conversion_id = 1071094688;
+  var google_conversion_language = "fr";
+  var google_conversion_format = "3";
+  var google_conversion_color = "ffffff";
+  var google_conversion_label = "WD83CPKZ7QEQoLfe_gM";
+  var google_conversion_value = 0;
+  /* ]]> */
+</script>
+<script type="text/javascript" src="http://www.googleadservices.com/pagead/conversion.js"></script>
+<noscript>
+  <div style="display:inline;">
+    <img height="1" width="1" style="border-style:none;" alt="" src="http://www.googleadservices.com/pagead/conversion/1071094688/?label=WD83CPKZ7QEQoLfe_gM&amp;guid=ON&amp;script=0"/>
+  </div>
+</noscript>
+<!-- Google Code for Demande de devis Conversion Page -->
+
+<!--Bing code-->
+<script type="text/javascript"> if (!window.mstag) mstag = {loadTag : function(){},time : (new Date()).getTime()};</script> <script id="mstag_tops" type="text/javascript" src="//flex.atdmt.com/mstag/site/3f0d7f32-37b4-473e-94fb-9d540a5dfe7b/mstag.js"></script> <script type="text/javascript"> mstag.loadTag("conversion", {cp:"5050",dedup:"1"})</script> <noscript> <iframe src="//flex.atdmt.com/mstag/tag/3f0d7f32-37b4-473e-94fb-9d540a5dfe7b/conversion.html?cp=5050&dedup=1" frameborder="0" scrolling="no" width="1" height="1" style="visibility:hidden;display:none"> </iframe> </noscript>
+<!--Bing code-->
+<?php require SITE.'foot.php' ?>

@@ -1,0 +1,57 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V2 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 20 juillet 2005
+
+ Fichier : /secure/extranet/families/i_linkFamily.html
+ Description : Recherche famille
+
+/=================================================================*/
+
+if(!isset($_GET['id']) || !preg_match('/^[1-9][0-9]*$/', $_GET['id']))
+{
+    print('-1');
+    flush();
+    
+    exit;
+}
+
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+require(EXTRANET  . 'logs.php');
+require(ICLASS    . 'ExtranetUser.php');
+
+$handle = DBHandle::get_instance();
+$user   = & new ExtranetUser($handle);
+
+if(!$user->login() || !$user->active)
+{
+    print('-1');
+    flush();
+    
+    exit;
+}
+
+if(($result = & $handle->query('select name from families_fr where id = \'' . $handle->escape($_GET['id']). '\'', __FILE__, __LINE__)) && $handle->numrows($result, __FILE__, __LINE__) == 1)
+{
+    $record = & $handle->fetch($result);
+
+    print($_GET['id'] . '<separator>' . to_entities(str_replace(array('"', "'", '&', '(', ')'), array(' ', ' ', '', '', ''), Utils::toASCII($record[0]))));
+}
+else
+{
+    print('-1');
+}
+
+
+
+flush();
+exit;
+
+
+?>

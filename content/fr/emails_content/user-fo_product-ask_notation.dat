@@ -1,0 +1,36 @@
+<p style="font-size: 12px">
+  <br />
+  <br />
+  Bonjour, <strong>CUSTOMER_NAMES</strong><br />
+  <br />
+  <br />
+  Vous avez passé commande le COMMAND_DATE sur notre site et nous vous en remercions encore.<br />
+  <br />
+  <strong>Que pensez-vous des produits que vous avez reçus ?</strong> Répondent-ils à vos attentes ?<br />
+  <br />
+  Notez maintenant d'un clic les produits que vous avez commandés sur notre site.<br />
+  <br />
+</p>
+PRODUCTS_TABLE
+<p style="font-size: 12px">
+  <br />
+  Vous <strong>aiderez</strong> les futurs clients <strong>à mieux choisir</strong> les matériels donc ils ont besoin pour leur activité.<br />
+  <br />
+  Le service client Techni-Contact<br />
+  <br />
+</p>
+
+<p style="font-size: 12px">
+	<b>Techni-Contact est édité par</b><br/>
+	Md2i<br/>
+	253 rue Gallieni<br/>
+	F-92774 BOULOGNE BILLANCOURT cedex<br/>
+	Tel : 01 55 60 29 29 (appel local)<br/>
+	Fax: 01 83 62 36 12<br/>
+	<a href="FO_URL?utm_source=email&amp;utm_medium=email&amp;utm_campaign=mail-client">FO_URL</a><br/>
+	<br/>
+	SAS au capital de 160.000 €<br/>
+	SIRET : 392 772 497 000 39<br/>
+	TVA n° FR12 392 772 497<br/>
+	R.C. NANTERRE B 392 772 497
+</p>

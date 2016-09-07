@@ -1,0 +1,276 @@
+/** GENERAL **/
+div { margin: 0; padding: 0; }
+input { font: 12px Arial, Helvetica, sans-serif; background: #FFFFFF; color: #333333; border: 1px solid #CCCCCC; padding: 0; margin: 0; }
+form { margin: 0; padding: 0; }
+select { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333333; border: 1px solid #CCCCCC; }
+.button { padding: 0; border: 1px solid #CCCCCC; background-color: #ffffff; font-size: 11px; }
+.zero { clear: both; }
+.infos { height: 21px; }
+.infosR { float: right; width: 275px; }
+.infosL { float: left; width: 370px; }
+.infosC { float: left; width: 310px; }
+.intitule { font-weight: bold; padding: 2px; float: left; }
+.valeur { padding: 2px; }
+.valeurL { padding: 2px; float: left; }
+.valeurR { padding: 2px; float: right; }
+.fValidUn, .fValidUnD { font: bold 11px Arial, Helvetica, sans-serif; text-align: center; }
+.fValidUnD { float: right; }
+.fValidDeux { font: bold 14px Arial, Helvetica, sans-serif; text-align: center; padding: 10px; height: auto; }
+.fValidTrois { font: bold 12px Arial, Helvetica, sans-serif; background: white url(flecheSix.gif) no-repeat; border: solid 1px #cd2d2c; width: 250px; height: 25px; padding: 0 10px 0 15px; margin: 0 auto; text-align: center; display: block; }
+.window_title_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; height: 23px; background: url(../images/dot-bg.jpg); }
+.window_title_bar .wtb_close_img { float: right; padding: 4px; margin: 0; }
+.window_title_bar .wtb_move_img { float: left; margin: 2px; }
+.window_title_bar .wtb_text { padding: 3px; cursor: default; }
+.window_subtitle_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; display: block; padding: 4px 0px; background: url(../images/dot-bg.jpg); }
+.window_bg { border: 1px solid #999999; padding: 10px; margin: 10px; }
+.window_bg_small { border: 1px solid #999999; padding: 5px; margin: 5px; }
+.listing { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; color: #999999; word-spacing: 1px; text-align: right; margin: 5px; }
+.listing a:link, .listing a:visited { color: #999999; text-decoration: none; }
+.listing a:hover { text-decoration: underline; }
+.listing .listing-current{ font-size: 12px; font-weight: bold; color:#666666; }
+.titreBloc { padding: 4px 4px 4px 10px; color: #FFFFFF; font: bold 12px arial, helvetica, sans-serif; letter-spacing: 1px; border-bottom: 1px solid #EEEEEE; background-color: #5D6068; text-align: center; }
+
+/* ADRESSES RECTANGULAIRES*/
+.adresses { padding: 10px 0; }
+.facturation, .livraison { margin: 0px; width: 250px; padding: 0px; border: 1px solid  #EEEEEE; }
+.livraison { float: right; }
+.coord { padding: 8px 8px 8px 36px; font: normal 12px arial, helvetica, sans-serif; width: 206px; text-align: left; background-color: #FBFBFB; }
+.adr_modif { font-weight: bold; text-align: right; background-color: #FBFBFB; float: right; }
+
+/**********************************************************************************************************************/
+/* LISTE DES COMMANDES */
+/**********************************************************************************************************************/
+#CommandSearchDBShad { z-index: 1; position: absolute; top: 35px; left: 55px; width: 384px; height: 69px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#CommandSearchDB { z-index: 2; position: absolute; top: 30px; left: 50px; width: 380px; height: 65px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+#CommandFilterDBShad { z-index: 1; position: absolute; top: 35px; left: 465px; width: 464px; height: 69px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#CommandFilterDB { z-index: 2; position: absolute; top: 30px; left: 460px; width: 460px; height: 65px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+
+.blocka { padding: 7px 40px 7px 0; float: left; font-size: 11px; }
+
+.liste_cmd { width: 100%; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+.liste_cmd th { background-color: #666666; color: #FFFFFF; font-weight: bold; font-size: 12px; text-align: center; padding: 2px; }
+.liste_cmd th a { color: #FFFFFF; text-decoration: none; }
+.liste_cmd th a:hover { color: #F0F0F0; text-decoration: underline; }
+.liste_cmd tr.normal { background-color: #F9F9F9; font-weight: bold; }
+.liste_cmd tr.normal_hover { background-color: #CCCCCC; cursor: pointer; font-weight: bold; }
+.liste_cmd tr.paye { background-color: #EFEFEF; }
+.liste_cmd tr.paye_hover { background-color: #CCCCCC; cursor: pointer; }
+.liste_cmd td { color: #000000; margin: 0; padding: 2px 4px; text-align: center; border-bottom: 1px solid #AAAAAA; }
+.liste_cmd td.price { text-align: right; }
+.liste_cmd td.status {  }
+.liste_cmd td.status_processing { font-weight: bold; }
+
+/*
+.liste_cmd td.price { font-weight: bold; text-align: right; }
+.liste_cmd td.company {  }
+.liste_cmd td.date {  }
+*/
+/**********************************************************************************************************************/
+/* FENETRE PRINCIPALE */
+/**********************************************************************************************************************/
+
+#commande { width: 958px; }
+#ModifierClient .clientID, #ModifierClient .clientIDn { width: 75px; height: 15px; }
+#ModifierClient .clientIDn { display: none; }
+#performingRequestCW { font-weight: bold; visibility: hidden; float: right; }
+#performingRequestMW { font-weight: bold; visibility: hidden; float: right; margin-top: 3px; }
+#NewClientError{ font: bold 12px Arial, Helvetica, sans-serif; color: #B00000; }
+#ShippingFeeError { font: bold 12px Arial, Helvetica, sans-serif; color: #B00000; padding: 2px; }
+
+/* PANIER */
+#panier .date { width: 300px; float: right; text-align: right; padding: 0; margin: 0; }
+#panier .fValidUn { width: auto; }
+#panier .buttons { float: right; padding: 0 10px; margin-right: 20px; text-align: center; }
+#panier table.liste_produits { width: 958px; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+#panier table.liste_produits  th { font-weight: bold; color: #FFFFFF; background-color: #5D6068; margin: 0; padding: 0; text-align: center; vertical-align: middle; }
+#panier table.liste_produits  tr td { padding: 2px 4px; border-left: 1px solid #CCCCCC; vertical-align: top; }
+#panier table.liste_produits  tr.adv-not-ok td { border-top: 1px solid #CCCCCC; border-left: 0px; border-right: 0px; }
+#panier table.liste_produits  tr.adv-not-ok td.left { font-weight: bold; vertical-align: middle; padding: 2px 10px; }
+#panier table.liste_produits  tr.adv-not-ok div.prix { font-weight: bold; float: right; text-align: right; }
+#panier table.liste_produits  tr td.ref-dde1 { text-align: left; border-right: 0px; }
+#panier table.liste_produits  tr td.ref-dde2 { text-align: right; border-left: 0px; border-right: 0px; font-weight: bold; }
+#panier table.liste_produits  tr td.ref-prix { font-weight: bold; text-align: right; }
+#panier table.liste_produits  tr td.ref-qte { text-align: left; padding: 1px 5px 1px 5px; vertical-align: top; }
+#panier table.liste_produits  tr td.ref-qte input { font: bold 11px arial, helvetica, sans-serif; color: #f40309; width: 23px; height: 14px; padding: 2px 2px; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+#panier table.liste_produits  tr td.ref-qte img { width: 14px; height: 10px; border: 0; cursor: pointer; float: right; clear: both; }
+#panier table.liste_produits  tr td div.min-qte { font-weight: bold; color: #008000; text-align: right; height: 14px; padding: 1px 2px; margin: 0; float: right; background-color: #FFFFFF; border: #d5d5d6 1px solid; }
+#panier table.liste_produits  tr td.suppr { text-align: center; vertical-align: middle; border-left: 0px; }
+#panier table.liste_produits  tr td.suppr img { cursor: pointer; }
+#panier table.liste_produits  tr td.center { text-align: center; }
+#panier table.liste_produits  tr td.right { text-align: right; }
+#panier table#tva { width: 274px; margin: 0; padding: 0; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+#panier table#tva  th { font-weight: bold; color: #ffffff; background-color: #5D6068; padding: 0; margin: 0; text-align: center; vertical-align: middle; }
+#panier table#tva  tr td { margin: 0; padding: 1px 4px; border-right: 1px solid #CCCCCC; vertical-align: top; text-align: right; }
+#panier table#tva  tr td.base_euro { font-weight: bold; }
+#panier table#tva  tr td.montant_tva { font-weight: bold; }
+#panier table#tva  tfoot tr td { border-top: 1px solid #CCCCCC; }
+#panier table#tva  tfoot tr td.total { text-align: left; border-right: 0px; }
+#panier table#tva  tfoot tr td.total div { font-weight: bold; float: right; }
+#panier table#tva  tfoot tr td.tvas { border-left: 0px; }
+#panier table#tva  tfoot tr td.total-tva { font-weight: bold; }
+#panier #montant-totaux { float: right; width: 250px; font: bold 11px Arial, Helvetica, sans-serif; color: #000000; }
+#panier #montant-totaux .total_H { border: 1px solid #CCCCCC; background-color: #FFFFFF; }
+#panier #montant-totaux .total_Hn { border: 1px solid #CCCCCC; border-top: 0; background-color: #FFFFFF; }
+#panier #montant-totaux .total_G { float: left; width: 120px; height: 16px; color: #ffffff; background-color: #5D6068; padding: 2px; margin: 0; text-align: right; }
+#panier #montant-totaux .total_D { height: 16px; font-size: 13px; padding: 2px 10px; margin: 0; text-align: right; background-color: #FFFFFF; overflow: hidden; }
+#panier #montant-totaux .montant-total_haut { border: 1px solid #CCCCCC; color: #ffffff; background-color: #5D6068; padding: 2px; margin: 0; text-align: center; }
+#panier #montant-totaux .montant-total_bas { border: 1px solid #CCCCCC; border-top: 0px; font-size: 13px; padding: 2px 10px; margin: 0; text-align: right; background-color: #FFFFFF; }
+#panier #montant-totaux .total_edit { float: right; font-size: 13px; font-weight: bold; width: 100px; height: 15px; padding: 0px; border: 0; background-color: #E0E0E0; text-align: right; }
+#panier #mod-montant-totaux { float: right; width: 60px; }
+#panier #mod-montant-totaux div { height: 15px; text-align: right; padding: 3px 5px; }
+
+#statusList { border: 1px solid #CCCCCC; width: 480px; background-color: #F4FAFF; padding: 5px; }
+#statusList .infos { height: 27px; }
+#statusList .intitule { width: 125px; }
+#statusList .valeur { float: left; width: 290px; }
+#statusList .in_place_edit { border: 0; float: left; height: 17px; width: 290px; }
+#statusList .in_place_select { font-size: 12px; border: 0; float: left; width: 290px; }
+
+/**********************************************************************************************************************/
+/* FENETRE RECHERCHE CLIENT */
+/**********************************************************************************************************************/
+
+#ClientSearchWindowShad { z-index: 1; position: absolute; top: 25px; left: 25px; width: 804px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#ClientSearchWindow { z-index: 2; position: absolute; top: 15px; left: 15px; width: 800px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+
+/* FORMULAIRE DE RECHERCHE */
+#RechercheClient { text-align: left; }
+#RechercheClient .caption { position: relative; top: 8px; display: inline; left: 20px; font: bold 12px Arial, Helvetica, sans-serif; margin: 0; padding: 0 10px; background-color: #E9EFF8; }
+#RechercheClient #colg { border: 1px solid black; margin: 0; padding: 0px; width: 500px; text-align: center; }
+#RechercheClient #colg table { margin: 10px; }
+#RechercheClient #colg table td { font: 12px Arial, Helvetica, sans-serif; padding: 5px; }
+#RechercheClient #colg table td input.button { width: 100px; height: 23px; }
+#RechercheClient #colr { float: right; border: 1px solid black; width: 220px; text-align: center; visibility: visible; padding: 20px 0px; margin-top: 20px; }
+
+/* RECAPITULATIF CLIENT */
+#recap h2 { font: bold 13px Arial, Helvetica, sans-serif; margin: 0; padding: 0; width: 400px; border-bottom: 1px solid #000000; }
+#recap .date { width: 200px; float: right; text-align: right; padding: 0; margin: 0; }
+#recap table td { font: 12px Arial, Helvetica, sans-serif; }
+#recap table td.intitule { width: 50px; font-weight: bold; }
+#recap .listedeviscmd table { margin: 0; padding: 0; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 12px Arial, Helvetica, sans-serif; color: #000000; }
+#recap .listedeviscmd table  th { font-weight: bold; color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: center; vertical-align: middle; }
+#recap .listedeviscmd table td { margin: 0; padding: 2px 4px; border-right: 1px solid #CCCCCC; vertical-align: top; text-align: right; }
+
+/**********************************************************************************************************************/
+/* FENETRE COORDONNEE */
+/**********************************************************************************************************************/
+
+#CoordChangeWindowShad { z-index: 3; position: absolute; top: 240px; left: 240px; width: 644px; background-color: #000000; display: none; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#CoordChangeWindow { z-index: 4; position: absolute; top: 230px; left: 230px; width: 640px; border: 2px solid #999999; background-color: #E9EFF8; display: none; }
+#ShipAddressError { font: bold 12px Arial, Helvetica, sans-serif; color: #B00000; }
+
+/* COORDONNEES */
+#coord { width: 598px; font: 12px arial, helvetica, sans-serif; color: #000000; }
+#coord .fValidTrois { width: 180px; }
+#coord div.titreBloc { margin: 5px 0; }
+#coord div.intitule_log { width: 170px; font-weight: bold; padding: 2px; margin: 0; float: left; vertical-align: center; display: block; }
+#coord div.intitule { width: auto; padding: 2px 15px 2px 2px; }
+#coord select.titre { padding: 0; margin: 0; vertical-align: center; font: 12px arial, helvetica, sans-serif; color: #000000; }
+#coord .coord_norm, #coord .coordfloat, #coord .coordfloatR { padding: 2px; height: 20px; }
+#coord .coordfloat { float: left; }
+#coord .coordfloatR { float: right; }
+#coord .coord_norm input, #coord .coordfloat input, #coord .coordfloatR input { border: 1px solid #C6D6D8; }
+#coord .coordlivraison input { border: 0px; margin: 0; height: 13px; width: 13px; background-color: #E9EFF8; }
+#coord #coordlivraisonshown { margin-bottom: 10px; }
+#coord .titreCoordError { padding-left: 40px; font: bold 12px arial, helvetica, sans-serif; color: #F00000; letter-spacing: 1px }
+#coord .coordError { padding-left: 10px; font-style: italic; color: #F00000; }
+#coord div.note { padding: 10px 4px 4px 4px; }
+
+/**********************************************************************************************************************/
+/* FENETRE CHOIX DU PRODUIT */
+/**********************************************************************************************************************/
+
+#ProductExplorerWindowShad { z-index: 5; position: absolute; top: 40px; left: 40px; width: 804px; background-color: #000000; visibility: hidden; filter: Alpha (opacity=50, finishopacity=50, style=1) -moz-opacity:.50; opacity:.50; }
+#ProductExplorerWindow { z-index: 6; position: absolute; top: 30px; left: 30px; width: 800px; border: 2px solid #999999; background-color: #E9EFF8; visibility: hidden; }
+#ProductExplorerTabs { padding: 0; margin: 0; }
+#ProductExplorerTabs .PETab { cursor: pointer; text-align: center; width: 100px; float: left; border: 1px solid #999999; background-color: #D7DEE6; display: block; }
+#ProductExplorerLayers  { height: 500px;}
+#ProductExplorerLayers .PELayer { float: left; width: 800px; background-color: #E9EFF8; height: 500px; overflow: scroll; }
+#ProductExplorerFamilyLayer { display: block; }
+#ProductExplorerSupplierLayer { display: none; }
+#ProductExplorerSearchLayer { display: none; }
+
+/* MENU DES FAMILLES */
+#ProductExplorerFamilyLayer  #menu { width: 780px; text-align: center; background: #a00100; font: 13px Arial, Helvetica, sans-serif; color: white; padding: 6px 2px; margin: 4px 0; }
+#ProductExplorerFamilyLayer  #menu a { font-weight: normal; background: #cd2d2c; color: white; text-decoration: none; padding: 2px 3px; }
+#ProductExplorerFamilyLayer  #menu a:hover { background: white; color: #a00100; }
+#ProductExplorerFamilyLayer  #menu a.selected { background: #a00100; color: #FFFFFF; cursor: default; outline: none; }
+
+#PEFcolg { float: left; width: 190px; text-align: left; padding-bottom: 2px; background-color: white; }
+#PEFcolg .titre { text-align: center; display: block; background: #637382; font: bold 12px Arial, Helvetica, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: white; padding: 5px 13px; }
+#PEFcolg .sf { padding-top: 3px; }
+#PEFcolg .sfn { padding-top: 3px; display: none; }
+#PEFcolg .sf a, #PEFcolg .sf strong, #PEFcolg .sfn a, #PEFcolg .sfn strong { display: block; color: #3d4b58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; font-weight: bold; padding: 3px 0 5px 20px; background: url(flecheUn.gif) no-repeat left bottom; }
+#PEFcolg .sf strong, #PEFcolg .sfn strong { background: url(flecheDeux.gif) no-repeat left bottom; }
+#PEFcolg .sf a:hover, #PEFcolg .sfn a:hover { text-decoration: underline; }
+#PEFcolg .ssf { background: url(flecheTrois.gif) no-repeat left bottom; padding-bottom: 3px; }
+#PEFcolg .ssf a { display: block; color: #3d4b58; text-decoration: none; font: 11px Arial, Helvetica, sans-serif; letter-spacing: 1px; padding: 0 0 0 10px; margin: 2px 0 1px 8px; border-left: solid 2px #889c48; background: #f6f6f6; }
+#PEFcolg .ssf a.current { background-color: #c6d6d8; padding: 1px 0 1px 10px; }
+#PEFcolg .ssf a:hover { background-color: #c6d6d8; text-decoration: none; }
+#PEFcolg .ssf a.current:hover { background-color: #889c48; color: white; }
+
+#PEFcolc { float: left; text-align: left; width: 584px; padding: 0 5px; }
+#PEFcolc .navig { padding: 8px 0; font-size: 10px; border-bottom: solid 3px #c6d6d8; }
+#PEFcolc .navig a, #ProductExplorerLayers #PEFcolg .navig h1, #ProductExplorerLayers #PEFcolg .navig strong { font: 12px Arial, Helvetica, sans-serif; font-weight: bold; letter-spacing: 1px; color: #272727; display: inline; text-decoration: none; padding: 0 2px; }
+#PEFcolc .navig a:hover { text-decoration: underline; }
+#PEFcolc #liste { font: 11px Arial, Helvetica, sans-serif; color: #637382; }
+#PEFcolc #liste .liUn, #ProductExplorerLayers #PEFcolc #liste .liDeux { padding: 4px; height: 84px; border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; }
+#PEFcolc #liste .liUn { background: #F6F6F6; }
+#PEFcolc #liste .liDeux { background: #FFFFFF; }
+#PEFcolc #liste .elt, #ProductExplorerLayers #PEFcolc #liste .eltDeux { width: 275px; margin: 2px; padding-left: 5px; float: left; height: 80px; }
+#PEFcolc #liste .elt { background: url(pointVerti.gif) repeat-y top right; padding-right: 3px; }
+#PEFcolc #liste img { float: right; padding: 5px 5px 0 0 ; }
+#PEFcolc #liste img.panier_s { float: none; }
+#PEFcolc #liste a { color: #3d4b58; text-decoration: none; display: block; font-weight: bold; padding: 5px; font-size: 12px; margin-left: -5px; margin-right: 5px; background: url(flecheQuatre.gif) no-repeat; }
+#PEFcolc #liste a:hover { background-color: #c6d6d8; }
+#PEFcolc #famille { font: 12px Arial, Helvetica, sans-serif; }
+#PEFcolc #famille strong { font-size: 14px; padding: 5px; display: block; }
+#PEFcolc #famille .elt, #ProductExplorerLayers #PEFcolc #famille .eltDeux { padding: 4px; border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; }
+#PEFcolc #famille .elt { background: #f6f6f6; }
+#PEFcolc #famille .elt_float { width: 272px; float: left; display: none; }
+#PEFcolc #famille .elt_normt { width: auto; float: none; }
+#PEFcolc #famille a { color: #3d4b58; text-decoration: none; display: block; font-weight: bold; padding: 2px 5px 2px 15px; font-size: 12px; background: url(flecheQuatre.gif) no-repeat 5px -2px; }
+#PEFcolc #famille .elt a:hover { background-color: white; }
+#PEFcolc #famille .eltDeux a:hover { background-color: #f6f6f6; }
+
+/* FICHE PRODUIT */
+#PEFcolc h1.produit { color: #637382; text-transform: uppercase; font-size: 16px; font-weight: bold; padding: 10px 0 0 0; margin: 0; display: block; }
+#PEFcolc #produit { width: 560px; font: 12px Arial, Helvetica, sans-serif; }
+#PEFcolc #produit .liUn { border-bottom: solid 1px #c6d6d8; margin-bottom: 2px; background: #f6f6f6; padding: 10px 10px 10px 20px; }
+#PEFcolc #produit .action { border: solid 1px #c6d6d8; border-left: groove 3px red; background-color: white; padding: 5px; margin: 5px 0 0 -5px; }
+#PEFcolc #produit .action a { color: #637382; text-decoration: none; font-size: 13px; background: url(flecheCinq.gif) no-repeat 0 4px; padding: 0 0 1px 10px; display: block; }
+#PEFcolc #produit .action a:hover { text-decoration: underline; }
+#PEFcolc #produit .liUn h2 { margin: 0; padding: 10px 0 5px 10px; margin-left: -10px; font-size: 12px; background: url(flecheQuatre.gif) no-repeat 0 6px; color: #889c48; }
+#PEFcolc #produit .liUn h2 span { font: 12px Arial, Helvetica, sans-serif; color: #000000; }
+#PEFcolc #produit .warning { font: bold 12px Arial, Helvetica, sans-serif; color: #B00000; padding: 10px; }
+#PEFcolc #produit .back { text-align: right; margin-top: -5px; padding-bottom: 5px; font-size: 10px; font-weight: bold; }
+#PEFcolc #produit .back a { text-decoration: none; color: black; }
+#PEFcolc #produit .back a:hover { text-decoration: underline; }
+#PEFcolc #produit .img, #PEFcolc #produit .imgDeux { float: right; background-color: white; border: solid 1px #c6d6d8; padding: 5px; text-align: center; font-size: 10px; margin: 0 0 5px 5px; }
+#PEFcolc #produit .img em { display: block; font-style: normal; }
+#PEFcolc #produit .img em a { color: black; }
+#PEFcolc #produit .imgDeux { display: none; }
+
+/* PRIX D'UN PRODUIT */
+#PEFcolc #produit .prixProduit { font: 12px arial, helvetica, sans-serif; color: #666465; border: 1px solid #E0E0E0; margin: 2px 15px 2px 10px; padding : 0px 15px; background-color : #FFFFFF; }
+#PEFcolc #produit .prixProduit table td { padding: 0; margin: 0; text-align: left; }
+#PEFcolc #produit .prixProduit table td.prixLabel { width: 40px; }
+#PEFcolc #produit .prixProduit table td.prix { font: 18px arial, helvetica, sans-serif; width: 150px; padding: 0 50px 2px 0; text-align: right ; }
+#PEFcolc #produit .prixProduit table td.quantiteLabel { width: 60px; padding: 0 15px 0 0; text-align: right; }
+#PEFcolc #produit .prixProduit table td.quantite { width: 70px; }
+#PEFcolc #produit .prixProduit table td.quantite input { font: bold 12px arial, helvetica, sans-serif; color: #f40309; width: 29px; height: 16px; padding: 2px 5px; margin: 0; text-align: right;vertical-align: text-bottom; border: #d5d5d6 1px solid; }
+
+/* LISTE REFERENCES */
+#PEFcolc #ref { clear: both; background: #f6f6f6; font: 11px Arial, Helvetica, sans-serif;  text-align: left; }
+#PEFcolc #ref h2 { margin: 0; padding: 0 0 5px 10px; font-size: 12px; background: url(flecheQuatre.gif) no-repeat 0 -4px; color: #889c48; }
+#PEFcolc #ref table { border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; }
+#PEFcolc #ref thead tr { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+#PEFcolc #ref tr th, #ref tr td { margin: 0; padding: 2px 10px 2px 5px; border-right: 1px solid #ccc; white-space: nowrap; text-align: center; }
+#PEFcolc #ref tr th { font-weight: bold; color: #FFFFFF; background-color: #5D6068; }
+#PEFcolc #ref tr td { color: #000000; }
+#PEFcolc #ref tr:hover td { background: #f0f0f0; }
+#PEFcolc #ref tr.ref-2 { background-color: #F3F3F3; }
+#PEFcolc #ref tr td.ref-prix { font-weight: bold; text-align: right; }
+#PEFcolc #ref tr td.ref-qte { width: 28px; }
+#PEFcolc #ref tr td.ref-qte input { font: bold 12px arial, helvetica, sans-serif; color: #f40309; width: 23px; height: 15px; padding: 0; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+#PEFcolc #ref img { border: 0; }

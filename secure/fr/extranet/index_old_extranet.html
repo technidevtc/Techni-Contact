@@ -1,0 +1,148 @@
+<?php
+
+/*================================================================/
+
+ Techni-Contact V3 - MD2I SAS
+ http://www.techni-contact.com
+
+ Auteur : Hook Network SARL - http://www.hook-network.com
+ Date de création : 15 juillet 2005
+ Mise à jour le : 29 mai 2005
+ 
+ Fichier : /secure/extranet/index.html
+ Description : Fichier accueil extranet
+
+/=================================================================*/
+
+	
+if(strcmp(strtoupper(substr(dirname(__FILE__),0,3)),'C:\\')=='0'){
+	require_once '../../../config.php';
+}else{
+	require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+}
+
+include('language_local.php');
+
+$title = INDEX_TITLE;
+
+define('WHERE', WHERE_INDEX);
+
+require(EXTRANET . 'head.php');
+
+
+?>
+<div class="barre">
+<?php
+if ($user->parent == 61049)
+	print INDEX_COMPANY . ' <strong>' . to_entities($user->name) . '</strong>. ' . INDEX_WELCOME_MSG_SUPPLIER . '[<a href="logout.html?' . $sid . '">' . INDEX_LOGOUT . '</a>]';
+else
+	print INDEX_WELCOME_ADVERTISER . ' <strong>' . to_entities($user->name) . '</strong> ' . INDEX_WELCOME_MSG_ADVERTISER . '[<a href="logout.html?' . $sid . '">' . INDEX_LOGOUT . '</a>]';
+?>
+</div>
+<div class="miseAZero"></div>
+<?php
+require(EXTRANET . 'alertmdp.php');
+
+if ($user->parent == '0')
+{
+	$res = & $handle->query('select count(id) from contacts where idAdvertiser = \'' . $handle->escape($user->id) . '\' and cread = 0', __FILE__, __LINE__);
+	if ($handle->numrows($res, __FILE__, __LINE__) == 1)
+	{
+	    $val = & $handle->fetch($res);
+	    $nb  = & $val[0];
+	    
+	    switch($nb)
+	    {
+	        case 0  : $requests = INDEX_CONTACT_READ_0; break;
+	        case 1  : $requests = INDEX_CONTACT_READ_0; break;
+	        default : $requests = $nb . ' ' . INDEX_CONTACT_READ_N;
+	    }
+	}
+	else
+	{
+		$requests = INDEX_NO_CONTACT;
+	}
+}
+elseif ($user->parent == '61049')
+{
+	$resC = & $handle->query("select count(idCommande) from commandes_advertisers where statut_traitement = 2 and idAdvertiser = '" . $user->id . "' and timestampIMS > ".mktime(0,0,0,3,1,2011), __FILE__, __LINE__);
+	$resT = & $handle->query("select count(idCommande) from commandes_advertisers where statut_traitement = 3 and idAdvertiser = '" . $user->id . "' and timestampIMS > ".mktime(0,0,0,3,1,2011), __FILE__, __LINE__);
+
+        if ($handle->numrows($resC, __FILE__, __LINE__) == 1 && $handle->numrows($resT, __FILE__, __LINE__) == 1)
+	{
+	    $valC = & $handle->fetch($resC);
+	    $nbC  = $valC[0];
+	    $valT = & $handle->fetch($resT);
+	    $nbT  = $valT[0];
+	    
+		switch($nbC)
+	    {
+	        case 0  : $cmdC = INDEX_COMMAND_READ_0; break;
+	        case 1  : $cmdC = INDEX_COMMAND_READ_1; break;
+	        default : $cmdC = INDEX_COMMAND_READ_N_1 . $nbC . " " . INDEX_COMMAND_READ_N_2;
+	    }
+		
+//		switch($nbT)
+//	    {
+//	        case 0  : $cmdT = " " . INDEX_COMMAND_PROCESSING_0; break;
+//	        case 1  : $cmdT = " " . INDEX_COMMAND_PROCESSING_1; break;
+//	        default : $cmdT = " " . INDEX_COMMAND_PROCESSING_N_1 . $nbT . " " . INDEX_COMMAND_PROCESSING_N_2;
+//	    }
+	}
+
+}
+else
+{
+	$requests = INDEX_NO_COMMAND;
+}
+
+
+
+if ($user->parent == '61049')
+{
+?>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="commandes.html?<?php echo $sid ?>"><?php echo INDEX_MANAGE_COMMAND ?></a></div>
+	<div class="bloc-commandes">
+		<?php echo $cmdC . $cmdT ?><br />
+		<?php echo INDEX_MANAGE_COMMAND_DESC ?>
+	</div>
+</div>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="products.html?<?php echo $sid ?>"><?php echo INDEX_MANAGE_PRODUCTS ?></a> </div>
+	<div class="bloc-fiches"><?php echo INDEX_MANAGE_PRODUCTS_DESC ?></div>
+</div>
+<?php
+}
+else
+{
+?>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="requests.html?<?php echo $sid ?>"><?php echo INDEX_MANAGE_CONTACTS ?></a></div>
+	<div class="bloc-demandes">
+		<?php echo INDEX_CONTACT_READ_PRE ?> <?php print($requests) ?> !<br />
+		<?php echo INDEX_MANAGE_CONTACTS_DESC ?>
+	</div>
+</div>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="products.html?<?php echo $sid ?>"><?php echo INDEX_MANAGE_PRODUCTS ?></a> </div>
+	<div class="bloc-fiches"><?php echo INDEX_MANAGE_PRODUCTS_DESC ?></div>
+</div>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="stats.html?<?php echo $sid ?>"><?php echo INDEX_CONSULT_STATS ?></a> </div>
+	<div class="bloc-stats"><?php echo INDEX_CONSULT_STATS_DESC ?></div>
+</div>
+<?php
+}
+?>
+<div class="bloc-accueil">
+	<div class="bloc-titre">&gt; <a href="infos.html?<?php echo $sid ?>"><?php echo INDEX_INFORMATION ?></a> </div>
+	<div class="bloc-texte"><?php echo INDEX_INFORMATION_DESC ?></div>
+</div>
+
+<?php
+
+require(EXTRANET . 'tail.php');
+
+
+?>

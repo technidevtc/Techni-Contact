@@ -1,0 +1,266 @@
+/** GENERAL **/
+div { margin: 0; padding: 0; }
+form { margin: 0; padding: 0; }
+select { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333333; border: 1px solid #CCCCCC; }
+
+.button {
+  background:url("../css/themes/apple_pie/images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50% #F6F6F6;
+  border:1px solid #DDDDDD;
+  color:#336600;
+  font-weight:bold;
+  outline:medium none;
+  cursor:pointer;
+  margin:0;
+  padding:0.5em 1em;
+  position:relative;
+  text-align:center;
+  text-decoration:none;
+  -moz-border-radius:3px 3px 3px 3px;
+}
+.zero { clear: both; }
+.window_title_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; height: 23px; background: url(../images/dot-bg.jpg); }
+.window_title_bar .wtb_close_img { float: right; padding: 4px; margin: 0; }
+.window_title_bar .wtb_move_img { float: left; margin: 2px; }
+.window_title_bar .wtb_text { padding: 3px; cursor: default; }
+.window_subtitle_bar { font: bold 12px Verdana, Arial, Helvetica, sans-serif; color: #333333; text-align: left; background-color: #9694B2; display: block; padding: 4px 0px; background: url(../images/dot-bg.jpg); }
+.window_bg { border: 1px solid #999999; padding: 10px; margin: 10px; }
+.titreBloc { padding: 4px 4px 4px 10px; color: #FFFFFF; font: bold 12px arial, helvetica, sans-serif; letter-spacing: 1px; border-bottom: 1px solid #EEEEEE; background-color: #5D6068; text-align: center; }
+.intitule, .intitule180 { font-weight: bold; padding: 2px; float: left; }
+.intitule180 { width: 180px; }
+.valeur { padding: 2px; }
+.valeurR { padding: 2px; float: right; }
+.fValidUn, .fValidUnD { font: bold 11px Arial, Helvetica, sans-serif; text-align: center; }
+.fValidUnD { float: right; }
+.fValidDeux {
+  background:url("../css/themes/apple_pie/images/ui-bg_highlight-soft_100_f6f6f6_1x100.png") repeat-x scroll 50% 50% #F6F6F6;
+  border:1px solid #DDDDDD;
+  color:#336600;
+  font-weight:bold;
+  outline:medium none;
+  cursor:pointer;
+  margin:0;
+  padding:0.5em 1em;
+  position:relative;
+  text-align:center;
+  text-decoration:none;
+  -moz-border-radius:3px 3px 3px 3px;
+}
+.fValidTrois { font: bold 12px Arial, Helvetica, sans-serif; background: white url(../ressources/flecheSix.gif) no-repeat; border: solid 1px #cd2d2c; width: 250px; height: 25px; padding: 0 10px 0 15px; margin: 0 auto; text-align: center; display: block; }
+
+/* ADRESSES RECTANGULAIRES*/
+.adresses { padding: 10px 0; }
+.InfosBloc, .InfosBlocR { margin: 0px; width: 320px; padding: 0px; border: 1px solid  #EEEEEE; border: 1px solid #000000; }
+.InfosBlocR { float: right; }
+.widerBloc{width: 740px}
+.coord { padding: 8px 8px 0px 36px; font: normal 12px arial, helvetica, sans-serif; text-align: left; background-color: #FBFBFB; }
+.iic { width: 130px; font-weight: bold; }
+.adr_modif { padding: 0 8px 4px 0; font-weight: bold; text-align: right; background-color: #FBFBFB; }
+ 
+/* FORMULAIRE DE RECHERCHE */
+#RechercheClient { text-align: left; }
+#RechercheClient .caption { position: relative; top: 8px; display: inline; left: 20px; font: bold 12px Arial, Helvetica, sans-serif; margin: 0; padding: 0 10px; background-color: #E9EFF8; }
+#RechercheClient #colg { border: 1px solid black; margin: 0; padding: 0px; width: 500px; text-align: left; }
+#RechercheClient #colg table { margin: 10px; }
+#RechercheClient #colg table td { font: 12px Arial, Helvetica, sans-serif; padding: 5px; }
+#RechercheClient #colr { float: right; border: 1px solid black; width: 270px; text-align: center; visibility: visible; padding: 20px 0px; margin-top: 20px; }
+
+.PerfReqLabel { font-weight: bold; visibility: hidden; float: right; }
+.PerfReqLabelW { font-weight: bold; visibility: hidden; float: right; margin-right: 10px; padding: 0px 10px; background-color: #E9EFF8; }
+
+/**********************************************************************************************************************/
+/* FENETRE CLIENT */
+/**********************************************************************************************************************/
+
+/** RECAPITULATIF CLIENT **/
+#recap { width: 60%; font: 12px Arial, Helvetica, sans-serif; float: left}
+#recap h2 { font: bold 13px Arial, Helvetica, sans-serif; margin: 0; padding: 0; width: 400px; border-bottom: 1px solid #000000; }
+#recap .infos2 { padding: 0; margin: 0; }
+#recap .intitule { width: 200px; font-weight: bold; padding: 2px; margin: 0; float: left; vertical-align: center; }
+#recap .valeur { padding: 2px; }
+#recap .date { width: 200px; float: right; text-align: right; padding: 0; margin: 0; }
+#recap div.titreBloc { padding: 2px 2px 2px 8px; color: #FFFFFF; font: bold 12px arial, helvetica, sans-serif; letter-spacing: 1px; border-bottom: 1px solid #EEEEEE; background-color: #606060; }
+#recap .listedeviscmd table { margin: 0; padding: 0; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 12px Arial, Helvetica, sans-serif; color: #000000; }
+#recap .listedeviscmd table  th { font-weight: bold; color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: center; vertical-align: middle; }
+#recap .listedeviscmd table td { margin: 0; padding: 2px 4px; border-right: 1px solid #CCCCCC; vertical-align: top; text-align: right; }
+
+#InfosList { border: 1px solid #CCCCCC; width: 415px; background-color: #F4FAFF; padding: 5px; float: right; }
+#InfosList .infos { height: 20px; }
+#InfosList .intitule { width: 200px; }
+#InfosList .valeur { float: left; width: 200px; }
+#InfosList .in_place_edit { border: 0; float: left; width: 245px; }
+#InfosList .in_place_select { font-size: 12px; border: 0; float: left; width: 225px; }
+#InfosError { font-weight: bold; color: #F00000; width: 220px; padding: 5px 10px; float: left; }
+select#paysC, select#pays_lC, select#pays, select#pays_l{text-transform: uppercase}
+
+/** DEVIS - COMMANDE **/
+#deviscmd { font: 12px arial, helvetica, sans-serif; color: #000000; width: 900px; }
+#deviscmd .infos { font: bold 15px Arial, Helvetica, sans-serif; margin: 0; padding: 0; }
+#deviscmd div.infos2 { padding: 0; margin: 0; }
+#deviscmd div.intitule { width: 130px; font-weight: bold; padding: 2px; margin: 0; float: left; vertical-align: center; }
+#deviscmd div.valeur { padding: 2px; margin: 0; vertical-align: center; }
+#deviscmd .date { width: 200px; float: right; text-align: right; padding: 0; margin: 0; }
+
+#deviscmd  .adresses { padding: 10px 26px; margin: 0px; }
+#deviscmd div.facturation { margin: 0px; width: 300px; padding: 0px; border: 1px solid  #000000; }
+#deviscmd div.livraison { margin: 0px; width: 300px; padding: 0px; float: right; border: 1px solid #000000; }
+#deviscmd div.titreBloc { padding: 4px 4px 4px 10px; color: #FFFFFF; font: bold 12px arial, helvetica, sans-serif; letter-spacing: 1px; border-bottom: 1px solid #EEEEEE; background-color: #606060; text-align: center; }
+#deviscmd div.coord { padding: 10px 10px 10px 50px; margin: 0px; background-color: #FFFFFF; }
+#deviscmd div.adr_modif { font-weight: bold; padding: 0px 10px 5px 0px; margin: 0; text-align: right; }
+#deviscmd div.adr_modif a { text-decoration: none; }
+#deviscmd div.adr_modif a:hover { text-decoration: underline; }
+
+/** DEVIS - COMMANDE : TABLEAUX PRODUITS, TVA & TOTAUX **/
+
+#tabdeviscmd .date { width: 300px; float: right; text-align: right; padding: 0; margin: 0; }
+#tabdeviscmd .infos { font: bold 18px Arial, Helvetica, sans-serif; margin: 0; padding: 10px 0px; }
+#tabdeviscmd table#produits { width: 900px; margin: 0; padding: 0; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+#tabdeviscmd table#produits  th { font-weight: bold; color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: center; vertical-align: middle; }
+#tabdeviscmd table#produits td { margin: 0; padding: 2px 4px; border-right: 1px solid #CCCCCC; vertical-align: top; text-align: center; }
+#tabdeviscmd table#produits td.ref-remise { text-align: left; vertical-align: top; height: 20px; border-right: 0px; padding-left: 20px; }
+#tabdeviscmd table#produits td.ref-remise2 { text-align: right; vertical-align: top; height: 20px; border-left: 0px; border-right: 0px; font-weight: bold; }
+#tabdeviscmd table#produits td.ref-remise3 { text-align: left; vertical-align: top; border-left: 0px; height: 20px; }
+#tabdeviscmd table#produits  tr.adv-not-ok td { border-top: 1px solid #CCCCCC; border-left: 0px; border-right: 0px; }
+#tabdeviscmd table#produits  tr.adv-not-ok td.left { font-weight: bold; vertical-align: middle; padding: 2px 10px; }
+#tabdeviscmd table#produits  tr.adv-not-ok div.prix { font-weight: bold; float: right; text-align: right; }
+#tabdeviscmd table#produits  tr td div.min-qte { font-weight: bold; color: #008000; text-align: right; height: 14px; padding: 1px 2px; margin: 0; float: right; background-color: #FFFFFF; border: #d5d5d6 1px solid; }
+#tabdeviscmd table#produits  tr td.ref-qte { text-align: right; padding: 1px 5px 1px 5px; }
+#tabdeviscmd table#produits  tr td.ref-qte input { font: bold 11px arial, helvetica, sans-serif; color: #f40309; width: 23px; height: 14px; padding: 2px 2px; margin: 0; text-align: right; border: #d5d5d6 1px solid; }
+#tabdeviscmd table#produits  tr td.ref-qte img { width: 14px; height: 10px; border: 0; cursor: pointer; float: right; }
+#tabdeviscmd table#produits  tr td.ref-prix { font-weight: bold; text-align: right; }
+#tabdeviscmd table#produits  tr td.tva { text-align: right; }
+
+div#montant-totaux { float: right; width: 260px; margin: 0; padding: 0; font: bold 11px Arial, Helvetica, sans-serif; color: #000000; }
+div#montant-totaux .montant-total_haut { border: 1px solid #CCCCCC; color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: center; }
+div#montant-totaux .montant-total_bas { border: 1px solid #CCCCCC; border-top: 0px; font-size: 13px; padding: 2px 10px; margin: 0; text-align: right; background-color: #FFFFFF; }
+div#montant-totaux .total_H { border: 1px solid #CCCCCC; }
+div#montant-totaux .total_Hn { border: 1px solid #CCCCCC; border-top: 0; }
+div#montant-totaux .total_G { color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: right; float: left; width: 120px; height: 16px; }
+div#montant-totaux .total_D { font-size: 13px; padding: 2px 10px; margin: 0; text-align: right; background-color: #FFFFFF; height: 16px; overflow: hidden; }
+
+#tabdeviscmd table#tva { width: 350px; margin: 0; padding: 0; border: 1px solid #CCCCCC; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+#tabdeviscmd table#tva  th { font-weight: bold; color: #ffffff; background-color: #606060; padding: 2px; margin: 0; text-align: center; vertical-align: middle; }
+#tabdeviscmd table#tva  tr td { margin: 0; padding: 1px 4px; border-right: 1px solid #CCCCCC; vertical-align: top; text-align: right; }
+#tabdeviscmd table#tva  tr td.base_euro { font-weight: bold; }
+#tabdeviscmd table#tva  tr td.montant_tva { font-weight: bold; }
+#tabdeviscmd table#tva  tfoot tr td { border-top: 1px solid #CCCCCC; }
+#tabdeviscmd table#tva  tfoot tr td.total { text-align: left; border-right: 0px; }
+#tabdeviscmd table#tva  tfoot tr td.total div { font-weight: bold; float: right; }
+#tabdeviscmd table#tva  tfoot tr td.tvas { border-left: 0px; }
+#tabdeviscmd table#tva  tfoot tr td.total-tva { font-weight: bold; }
+
+/**********************************************************************************************************************/
+/* FENETRE COORDONNEE */
+/**********************************************************************************************************************/
+
+#CustomerCW { display: none; position: absolute; left: 130px; top: 80px; z-index: 4; width: 640px; border: 2px solid #999999; background-color: #E9EFF8; box-shadow: 0 0 10px #000000 }
+#CustomerInfosAW { display: none; position: absolute; left: 130px; top: 380px; z-index: 4; width: 640px; border: 2px solid #999999; background-color: #E9EFF8; box-shadow: 0 0 10px #000000 }
+
+/* COORDONNEES */
+.FieldList { width: 598px; font: 12px arial, helvetica, sans-serif; color: #000000; }
+.FieldList .fValidTrois { width: 180px; }
+.FieldList div.titreBloc { margin: 5px 0; }
+.FieldList div.intitule_log { width: 170px; font-weight: bold; padding: 2px; margin: 0; float: left; vertical-align: center; display: block; }
+.FieldList div.intitule { width: auto; padding: 2px 15px 2px 2px; }
+.FieldList select.titre { padding: 0; margin: 0; vertical-align: center; font: 12px arial, helvetica, sans-serif; color: #000000; }
+.FieldList .field, #coord .fieldfl, #coord .fieldfr { padding: 2px; height: 20px; }
+.FieldList .fieldfl { float: left; }
+.FieldList .fieldfr { float: right; }
+.FieldList .field input, #coord .fieldfl input, #coord .fieldfr input { border: 1px solid #C6D6D8; }
+.FieldList .coordlivraison input { border: 0px; margin: 0; height: 13px; width: 13px; background-color: #E9EFF8; }
+.FieldList #coordlivraisonshown { margin-bottom: 10px; }
+.FieldList .titreCoordError { padding-left: 40px; font: bold 12px arial, helvetica, sans-serif; color: #F00000; letter-spacing: 1px }
+.FieldList .InfosError { padding-left: 10px; font-style: italic; color: #F00000; }
+.FieldList div.note { padding: 10px 4px 4px 4px; }
+#sector_qualification{max-width: 150px;}
+
+/* DC0755 - Refonte fiche client / Création de commande directe  */
+/* liste des clients */
+#showCustomerList {color: green}
+#showCustomerList ul {margin-top: 6px}
+#showCustomerList ul li{margin-bottom: 6px}
+#showCustomerList ul li:hover{text-decoration: underline; cursor:pointer;}
+
+#showOrderList { display: none }
+#showOrderList .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+#showEstimatesList .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+#showEstimateList { display: none }
+#showEstimateList .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+#showInvoiceList { display: none }
+#showInvoiceList .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+#showLeadsList .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+#showInternalNotes .title { position: relative; margin: 0.4em; padding: 7px; font-weight: bold; font-size: 0.9em; color: #ffc6c6; text-transform: uppercase; text-shadow: #4c3000 1px 1px 0; border: 1px solid #333; background: #333 url(../css/images/ui-bg_highlight-soft_50_dddddd_1x100.png) 50% 50% repeat-x }
+
+.marginTop16 {margin-top: 16px}
+
+.coordCustomer { padding: 8px 8px 8px 16px; font: normal 12px arial, helvetica, sans-serif; text-align: left; background-color: #FBFBFB; }
+
+/* list commandes */
+.liste_cmd { width: 100%; border-collapse: collapse; background-color: #FFFFFF; font: 11px Arial, Helvetica, sans-serif; color: #000000; }
+.liste_cmd th { background-color: #666666; color: #FFFFFF; font-weight: bold; font-size: 12px; text-align: center; padding: 2px; }
+.liste_cmd th a { color: #FFFFFF; text-decoration: none; }
+.liste_cmd th a:hover { color: #F0F0F0; text-decoration: underline; }
+.liste_cmd tr.normal { background-color: #F9F9F9; font-weight: bold; }
+.liste_cmd tr.normal_hover { background-color: #CCCCCC; cursor: pointer; font-weight: bold; }
+.liste_cmd tr.paye { background-color: #EFEFEF; }
+.liste_cmd tr.paye_hover { background-color: #CCCCCC; cursor: pointer; }
+.liste_cmd td { color: #000000; margin: 0; padding: 2px 4px; text-align: center; border-bottom: 1px solid #AAAAAA; }
+.liste_cmd td.price { text-align: right; }
+.liste_cmd td.status {  }
+.liste_cmd td.status_processing { font-weight: bold; }
+.liste_cmd tr.tr-cancelled{background-color: #FF7F7F;}
+
+/* RDV */
+#rdvLayerButtonContainer { display: none; float: right }
+fieldset { margin: 0 0 5px; padding: 4px 8px 8px; border: 2px groove threedface }
+legend { margin: 0 2px; font-weight: bold; font-size: 15px; color: #b00000 }
+#rdvLayerButtonContainer button { padding: 5px }
+/* RDV */
+
+/* UI */
+.ui-icon:hover { background-image: url(../css/themes/apple_pie/images/icons-top.png); cursor: pointer}
+/* UI */
+
+/* Contacts secondaires */
+#blocContactsSecondairesEdit{display: none}
+#blocContactsSecondairesEdit label, .blocFormContactsSecondaires label{display: inline-block; width: 70px; font-weight: bold}
+#blocContactsSecondairesEdit input[type="text"], .blocFormContactsSecondaires input[type="text"]{
+  width: 180px;background: none repeat scroll 0 0 #FFFFFF;
+  border: 1px solid #CCCCCC;
+  font-size: 12px;
+  margin: 0;
+  padding: 1px 1px 0;
+}
+#blocContactsSecondairesEdit input[readonly], .blocFormContactsSecondaires input[readonly]{background: none repeat scroll 0 0 #F8F8F8;}
+
+#blocContactsSecondairesEdit select, .blocFormContactsSecondaires select{
+  background: none repeat scroll 0 0 #FFFFFF;
+  border: 1px solid #CCCCCC;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+  width: 180px;
+}
+
+table.secondaryContact{
+  width: 350px; 
+  border: 1px solid #aaaaaa;
+  padding: 3px;
+  display: inline-block;
+  margin: 0 2px 2px 0;
+}
+
+.blocFormContactsSecondaires table{
+  width: 700px; 
+  padding: 3px;
+  display: inline-block;
+  margin: 0 2px 2px 0;
+}
+
+.actions{float: right}
+.actions .cancel, .actions .edit {display: block}
+.actions .page-white-delete{display: none}
+#hideAddContactForm{display: none}
+.blocFormContactsSecondaires{display: none; margin-top: 10px}
+
+
+  

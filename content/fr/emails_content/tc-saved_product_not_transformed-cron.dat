@@ -1,0 +1,19 @@
+<p>
+  Bonjour,<br />
+  <br />
+  Un internaute a sauvegardé un produit dans son compte client il y 2 jours et n’a pas encore fait d’action  sur celui-ci.<br />
+  <br />
+  Les coordonnées de ce client sont :<br />
+  <br />
+  Société : CUSTOMER_COMPANY_NAME<br />
+  Prénom : CUSTOMER_FIRST_NAME<br />
+  Nom : CUSTOMER_LAST_NAME<br />
+  Email : CUSTOMER_EMAIL<br />
+  Téléphone : CUSTOMER_PHONE<br />
+  <br />
+  Les produits concernés sont les suivants :
+  <br />
+  PRODUCTS_LIST<br />
+  <br />
+  <a href="CUSTOMER_LINK">Voir fiche client Lien vers fiche client</a><br />
+</p>
