@@ -39,7 +39,7 @@ function string_to_url($string) {
 					$data_ann_que= mysql_fetch_object($req_ann_que);
 		?>
 		
-			<div class="blue-title">Qui sont les utilisateurs de Techni-Contact ?  </div>
+			<div class="blue-title"><h1>Qui sont les utilisateurs de Techni-Contact ?  </h1></div>
 			<div class="zero"></div>
 			<div id="help">
 			<br /><br />
@@ -131,7 +131,7 @@ function string_to_url($string) {
 									
 					echo '		 	<div class="img_logo">
 									<a href="'.URL.'utilisateurs/'.$data_client->id.'-'.$data_client->client_id.'-'.$url_final.'.html">
-										<img src="'.$data_client->logo.'" width="100" />
+										<img src="'.$data_client->logo.'" alt="Logo '.$data_client->societe.'" width="100" />
 									</a>
 									</div>';
 									}else {

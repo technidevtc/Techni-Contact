@@ -639,6 +639,7 @@ if ($valid_form) { // User validate the form
       "CUSTOMER_COMPANY_PC" => $infos["cp"],
       "CUSTOMER_COMPANY_CITY" => $infos["ville"],
       "CUSTOMER_COMPANY_COUNTRY" => $infos["pays"],
+      "MAINPRODUCT_PRECISIONS" => $infos["precisions"],
       "CUSTOMER_CUSTOM_FIELDS" => $cfvs,
       "SITE_MAIN_URL" => URL
       //"Customer-Company-DeleveryNote" => $infos["infos_sup"],
@@ -916,7 +917,7 @@ if ($valid_form) { // User validate the form
             
             //Get the advertiser from_web
             $query_adv_get_web  = "SELECT
-                          a.from_web
+                          a.from_web , c.parent
                         FROM
                           contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
                         WHERE
@@ -926,18 +927,26 @@ if ($valid_form) { // User validate the form
 
 
             $template_temp1 = $template;
-    
+			
             if (strcmp($content_adv_get_web['from_web'],'0')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
               //from_web is decoched so we have to send a personnalized mail
               //That contain all the informations of the leed
         
               //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');
-      
+			/*
               if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
-                $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+				//  $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
               } else if (!empty($pdt["cat_name"])) {
-                $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+               // $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
               }
+			*/
+			
+				if($content_adv_get_web['parent'] == 0){
+					$temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+				}else{
+					$temp_infos_name  = '<br /><strong>Votre gamme de produits : </strong> '.$pdt["cat_name"];
+				}
+			  
 			  
               $template_temp1 = 'customer-lead_annonceur-alerte_all_informations';
               $array_var =  array(
@@ -961,6 +970,7 @@ if ($valid_form) { // User validate the form
                 "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
                 "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
                 "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
+                "EXTRAINFO_COMPANY_COMMENTAIRE" => $CustomerMailData["MAINPRODUCT_PRECISIONS"],
                 "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
                 
               );
@@ -974,8 +984,9 @@ if ($valid_form) { // User validate the form
               'template' => $template_temp1,
               'data' => $array_var
             );
-            $mail = new Email($mailContent);
 			
+			
+            $mail = new Email($mailContent);
 			
 			
             //Changes End "01/12/2014"
@@ -1055,7 +1066,8 @@ if ($valid_form) { // User validate the form
                   "ADVERTISER_WEBPASS" => $adv["webpass"],
                   "GENERATEDCONTACTID" => $adv["leadID"]
                 );
-
+				print_r($array_var);
+				
         
               /*******************************************************************/
               /*******************************************************************/     
@@ -1065,7 +1077,7 @@ if ($valid_form) { // User validate the form
             
               //Get the advertiser from_web
               $query_adv_get_web  = "SELECT
-                            a.from_web
+                            a.from_web , c.parent
                           FROM
                             contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
                           WHERE
@@ -1085,12 +1097,20 @@ if ($valid_form) { // User validate the form
                 //That contain all the informations of the leed
 
       //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');
-                
+                /*
                 if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
-                  $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+                  //$temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
                 } else if (!empty($pdt["cat_name"])) {
-                  $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+                  //$temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
                 }
+				*/
+				
+				if($content_adv_get_web['parent'] == 0){
+					$temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+				}else{
+					$temp_infos_name  = '<br /><strong>Votre gamme de produits : </strong> '.$pdt["cat_name"];
+				}
+				
                 
                 $template_temp2 = 'customer-lead_annonceur-alerte_all_informations';
                 $array_var =  array(
@@ -1114,7 +1134,7 @@ if ($valid_form) { // User validate the form
                   "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
                   "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
                   "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
-                  
+                  "EXTRAINFO_COMPANY_COMMENTAIRE" => $CustomerMailData["MAINPRODUCT_PRECISIONS"],
                   "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
                 );
               }//end if test on template
@@ -1215,7 +1235,7 @@ if ($valid_form) { // User validate the form
               
               //Get the advertiser from_web
               $query_adv_get_web  = "SELECT
-                            a.from_web
+                            a.from_web , c.parent
                           FROM
                             contacts c INNER JOIN advertisers a ON a.id=c.idAdvertiser
                           WHERE
@@ -1231,16 +1251,24 @@ if ($valid_form) { // User validate the form
               $template_temp3 = $template;
               
               if (strcmp($content_adv_get_web['from_web'],'0')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
-      //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');        
+				   //echo('<br /> In if '.$content_adv_get_web['from_web'].' * '.$template.'<br />');        
                   //from_web is decoched so we have to send a personnalized mail
-                  //That contain all the informations of the leed
+                 //That contain all the informations of the leed
                 
+				/*
                 if (!empty($MainProductMailData['MAINPRODUCT_NAME'])) {
-                  $temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+                  //$temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
                 } else if(!empty($pdt["cat_name"])) {
-                  $temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
+                  //$temp_infos_name  = '<br /><strong>Famille demand&eacute;e : </strong> '.$pdt["cat_name"];
                 }
-                
+				*/
+				
+				if($content_adv_get_web['parent'] == 0){
+					$temp_infos_name  = '<br /><strong>Nom du produit : </strong> '.$MainProductMailData['MAINPRODUCT_NAME'];
+				}else{
+					$temp_infos_name  = '<br /><strong>Votre gamme de produits : </strong> '.$pdt["cat_name"];
+				}
+				
                 $template_temp3 = 'customer-lead_annonceur-alerte_all_informations';
                 $array_var =  array(
                   "SITE_MAIN_URL" => URL,
@@ -1263,20 +1291,25 @@ if ($valid_form) { // User validate the form
                   "EXTRAINFO_EMAIL" => $CustomerMailData["CUSTOMER_EMAIL"],
                   "EXTRAINFO_PHONE" => $CustomerMailData["CUSTOMER_PHONE"],
                   "EXTRAINFO_JOB" => $CustomerMailData["CUSTOMER_JOB"],
-                  
+                  "EXTRAINFO_COMPANY_COMMENTAIRE" => $CustomerMailData["MAINPRODUCT_PRECISIONS"],
                   "EXTRAINFO_PRODUCT_NAME" => $temp_infos_name
                 );
               
               } elseif (strcmp($content_adv_get_web['from_web'],'1')==0 && strcmp($template,'customer-lead_annonceur-alerte')==0) {
                 
-				$sql_societe  = "SELECT societe FROM contacts WHERE id='".$adv["leadID"]."'  ";
+				$sql_societe  = "SELECT societe , idAdvertiser FROM contacts WHERE id='".$adv["leadID"]."'  ";
 				$req_societe  =  mysql_query($sql_societe);
 				$data_societe =  mysql_fetch_object($req_societe);
+				
+				$sql_advertiser = "SELECT webpass FROM extranetusers WHERE id='".$data_societe->idAdvertiser."' ";
+				$req_advertiser = mysql_query($sql_advertiser);
+				$data_advertiser =  mysql_fetch_object($req_advertiser);
+				
                 $template_temp3 = 'customer-lead_annonceur-alerte';
                 $array_var  =  array(
                   "SITE_MAIN_URL" => URL,
                   "EXTRANET_URL" => EXTRANET_URL,
-                  "ADVERTISER_WEBPASS" => $adv["webpass"],
+                  "ADVERTISER_WEBPASS" => $data_advertiser->webpass,
                   "GENERATEDCONTACTID" => $adv["leadID"],
                   "SOCIETE_NAME" => $data_societe->societe
                 );
@@ -1297,6 +1330,13 @@ if ($valid_form) { // User validate the form
                 );
         
               $mail = new Email($mailContent);
+			 
+/*			 echo 'tab2';
+			  echo '******************';
+			  print_r($array_var);
+*/			
+			 
+			 //die; 
              /* $mail->Build(
                 "Demande de devis sur www.techni-contact.com",
                 "",
@@ -1896,7 +1936,7 @@ $(function () {
     
   $(".btn-send-lead", lead_form).mouseenter(function(){
     $(".edit:focus").blur() ;
-
+	
     setTimeout(function(){
       var errorsContent = '';
       var hasError = false;
@@ -1932,19 +1972,24 @@ $(function () {
     if (!reqInProgress) {
       reqInProgress = true
       formData = lead_form.serialize();
-	  
+	 
 	  console.log(lead_form.attr("action"));
       $.ajax({
         type: "POST",
         data: formData,
         url: lead_form.attr("action"),
+		
         success: function(data) {
           data = data.replace(/^\s*|\s*$/,"");
+		  
           if (data == 'LeadOk') {
             $("[id^='error_']").html("").hide();
             var typeLead = document.location.pathname.split('-')[1].split('.')[0].substring(0,1);
-            if(typeLead == 'a' || typeLead == 'f' )
-              document.location.href = "<?php echo URL; ?>lead-"+typeLead+"-success.html";
+            if(typeLead == 'a' || typeLead == 'f' ){
+				document.location.href = "<?php echo URL; ?>lead-"+typeLead+"-success.html";
+			}
+			
+              
           }
           else {
             reqInProgress = false;

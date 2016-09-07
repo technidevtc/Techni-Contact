@@ -1,0 +1,126 @@
+<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+  $db = DBHandle::get_instance();
+	
+	$url_page 	=  $_SERVER['REQUEST_URI'];
+	$url_expode = explode('/',$url_page);
+	$id_tag =  $url_expode[3];
+	
+	$sql_tag  = "SELECT name FROM blog_tags_names WHERE id='".$id_tag."' "; 
+	$req_tag  =  mysql_query($sql_tag);
+	$data_tag =  mysql_fetch_object($req_tag);
+	
+ 
+$title = $data_tag->name." - Le blog de Techni-Contact";
+$meta_desc = $data_tag->name." sur le blog de Techni-Contact. Lisez nos chroniques, fiches pratiques et témoignages. Techni-Contact facilite les achats des entreprises et des collectivités.";
+//$pageName = "guide_achat";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+
+
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+		  <div class="very-big-blue-title" style="margin-bottom: 15px;">
+			 <h1><?= $data_tag->name ?> - Le blog de Techni-Contact</h1>
+		  </div>
+			<br />
+		    
+			<div class="first-blog">
+			<div id="bloc-tags">
+					<div class="all_tags"><b><a href="<?= URL ?>blog">Tous les articles</b></div>
+					<div class="second_all_tags">
+					<?php
+						$sql_tags = "SELECT ba.name,ba.id,ba.ref_name
+									 FROM blog_tags_names ba, blog_tags_linked_articles  btla
+									 WHERE ba.id = btla.id_tag
+									 GROUP BY ba.id
+									 ORDER BY ba.name ASC ";
+						$req_tags =  mysql_query($sql_tags);
+						while($data_tags = mysql_fetch_object($req_tags)){
+							echo '<div class="specs_tags" ><a href="'.URL.'blog/tag/'.$data_tags->id.'/'.$data_tags->ref_name.'.html">'.$data_tags->name.'</a></div>';
+						}
+					?>
+					</div>
+				</div>
+			<br />				
+			<?php	
+				$sql_all = "SELECT ba.id as id_article,ba.article_title,ba.promo_image,timestamp_created,ref_name,content
+							FROM   blog_tags_linked_articles btla,  blog_articles ba
+							WHERE  btla.id_article = ba.id
+							AND    btla.id_tag = '".$id_tag."'
+							AND statut='1'
+							GROUP BY ba.id				
+							ORDER BY article_title ASC ";
+				$req_all =  mysql_query($sql_all);
+				
+				while($data_all = mysql_fetch_object($req_all)){
+					echo '<div class="global_articles">';
+						
+						if(empty($data_all->promo_image)){
+							echo '<div style="float:left;margin-right:10px">
+										<a href="'.$url_article.'" target="_blink">
+											<img src="'.URL.'ressources/images/empty_gallery.png" alt="'.$data_all->article_title.' -  Le blog Techni-Contact" width="150px"  />
+										</a>
+								  </div>';
+						}else{
+							echo'<div style="float:left;margin-right:10px">
+									<a href="'.$url_article.'" target="_blink">
+										<img src="'.URL.'ressources/images/blog/'.$data_all->promo_image.'" alt="'.$data_all->article_title.' -  Le blog Techni-Contact" width="150px" />
+									</a>
+								</div>';
+						}
+						
+						/*
+						if(empty($data_all->promo_image)){
+							echo '<div style="float:left;margin-right:10px"><img src="'.URL.'ressources/images/empty_gallery.png" width="150px" /></div>';
+						}else{
+							echo'<div style="float:left;margin-right:10px"><img src="'.URL.'ressources/images/blog/'.$data_all->promo_image.'" width="150px" /></div>';
+						}
+						*/
+					$sql_tags = "SELECT ba.name,ba.id,ba.ref_name
+								 FROM blog_tags_names ba, blog_tags_linked_articles  btla
+								 WHERE ba.id = btla.id_tag
+								 AND btla.id_article='".$data_all->id_article."'
+								 GROUP BY ba.id
+								 ORDER BY ba.name ASC  ";
+					$req_tags = mysql_query($sql_tags);
+					$all_tag = "";
+					while($data_tags = mysql_fetch_object($req_tags)){
+						$all_tag .= $data_tags->name." - ";
+					}
+					$all_tag = substr($all_tag, 0, -2);
+					$desc_clean  = strip_tags($data_all->content);
+					$desc = substr($desc_clean, 0, 400);
+					
+					
+					// http://www.techni-contact.com/blog/ID_article/NOM-DE-L-ARTICLE.html
+					$url_article = URL.'blog/'.$data_all->id_article.'/'.$data_all->ref_name.'.html';
+					echo'	<div style="overflow: hidden;">
+								<a href="'.$url_article.'"><h2 class="blue-title">'.$data_all->article_title.'</h2></a>
+								
+								<div class="sec_blog">'.$desc.'...</div><br />
+								<div class="suite-article"><a href="'.$url_article.'">[Lire l\'article]</a></div><br />
+								Publié le '.date("d/m/Y", strtotime($data_all->timestamp_created)).'  - Tags : '.$all_tag.' 
+							</div>
+						</div>';
+				}
+			?>
+				
+			</div>
+			
+			
+			
+          </div>
+  </div>
+	  
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+<script src="<?= URL ?>ressources/scripts/AJAX_get_articles_tags.js"></script>
+          
+<?php require(SITE."foot.php"); ?>
+  

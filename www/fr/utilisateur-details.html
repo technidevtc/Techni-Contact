@@ -41,9 +41,9 @@ require(SITE . "head.php");
 			<div class="logo_right"> 
 				<?php
 				if(!empty($data_ann->logo)){
-					echo '<img src="'.URL.''.$data_ann->logo.'" style="width: 90px;" />';
+					echo '<img src="'.URL.''.$data_ann->logo.'" style="width: 90px;" alt="Logo '.$data_ann->societe.'" />';
 				}else{
-					echo '<img id="preview_facade" src="'.URL.'ressources/images/produits/no-pic-thumb_big.gif" style="width: 90px;" />';
+					//echo '<img id="preview_facade" src="'.URL.'ressources/images/produits/no-pic-thumb_big.gif"  style="width: 90px;" />';
 				}
 				?>
 			</div>
@@ -170,7 +170,7 @@ require(SITE . "head.php");
 						<?php
 						if(!empty($product_img)){
 							echo '<a href="'.URL.'produits/'.$data_famille->idFamily.'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html">
-									<img  src="'.$product_img.'" />
+									<img  src="'.$product_img.'" alt="'.$data_product['name'].' - '.$data_product['fastdesc'].' " />
 								  </a><br />';
 						}else {
 							echo '<a href="'.URL.'produits/'.$data_famille->idFamily.'-'.$data_product["id"].'-'.$data_product["ref_name"].'.html"><img id="preview_facade" src="'.URL.'ressources/images/produits/no-pic-thumb_big.gif" /></a><br />';
@@ -209,7 +209,7 @@ require(SITE . "head.php");
 				<div style="margin: auto; width: 300px;">
 					<?php
 						if(!empty($data_ann_quest->photo_equipement)){
-							echo '<img src="'.URL.''.$data_ann_quest->photo_equipement.'" id="example_old'.$i.'" style="width: 430px;" />';
+							echo '<img src="'.URL.''.$data_ann_quest->photo_equipement.'" alt="Illustration '.$data_ann->societe.'" id="example_old'.$i.'" style="width: 430px;" />';
 						}
 					?>
 				</div>

@@ -1,0 +1,87 @@
+﻿<?php
+require_once substr(dirname(__FILE__),0,strpos(dirname(__FILE__),'/',stripos(dirname(__FILE__),'technico')+1)+1).'config.php';
+
+define("FORM_PERSONNAL_INFOS_WARNING", "Merci de ne pas faire apparaitre vos coordonnées personnelles dans cette zone.");
+  $db = DBHandle::get_instance();
+
+	$url_page 	=  $_SERVER['REQUEST_URI'];
+	$url_expode = explode('/',$url_page);
+	$id_article =  $url_expode[2];
+	
+	$sql_articles = " SELECT id ,article_title,promo_image,content,timestamp_created,ref_name,title_meta
+						FROM blog_articles
+					  WHERE id ='".$id_article."'";
+	$req_articles  =  mysql_query($sql_articles);
+	$data_articles =  mysql_fetch_object($req_articles);	
+	$desc    	  = substr($data_articles->content, 0, 400);
+ 
+$title = $data_articles->title_meta;
+$meta_desc = strip_tags($desc);
+//$pageName = "guide_achat";
+define("__BR_NO_PUB__", true);
+require(SITE . "head.php");
+?>
+
+
+<div class="white-bg">
+  <div class="lead-form blocks-left">
+          <div class="catalogs-form">
+		  
+		    <div class="very-big-blue-title" style="margin-bottom: 15px;"><h1><?= $data_articles->article_title ?></h1> </div>
+			<div class="first-blog">
+				<div id="bloc-tags">
+					<div class="all_tags"><b><a href="<?= URL ?>blog">Tous les articles</a></b></div>
+					<div class="second_all_tags">
+					<?php
+						$sql_tags = "SELECT ba.name,ba.id,ba.ref_name
+									 FROM blog_tags_names ba, blog_tags_linked_articles  btla
+									 WHERE ba.id = btla.id_tag
+									 AND btla.id_article='".$id_article."'
+									 GROUP BY ba.id
+									 ORDER BY ba.name ASC ";
+						$req_tags =  mysql_query($sql_tags);
+						while($data_tags = mysql_fetch_object($req_tags)){
+							echo '<div class="specs_tags" ><a href="'.URL.'blog/tag/'.$data_tags->id.'/'.$data_tags->ref_name.'.html">'.$data_tags->name.'</a></div>';
+						}
+					?>
+					</div>
+				</div>
+				
+				
+			
+				<div style="clear: both;">
+				<?php
+					/*if(!empty($data_articles->promo_image)){
+						echo '<br /><div style="float:left;margin-right:10px"><img style="width: 230px;" src="'.URL.'ressources/images/blog/'.$data_articles->promo_image.'" /></div>';
+					}*/
+				?>
+					<div><br />
+					<b>L'article vous plait ? Partagez le !</b><br /><br />
+					<span class="st_linkedin_large" displayText="LinkedIn"></span>
+					<span class="st_facebook_large" displayText="Facebook"></span>
+					<span class="st_twitter_large" displayText="Tweet"></span>
+					<span class="st_print_large" displayText="Print"></span>
+					<span class="st_email_large" displayText="Email"></span>
+					<br /><br />
+					<?= $data_articles->content ?></div>
+					<br />
+					<b>L'article vous plait ? Partagez le !</b><br /><br />
+					<span class="st_linkedin_large" displayText="LinkedIn"></span>
+					<span class="st_facebook_large" displayText="Facebook"></span>
+					<span class="st_twitter_large" displayText="Tweet"></span>
+					<span class="st_print_large" displayText="Print"></span>
+					<span class="st_email_large" displayText="Email"></span>
+				</div>	
+			</div>
+			
+			
+			
+          </div>
+  </div>
+	  
+      <?php require(SITE . "blocks-right.php"); ?>
+    <div class="zero"></div>
+</div>
+<script src="<?= URL ?>ressources/scripts/AJAX_get_articles_tags.js"></script>
+          
+<?php require(SITE."foot.php"); ?>

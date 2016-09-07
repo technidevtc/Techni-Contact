@@ -4,6 +4,8 @@ require_once substr(dirname(__FILE__), 0, strpos(dirname(__FILE__), "/", stripos
 $db = DBHandle::get_instance();
 $session = new UserSession($db);
 
+
+
 // Flagship Products
 $res = $db->query("
 	SELECT
@@ -125,8 +127,8 @@ require(SITE.'head.php');
                     <li><img src="<?php echo $res_url.'images/theytrustus/whirlpool.jpg'; ?>" alt="whirlpool" class="vmaib" /><div class="vsma"></div></li>
                   </ul>
                 </div>
-                <div class="scroll-l"><img src="<?php echo $res_url; ?>images/carrousel-arrow-left.png" alt=""></div>
-                <div class="scroll-r"><img src="<?php echo $res_url; ?>images/carrousel-arrow-right.png" alt=""></div>
+                <div class="scroll-l"><img src="<?php echo $res_url; ?>images/carrousel-arrow-left.png" alt="Précédent"></div>
+                <div class="scroll-r"><img src="<?php echo $res_url; ?>images/carrousel-arrow-right.png" alt="Suivant"></div>
               </div>
             </div>
             <div class="clear"></div>
@@ -146,7 +148,7 @@ require(SITE.'head.php');
            <?php endif ?>
 
             <div id="block-top-sales" class="grey-block">
-              <div class="grey-block-title">Nos meilleures ventes</div>
+              <div class="grey-block-title"><h1>Nos équipements pro les plus vendus</h1></div>
               <div class="grey-block-inlay">
                 <?php foreach($pdtList as $pdt) {
                 // if product is set as default estimate

@@ -152,12 +152,12 @@ require(SITE."head.php");
                   <div class="cart-left">
                       <div class="q-a-block block">
                         <div class="q-a-title">Vos questions, nos réponses</div>
-                        <ul>
-                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande']);<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
-                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés']);<?php endif; ?>HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
-                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Livraison en Corse']);<?php endif; ?>HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
-                          <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander']);<?php endif; ?>HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
-                        </ul>
+						   <ul>
+						   <li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande');<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
+							<li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés');<?php endif; ?>;HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
+							<li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Livraison en Corse');<?php endif; ?>;HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
+							<li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander');<?php endif; ?>;HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
+						  </ul>
                       </div>
                       <div class="trust-block block">
                         <div class="trust-block-title">Ils nous font confiance</div>
@@ -182,7 +182,7 @@ require(SITE."head.php");
                   <!--<h2>Vous avez <?php echo $cart->itemCount; ?> articles dans votre panier:</h2>-->
                <?php } ?>
                 <!--</div>-->
-                
+                <div class="grey-block-title"><h1>Mon panier</h1></div>
               <?php if ($cart->itemCount > 0) { ?>
                 <div class="zero"></div>
                 
@@ -263,10 +263,10 @@ require(SITE."head.php");
                     <div class="q-a-block block">
                       <div class="q-a-title">Vos questions, nos réponses</div>
                       <ul>
-                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande']);<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
-                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés'])<?php endif; ?>;HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
-                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Livraison en Corse'])<?php endif; ?>;HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
-                        <li><a href="javascript:<?php if(!TEST): ?>_gaq.push(['_trackEvent', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander'])<?php endif; ?>;HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
+                       <li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Comment payer ma commande');<?php endif; ?>HN.TC.questionsAnswers('paiement');">Comment payer ma commande ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Les mandats administratifs sont ils acceptés');<?php endif; ?>;HN.TC.questionsAnswers('mandat');">Les mandats administratifs sont il acceptés ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Livraison en Corse');<?php endif; ?>;HN.TC.questionsAnswers('livraison');">Livrez vous en Corse et à l'étanger ?</a></li>
+                        <li><a href="javascript:<?php if(!TEST): ?>ga('send', 'event', 'Page panier', 'Ouverture pop up', 'Les particuliers peuvent ils commander');<?php endif; ?>;HN.TC.questionsAnswers('particulier');">Les particuliers peuvent il commander ?</a></li>
                       </ul>
                     </div>
                     <div class="trust-block block">
